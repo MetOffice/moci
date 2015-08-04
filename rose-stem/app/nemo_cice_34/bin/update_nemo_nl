@@ -1,0 +1,165 @@
+#!/usr/bin/env perl
+# *****************************COPYRIGHT******************************
+# (C) Crown copyright Met Office. All rights reserved.
+# For further details please refer to the file COPYRIGHT.txt
+# which you should have received as part of this distribution.
+# *****************************COPYRIGHT******************************
+#-----------------------------------------------------------------------
+# NAME
+#     update_nemo_nl
+#
+# SYNOPSIS
+#     update_nemo_nl -f <file> [OPTIONS]
+#
+# DESCRIPTION
+#     Update the NEMO namelists. Valid for NEMO 3.2 or 3.3.1.
+#
+# Code Owner: Please refer to the UM file CodeOwners.txt
+# This file belongs in section: Rose scripts
+#
+#-----------------------------------------------------------------------
+use strict;
+use warnings;
+
+use Getopt::Long;
+use Pod::Usage;
+
+# Arguments:
+my $verbose = 0;       # Verbose output
+my $file;              # Namelist file to edit
+my $runid;             # Job name
+my $l_restart;         # Restart logical indicator
+my $restart_ctl;       # Restart control
+my $final_ts;          # End time-step
+my $n_date0;           # Start date
+my $l_leapyear;        # Leap year indicator
+my $next_ts;           # next time-step in CRUN
+my $dir;               # directory for I/O
+my $iproc;             # NEMO iproc 
+my $jproc;             # NEMO jproc 
+my $ijproc;            # NEMO ijproc (= NEMO_NPROC)
+my $help;
+
+# Process arguments:
+if (@ARGV > 0) {
+  GetOptions('f|file=s'              => \$file,
+             'c|restart_ctl=s'       => \$restart_ctl,
+             'e|final_step=s'        => \$final_ts,
+             'g|restart=s'           => \$l_restart,
+             'i|iproc=s'             => \$iproc,
+             'j|jproc=s'             => \$jproc,
+             'l|leapyear=s'          => \$l_leapyear,
+             'n|next_step=s'         => \$next_ts,
+             'o|dir=s'               => \$dir,
+             'p|ijproc=s'            => \$ijproc,
+             'r|runid=s'             => \$runid,
+             's|start_date=s'        => \$n_date0,
+             'v|verbose'             => \$verbose,
+             'help|?'                => \$help) or pod2usage(1);
+             
+
+} else {
+# Requires an input file at a minimum
+  pod2usage(1);
+}
+
+pod2usage(1) if $help;
+
+if ($verbose) {
+  print "NEMO namelist update settings:\n";
+  print "  file = $file\n" if ($file);
+  print "  runid = $runid\n" if ($runid);
+  print "  l_restart = $l_restart\n" if ($l_restart);
+  print "  restart_ctl = $restart_ctl\n" if ($restart_ctl);
+  print "  final_ts = $final_ts\n" if ($final_ts);
+  print "  n_date0 = $n_date0\n" if ($n_date0);
+  print "  l_leapyear = $l_leapyear\n";
+  print "  next_ts = $next_ts\n" if ($next_ts);
+  print "  dir = $dir\n" if ($dir);
+  print "  iproc = $iproc\n" if ($iproc); 
+  print "  jproc = $jproc\n" if ($jproc);
+  print "  ijproc = $ijproc\n" if ($ijproc);
+}
+
+$file = "$dir/$file" if ($dir);
+print "  Updating namelist file: $file\n" if ($verbose);
+my @lines = read_file($file);
+
+foreach my $line (@lines) {
+
+  $line =~ s/^(ln_rstart)=.*/$1=$l_restart,/ if ($l_restart);
+
+  $line =~ s/^(nn_rstctl)=.*/$1=$restart_ctl,/ if ($restart_ctl);
+
+  $line =~ s/^(nn_itend)=.*/$1=$final_ts,/ if ($final_ts);
+
+  $line =~ s/^(nn_it000)=.*/$1=$next_ts,/ if ($next_ts);
+
+  # Vn3.3.1 uses dynamic allocation so we must ensure
+  # I and J procs are correct in the (nammpp) namelist
+  # whereas at earlier versions this was not important.
+
+  $line =~ s/^(jpni)=.*/$1=$iproc,/ if ($iproc);
+  
+  $line =~ s/^(jpnj)=.*/$1=$jproc,/ if ($jproc);
+  
+  $line =~ s/^(jpnij)=.*/$1=$ijproc,/ if ($ijproc);
+
+  $line =~ s/^(cn_exp)=.*/$1='$runid',/ if ($runid);
+  
+  $line =~ s/^(nn_date0)=.*/$1=$n_date0,/ if ($n_date0);
+  
+  $line =~ s/^(nn_leapy)=.*/$1=$l_leapyear,/ ;
+
+}
+
+write_file($file,@lines);
+
+
+sub read_file {
+
+  my $file = shift;  # input filename
+  open (my $fh, '<', $file) or die "Cannot read $file: $!\n";
+  my @lines = <$fh>;
+  close $fh;
+  return @lines;
+}
+
+sub write_file {
+
+  my $file = shift;     # Output filename
+  my @lines = @_;       # Data for writing
+  open (my $fh, '>', $file) or die "Cannot write $file: $!\n";
+  print $fh @lines;
+  close $fh;
+  return;
+}
+
+
+__END__
+
+=head1 NAME
+
+update_nemo_nl - Update the NEMO namelist file
+
+=head1 SYNOPSIS
+
+update_nemo_nl -f <file> [OPTIONS]
+
+  Arguments:
+    --file, -f <file>                 File containing namelists to edit
+    --restart_ctl, -c <string>        Restart control
+    --final_step, -e <int>            End timestep
+    --restart, -g <logical>           Restart logical indicator
+    --iproc, -i <int>                 NEMO processors (i-direction)
+    --jproc, -j <int>                 NEMO processors (j-direction)
+    --leapyear, -l <logical>          Leap year indicator
+    --next_step, -n <int>             Next timestep for a CRUN
+    --dir, -o <path>                  Directory for I/O
+    --ijproc, -p <int>                NEMO processors (total = NEMO_NPROC)
+    --runid, -r <string>              Job name
+    --start_date, -s <int>            Start date
+    --verbose, -v                     Verbose output
+    --help, -?                        Display help
+
+=cut

@@ -1,0 +1,98 @@
+#!/usr/bin/env ksh
+# *****************************COPYRIGHT******************************
+# (C) Crown copyright Met Office. All rights reserved.
+# For further details please refer to the file COPYRIGHT.txt
+# which you should have received as part of this distribution.
+# *****************************COPYRIGHT******************************
+#-----------------------------------------------------------------------
+#
+#  Script: UMScr_CalcIncrementDays
+#
+#  Purpose: Calculate the increment in days from a particular 
+#           date when the increment is given in terms of year, 
+#           months and days.
+#
+#  Programming Standard: UMDP 3 version unknown
+#
+#  External documentation:
+#           UMDP-C2
+#
+#  Code Owner: Please refer to the UM file CodeOwners.txt
+#  This file belongs in section: Rose scripts
+#
+#----------------------------------------------------------------------
+#
+#   Called by: qsnemosetup, qscicesetup
+#   Calls: UMScr_Time2Days, UMScr_Days2Time
+#
+#
+# ARGUMENTS
+#   * start_year           -- The year for the start date.
+#   * start_month          -- Month of the start date
+#   * start_day            -- Day of the month of the start date.
+#   * incr_year            -- Number of years to increment the start date by.
+#   * incr_month           -- Number of months to increment the start date by.
+#   * incr_day             -- Number of days to increment the start date by.
+#   * calendar             -- Type of calendar being used [360|365|gregorian]
+#
+# RETURNS
+#   * increment_days     -- The increment in terms of days.
+#
+#================================================================================
+
+
+# Set function name
+this="UMScr_CalcIncrementDays"
+
+# Arguments
+start_year=$1
+start_month=$2
+start_day=$3
+incr_year=$4
+incr_month=$5
+incr_day=$6
+calendar=$7
+
+# Local variables
+days_to_start=0
+end_year=0
+end_month=0
+days_to_end=0
+
+# Output variable
+increment_days=0
+
+# Calculate the number of days since the calendar zero
+days_to_start=$(UMScr_Time2Days ${start_year} ${start_month} ${start_day} $calendar)
+
+# Add the month and year increments to the start values
+# to get the end month/year
+(( end_year = start_year + incr_year ))
+(( end_month = start_month + incr_month ))
+
+# If there is a roll over onto a new year (i.e. month>12)
+# then deal with it.
+if [ $end_month -gt 12 ]; then
+    # Add whole years in months to end_year
+    (( add_years = (end_month - 1) / 12 ))
+    (( end_year = end_year + add_years ))
+
+    # find remaining months
+    (( end_month = (end_month - 1) % 12  + 1))
+fi
+
+# Calculate the number of days from calendar zero to end date
+# NOTE: doesn't include the day increments
+days_to_end=$(UMScr_Time2Days ${end_year} ${end_month} ${start_day} $calendar)
+
+# Account for the increment days
+(( days_to_end = days_to_end + incr_day ))
+
+(( increment_days = days_to_end - days_to_start ))
+
+echo "$increment_days"
+
+# Return 
+return 0
+
+

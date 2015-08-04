@@ -1,0 +1,519 @@
+<?xml version="1.0"?>
+<simulation> 
+  
+  <context id="nemo">
+    
+    <!-- $id$ -->
+    
+    <!-- 
+============================================================================================================
+=                                  definition of all existing variables                                    =
+=                                            DO NOT CHANGE                                                 =
+============================================================================================================
+    -->
+    
+    <field_definition level="1" prec="4" operation="ave(only(x))" enabled=".TRUE."> <!-- time step automaticaly defined -->
+
+      <!-- T grid -->
+      
+      <group id="grid_T" axis_ref="none" grid_ref="grid_T">
+	<field id="toce"         description="Temperature" standard="sea_water_potential_temperature" unit="degC" axis_ref="deptht"   />
+       	<field id="soce"         description="Salinity" standard="sea_water_salinity"                 unit="PSU"  axis_ref="deptht"   />
+ 	<field id="sst"          description="Sea Surface temperature" standard="sea_surface_temperature"  unit="degC"   />
+	<field id="sst2"         description="square of sea surface temperature"         unit="degC2"                    />
+	<field id="sstgrad"      description="module of sst gradient"                    unit="degC/m"                   />
+	<field id="sstgrad2"     description="square of module of sst gradient"          unit="degC2/m2"                 />
+	<field id="sss"          description="Sea Surface Salinity" standard="sea_surface_salinity"        unit="PSU"                      />
+	<field id="sss2"         description="square of sea surface salinity"            unit="psu2"                     />
+	<field id="ssh"          description="Sea Surface Height" standard="sea_surface_height_above_geoid"  unit="m"                        />
+	<field id="ssh2"         description="square of sea surface height" standard="sea_surface_height_above_geoid2"  unit="m2"      />
+	<field id="mldkz5"       description="Turbocline Depth" standard="ocean_mixed_layer_thickness_defined_by_vertical_tracer_diffusivity" unit="m" />
+	<field id="mldr10_1"     description="Mixed Layer Depth 0.01" standard="ocean_mixed_layer_thickness_defined_by_sigma_theta" unit="m" />
+	<field id="mldkara"      description="Kara Mixed Layer" standard="ocean_mixed_layer_thickness_defined_by_sigma_theta" unit="m" />
+       	<field id="rhop"         description="potential density (sigma0)"                unit="kg/m3" axis_ref="deptht"  />
+	<!-- next variables available with key_diahth -->
+	<field id="mlddzt"       description="Thermocline Depth" standard="depth_at_maximum_upward_derivative_of_sea_water_potential_temperature" unit="m" />
+	<field id="mldr10_3"     description="Mixed Layer Depth dr=0.03 (ref.10m)"       unit="m"                        />
+	<field id="mldr0_1"      description="Mixed Layer Depth dr=0.01 (ref.surf)"      unit="m"                        />
+	<field id="mldr0_3"      description="Mixed Layer Depth dr=0.03 (ref.surf)"      unit="m"                        />
+	<field id="mld_dt02"     description="Mixed Layer Depth |dt|=0.2 (ref.10m)"      unit="m"                        />
+	<field id="topthdep"     description="Top of the thermocline dt=-0.2 (ref.10m)"  unit="m"                        />
+	<field id="pycndep"      description="Pycnocline depth dr~dt=-0.2 (ref.10m)"     unit="m"                        />
+	<field id="BLT"          description="Barrier Layer Thickness"                   unit="m"                        />
+	<field id="tinv"         description="Max of vertical invertion of temperature"  unit="degC"                     />
+	<field id="depti"        description="Depth of max. vert. inv. of temperature"   unit="m"                        />
+        <field id="18d"          description="Depth of 18C isotherm" standard="depth_of_isosurface_of_sea_water_potential_temperature" unit="m"                        />
+        <field id="20d"          description="Depth of 20C isotherm" standard="depth_of_isosurface_of_sea_water_potential_temperature" unit="m"                        />
+	<field id="28d"          description="Depth of 28C isotherm" standard="depth_of_isosurface_of_sea_water_potential_temperature" unit="m"                        />
+	<field id="hc300"        description="Heat content 300 m" standard="integral_of_sea_water_potential_temperature_wrt_depth_expressed_as_heat_content"  unit="J/m2" />
+	<!-- variables available with key_diaar5 -->
+	<field id="botpres"      description="Pressure at sea floor"                     unit="dbar"                     />
+	<field id="cellthc"      description="Cell thickness"                            unit="m"     axis_ref="deptht"  />
+	<!-- variables available with key_diacorr -->
+	<field id="tt"           description="Square of 3D temperature field" standard="square_of_sea_water_potential_temperature" unit="degC2" axis_ref="deptht"   />
+	<field id="ss"           description="Square of 3D salinity field" standard="square_of_sea_water_salinity"   unit="PSU2"  axis_ref="deptht"   />
+       	<field id="rhop2"        description="square of (potential density (sigma0) -1000 kg/m3)" standard="square_of_sea_water_sigma_theta" unit="(kg/m3)2" axis_ref="deptht"  />
+	<!-- available key_trdtra -->
+	<field id="Ttrd_advx"    description="temperature: trend from zonal advn"        unit="K/s"   axis_ref="deptht"   />
+	<field id="Ttrd_advy"    description="temperature: trend from merid advn"        unit="K/s"   axis_ref="deptht"   />
+	<field id="Ttrd_advz"    description="temperature: trend from vert  advn"        unit="K/s"   axis_ref="deptht"   />
+	<field id="Ttrd_dmp"     description="temperature: trend from newtn damping"     unit="K/s"   axis_ref="deptht"   />
+	<field id="Ttrd_qsr"     description="temperature: trend from pen solar radn"    unit="K/s"   axis_ref="deptht"   />
+	<field id="Ttrd_atf"     description="temperature: trend from Asselin filter"    unit="K/s"   axis_ref="deptht"   />
+	<field id="Ttrd_ldf"     description="temperature: trend from horz diffusion"    standard="tendency_of_sea_water_temperature_due_to_horizontal_mixing" unit="K/s"   axis_ref="deptht"   />
+	<field id="Ttrd_zdf"     description="temperature: trend from vert diffusion"    standard="tendency_of_sea_water_temperature_due_to_vertical_mixing" unit="K/s"   axis_ref="deptht"   />
+	<field id="Ttrd_bbc"     description="temperature: trend from geothermal heating"    unit="K/s"   axis_ref="deptht"   />
+	<field id="Ttrd_bbl"     description="temperature: trend from bottom boundary layer" unit="K/s"   axis_ref="deptht"   />
+	<field id="Ttrd_nsr"     description="temperature: trend from nonsolar radn"     unit="K/s"                         />
+	<field id="Ttrd_npc"     description="temperature: trend from nonpen convection" unit="K/s"     axis_ref="deptht"   />
+	<field id="Strd_advx"    description="salinity: trend from zonal advn"           unit="psu/s"   axis_ref="deptht"   />
+	<field id="Strd_advy"    description="salinity: trend from merid advn"           unit="psu/s"   axis_ref="deptht"   />
+	<field id="Strd_advz"    description="salinity: trend from vert  advn"           unit="psu/s"   axis_ref="deptht"   />
+	<field id="Strd_dmp"     description="salinity: trend from newtn damping"        unit="psu/s"   axis_ref="deptht"   />
+	<field id="Strd_atf"     description="salinity: trend from Asselin filter"       unit="psu/s"   axis_ref="deptht"   />
+	<field id="Strd_ldf"     description="salinity: trend from horz diffusion"       standard="tendency_of_sea_water_salinity_due_to_horizontal_mixing" unit="psu/s"   axis_ref="deptht"   />
+	<field id="Strd_zdf"     description="salinity: trend from vert diffusion"       standard="tendency_of_sea_water_salinity_due_to_vertical_mixing" unit="psu/s"   axis_ref="deptht"   />
+	<field id="Strd_bbl"     description="salinity: trend from bottom boundary layer" unit="K/s"    axis_ref="deptht"   />
+	<field id="Strd_nsr"     description="salinity: trend from nonsolar radn"        unit="K/s"                         />
+	<field id="Strd_npc"     description="salinity: trend from nonpen convection"    unit="K/s"     axis_ref="deptht"   />
+     </group>
+
+      <!-- SBC -->
+      
+      <group id="SBC" axis_ref="none" grid_ref="grid_T" > <!-- time step automaticaly defined based on nn_fsbc -->
+
+	<field id="empmr"        description="Net Upward Water Flux" standard="water_flux_out_of_sea_ice_and_sea_water"   unit="kg/m2/s"  />
+	<field id="empsmr"       description="concentration/dilution water flux"  standard="water_flux_out_of_sea_water"  unit="kg/m2/s"  />
+	<field id="snowpre"      description="Snow precipitation"                                           unit="kg/m2/s"  />
+	<field id="runoffs"      description="River Runoffs" standard="water_flux_into_sea_water_from_rivers"  unit="Kg/m2/s"  />
+
+	<field id="qt"           description="Net Downward Heat Flux" standard="surface_downward_heat_flux_in_sea_water"  unit="W/m2"     />
+	<field id="qns"          description="non solar Downward Heat Flux"                                 unit="W/m2"     />
+	<field id="qsr"          description="Shortwave Radiation" standard="downwelling_photosynthetic_radiative_flux_in_sea_water"  unit="W/m2"     />
+	<field id="qsr3d"        description="Shortwave Radiation 3D distribution"        axis_ref="deptht" unit="W/m2"     />
+	<field id="qrp"          description="Surface Heat Flux: Damping" standard="heat_flux_into_sea_water_due_to_newtonian_relaxation" unit="W/m2"     />
+	<field id="erp"          description="Surface Water Flux: Damping" standard="water_flux_out_of_sea_water_due_to_newtonian_relaxation" unit="kg/m2/s"  />
+	<field id="taum"         description="wind stress module"                                           unit="N/m2"     />
+	<field id="wspd"         description="Wind speed module at 10 m" standard="wind_speed"              unit="m/s"      />
+	
+	<!-- * variable relative to atmospheric pressure forcing : available with ln_apr_dyn -->
+	<field id="ssh_ib"       description="Inverse barometer sea surface height"                         unit="m"        />
+
+	<!-- *_oce variables available with ln_blk_clio or ln_blk_core -->
+	<field id="qns_oce"      description="Non solar Downward Heat Flux over open ocean"                 unit="W/m2"     />
+	<field id="qlw_oce"      description="Longwave Downward Heat Flux over open ocean"                  unit="W/m2"     />
+	<field id="qsb_oce"      description="Sensible Downward Heat Flux over open ocean"                  unit="W/m2"     />
+	<field id="qla_oce"      description="Latent Downward Heat Flux over open ocean"                    unit="W/m2"     />
+	<field id="taum_oce"     description="wind stress module over open ocean"                           unit="N/m2"     />
+
+	<field id="ice_cover"    description="Ice fraction"  standard="sea_ice_area_fraction"               unit="1"        />
+
+	<field id="ioceflxb"     description="Oceanic flux at the ice base"                                 unit="W/m2"     />
+	<field id="qsr_ai_cea"   description="Air-Ice downward solar heat flux (cell average)"              unit="W/m2"     />
+	<field id="qns_ai_cea"   description="Air-Ice downward non-solar heat flux (cell average)"          unit="W/m2"     />
+	<field id="qla_ai_cea"   description="Air-Ice downward Latent heat flux (cell average)"             unit="W/m2"     />
+	
+	<field id="qsr_io_cea"   description="Ice-Oce downward solar heat flux (cell average)"              unit="W/m2"     />
+	<field id="qns_io_cea"   description="Ice-Oce downward non-solar heat flux (cell average)"          unit="W/m2"     />
+	
+	<field id="snowthic_cea" description="Snow thickness (cell average)"                                unit="m"        />
+	<field id="icethic_cea"  description="Ice thickness (cell average)"                                 unit="m"        />
+	<field id="iceprod_cea"  description="Ice production (cell average)"                                unit="m/s"      />
+	
+	<field id="ice_pres"     description="Ice presence"                                                 unit="-"        />
+	<field id="ist_cea"      description="Ice surface temperature (cell average)"                       unit="degC"     />
+	<field id="ist_ipa"      description="Ice surface temperature (ice presence average)"               unit="degC"     />      
+	<field id="uice_ipa"     description="Ice velocity along i-axis at I-point (ice presence average)"  unit="m/s"      />      
+	<field id="vice_ipa"     description="Ice velocity along j-axis at I-point (ice presence average)"  unit="m/s"      />      
+	
+	<field id="utau_ice"     description="Wind stress along i-axis over the ice at i-point"             unit="N/m2"     />
+	<field id="vtau_ice"     description="Wind stress along j-axis over the ice at i-point"             unit="N/m2"     />
+	
+	<field id="u_imasstr"    description="Sea-ice mass transport along i-axis"                          unit="kg/s"     />
+	<field id="v_imasstr"    description="Sea-ice mass transport along j-axis"                          unit="kg/s"     />
+
+	<!-- available key_coupled -->
+	<field id="snow_ao_cea"  description="Snow over ice-free ocean (cell average)"                      unit="kg/m2/s"  />
+	<field id="snow_ai_cea"  description="Snow over sea-ice (cell average)"                             unit="kg/m2/s"  />
+	<field id="subl_ai_cea"  description="Sublimation over sea-ice (cell average)"                      unit="kg/m2/s"  />
+	<field id="icealb_cea"   description="Ice albedo (cell average)"                                    unit="1"        />
+	<field id="calving"      description="Calving"                                                      unit="kg/m2/s"  />
+	<!-- available if key_coupled + conservative method -->
+	<field id="rain"         description="Liquid precipitation"                                         unit="Kg/m2/s"  />
+	<field id="evap_ao_cea"  description="Evaporation over ice-free ocean (cell average)"               unit="kg/m2/s"  />
+	<!-- variables available with key_diaar5 -->
+	<field id="isnwmlt_cea"   description="Snow over Ice melting (cell average)"                        unit="kg/m2/s"  />
+	<field id="fsal_virt_cea" description="Virtual salt flux due to ice formation (cell average)"       unit="kg/m2/s"  />
+	<field id="fsal_real_cea" description="Real salt flux due to ice formation (cell average)"          unit="kg/m2/s"  />
+	<field id="hflx_rain_cea" description="heat flux due to rainfall"                                   unit="W/m2"     />
+	<field id="hflx_evap_cea" description="heat flux due to evaporation"                                unit="W/m2"     />
+	<field id="hflx_snow_cea" description="heat flux due to snow falling over ice-free ocean"           unit="W/m2"     />
+	<field id="hflx_ice_cea"  description="heat flux due to ice thermodynamics"                         unit="W/m2"     />
+	<field id="hflx_rnf_cea"  description="heat flux due to runoffs"                                    unit="W/m2"     />
+	<field id="hflx_cal_cea"  description="heat flux due to calving"                                    unit="W/m2"     />
+	<field id="bicemel_cea"  description="Rate of Melt at Sea Ice Base (cell average)"                  unit="kg/m2/s"  />
+	<field id="licepro_cea"  description="Lateral Sea Ice Growth Rate (cell average)"                   unit="kg/m2/s"  />
+	<field id="snowmel_cea"  description="Snow Melt Rate (cell average)"                                unit="kg/m2/s"  />
+	<field id="sntoice_cea"  description="Snow-Ice Formation Rate (cell average)"                       unit="kg/m2/s"  />
+	<field id="ticemel_cea"  description="Rate of Melt at Upper Surface of Sea Ice (cell average)"      unit="kg/m2/s"  />
+
+      </group>
+
+      <!-- U grid -->
+      
+      <group id="grid_U"  axis_ref="depthu" grid_ref="grid_U">
+	<field id="utau"         description="Wind Stress along i-axis" standard="surface_downward_x_stress"  unit="N/m2" axis_ref="none" />
+	<field id="uoce"         description="Zonal Current"            standard="sea_water_x_velocity"       unit="m/s"                  />
+	<field id="uocetr_eff"   description="Effective ocean transport along i-axis"      unit="m3/s"                  />
+	<!-- uoce_eiv: available with key_traldf_eiv and key_diaeiv -->
+	<field id="uoce_eiv"     description="Zonal EIV Current"        standard="bolus_sea_water_x_velocity" unit="m/s"                  />
+	<!-- uoce_eiv: available with key_trabbl -->
+	<field id="uoce_bbl"     description="BBL ocean current along i-axis"              unit="m/s"  axis_ref="none" />
+	<field id="ahu_bbl"      description="BBL diffusive flux along i-axis"             unit="m3/s" axis_ref="none" />
+ 	<!-- variables available with key_diaar5 -->
+	<field id="u_masstr"     description="ocean eulerian mass transport along i-axis"  unit="kg/s"                 />
+	<field id="u_heattr"     description="ocean eulerian heat transport along i-axis"  unit="W"    axis_ref="none" />
+	<field id="ueiv_heattr"  description="ocean bolus heat transport along i-axis"     unit="W"    axis_ref="none" />
+	<field id="udiff_heattr" description="ocean diffusion heat transport along i-axis" unit="W"    axis_ref="none" />
+	<!-- variables available with key_diacorr -->
+	<field id="uu"           description="Square of 3D zonal velocity field" unit="(m/s)2" standard="square_of_sea_water_x_velocity" axis_ref="depthu"   />
+	<field id="ut"           description="Product of zonal velocity and temperature at U points" standard="product_of_sea_water_x_velocity_and_temperature" unit="degC m/s" axis_ref="depthu"   />
+	<field id="us"           description="Product of zonal velocity and salinity at U points" standard="product_of_sea_water_x_velocity_and_salinity" unit="PSU m/s" axis_ref="depthu"   />
+	<field id="urhop"        description="Product of zonal velocity and density at U points" standard="product_of_sea_water_x_velocity_and_density" unit="(kg/m3).(m/s)" axis_ref="depthu"   />
+     </group>
+      
+      <!-- V grid -->
+      
+      <group id="grid_V"  axis_ref="depthv" grid_ref="grid_V">
+	<field id="vtau"         description="Wind Stress along j-axis" standard="surface_downward_y_stress" unit="N/m2" axis_ref="none" />
+	<field id="voce"         description="Meridional Current"       standard="sea_water_y_velocity"      unit="m/s"                  />
+	<field id="vocetr_eff"   description="Effective ocean transport along j-axis"      unit="m3/s"                  />
+	<!-- voce_eiv: available with key_traldf_eiv and key_diaeiv -->
+	<field id="voce_eiv"     description="Meridional EIV Current"    standard="bolus_sea_water_y_velocity" unit="m/s"                />
+	<!-- voce_eiv: available with key_trabbl -->
+	<field id="voce_bbl"     description="BBL ocean current along j-axis"              unit="m/s" axis_ref="none"  />
+	<field id="ahv_bbl"      description="BBL diffusive flux along j-axis"             unit="m3/s" axis_ref="none" />
+	<!-- variables available with key_diaar5 -->
+	<field id="v_masstr"     description="ocean eulerian mass transport along j-axis"  unit="kg/s"                 />
+	<field id="v_heattr"     description="ocean eulerian heat transport along j-axis"  unit="W"    axis_ref="none" />
+	<field id="veiv_heattr"  description="ocean bolus heat transport along j-axis"     unit="W"    axis_ref="none" />
+	<field id="vdiff_heattr" description="ocean diffusion heat transport along j-axis" unit="W"    axis_ref="none" />
+	<!-- variables available with key_diacorr -->
+	<field id="vv"           description="Square of 3D meridional velocity field" unit="(m/s)2" standard="square_of_sea_water_y_velocity" axis_ref="depthv"   />
+	<field id="vt"           description="Product of meridional velocity and temperature at V points" standard="product_of_sea_water_y_velocity_and_temperature" unit="degC m/s" axis_ref="depthv"   />
+	<field id="vs"           description="Product of meridional velocity and salinity at V points" standard="product_of_sea_water_y_velocity_and_salinity" unit="PSU m/s" axis_ref="depthv"   />
+	<field id="vrhop"        description="Product of meridional velocity and density at V points" standard="product_of_sea_water_y_velocity_and_density" unit="(kg/m3).(m/s)" axis_ref="depthv"   />
+      </group>
+      
+      <!-- W grid -->
+      
+      <group id="grid_W"  axis_ref="depthw" grid_ref="grid_W">
+	<field id="woce"         description="Vertical Velocity" standard="upward_sea_water_velocity"  unit="m/s"                  />
+	<field id="wocetr_eff"   description="effective ocean vertical transport"          unit="m3/s"                 />
+	<!-- woce_eiv: available with key_traldf_eiv and key_diaeiv -->
+	<field id="woce_eiv"     description="Vertical EIV Velocity" standard="bolus_upward_sea_water_velocity"  unit="m/s"                  />
+	<!-- woce_eiv: available with key_trabbl_adv -->
+	<field id="avt"          description="Vertical Eddy Diffusivity" standard="ocean_vertical_heat_diffusivity"    unit="m2/s"                 />
+	<field id="avm"          description="Vertical Eddy Viscosity" standard="ocean_vertical_momentum_diffusivity"  unit="m2/s"                 />
+	<!-- avs: available with key_zdfddm -->
+	<field id="avs"          description="Salt Vertical Eddy Diffusivity" standard="ocean_vertical_salt_diffusivity"  unit="m2/s"              />
+	<!-- avt_evd and avm_evd: available with ln_zdfevd -->
+	<field id="avt_evd"      description="enhanced vertical diffusivity"               unit="m2/s"                 />
+	<field id="avm_evd"      description="enhanced vertical viscosity"                 unit="m2/s"                 />
+	<!-- aht2d and  aht2d_eiv: available with key_traldf_eiv and key_traldf_c2d -->
+	<field id="aht2d"        description="lateral eddy diffusivity" standard="vertical_component_of_ocean_xy_tracer_diffusivity" unit="m2/s" axis_ref="none" />
+	<field id="aht2d_eiv"    description="eddy induced vel. coeff. at w-point" standard="ocean_isopycnal_layer_thickness_diffusivity" unit="m2/s" axis_ref="none" />
+	<!-- avt_tide: available with key_zdftmx -->
+	<field id="av_tide"      description="tidal vertical diffusivity"                  unit="m2/s"                 />
+	<!-- variables available with key_diaar5 -->   
+	<field id="w_masstr"     description="vertical mass trasport"                      unit="kg/s"                 />
+	<field id="w_masstr2"    description="square of vertical mass trasport"            unit="kg2/s2"               />
+	<!-- variables available with key_diacorr -->
+	<field id="ww"           description="Square of 3D meridional velocity field" unit="(m/s)2" standard="square_of_sea_water_y_velocity" axis_ref="depthw"   />
+	<field id="wt"           description="Product of vertical velocity and temperature at W points" standard="product_of_sea_water_z_velocity_and_temperature" unit="degC m/s" axis_ref="depthw"   />
+	<field id="ws"           description="Product of vertical velocity and salinity at W points" standard="product_of_sea_water_z_velocity_and_salinity" unit="PSU m/s" axis_ref="depthw"   />
+	<field id="wrhop"        description="Product of vertical velocity and density at W points" standard="product_of_sea_water_z_velocity_and_density" unit="(kg/m3).(m/s)" axis_ref="depthw"   />
+      </group>
+          
+      <!-- scalar -->
+      
+      <!-- variables available with key_diaar5 -->
+      <group id="scalar" axis_ref="none" grid_ref="scalarpoint" zoom_ref="1point" >
+	<field id="voltot"     description="global mean volume"                         unit="m3"   />
+	<field id="sshtot"     description="global mean ssh"                            unit="m"    />
+	<field id="sshsteric"  description="global mean ssh steric"                     unit="m"    />
+	<field id="sshthster"  description="global mean ssh thermosteric"               unit="m"    />
+	<field id="masstot"    description="global mean mass"                           unit="kg"   />
+	<field id="temptot"    description="global mean temperature"                    unit="degC" />
+	<field id="saltot"     description="global mean salinity"                       unit="psu"  />
+	<field id="fram_trans" description="Sea Ice Mass Transport Through Fram Strait" unit="kg/s" />
+      </group>
+
+    </field_definition>
+    
+    <!-- 
+============================================================================================================
+=                                           output files definition                                        =
+=                                            Define your own files                                         =
+=                                         put the variables you want...                                    =
+============================================================================================================
+
+    -->
+    
+    <file_definition >
+
+      <group id="1m" output_freq="-1" output_level="10" enabled=".TRUE.">                      <!-- monthly files -->
+
+	<file id="1m_grid_T" name="auto" description="ocean T grid variables" >
+	  <field ref="toce"         name="votemper"  />
+	  <field ref="soce"         name="vosaline"  />
+	  <field ref="sst"          name="sosstsst"  />
+	  <field ref="sss"          name="sosaline"  />
+	  <field ref="ssh"          name="sossheig"  />
+	  <field ref="ssh2"         name="sosshei2"  />
+	  <field ref="empmr"        name="sowaflup"  />
+	  <field ref="runoffs"      name="sorunoff"  />
+	  <field ref="qsr"          name="soshfldo"  />
+	  <field ref="empsmr"       name="sowaflcd"  />
+	  <field ref="qt"           name="sohefldo"  />
+	  <field ref="mldr10_1"     name="somxl010"  />
+	  <field ref="mldkara"      name="sokaraml"  />
+	  <field ref="mldkz5"       name="somixhgt"  />
+	  <field ref="ice_cover"    name="soicecov"  />
+	  <field ref="wspd"         name="sowindsp"  />
+	  <field ref="mlddzt"       name="sothedep"  />
+	  <field ref="18d"          name="so18chgt"  />
+	  <field ref="20d"          name="so20chgt"  />
+	  <field ref="28d"          name="so28chgt"  />
+	  <field ref="hc300"        name="sohtc300"  />
+	  <field ref="rhop"         name="rhop"  />
+          <field ref="tt"           name="tt" />
+          <field ref="ss"           name="ss" />
+          <field ref="rhop2"        name="rhop2" />
+          <field ref="Ttrd_ldf"     name="Ttrd_ldf"     />
+          <field ref="Ttrd_zdf"     name="Ttrd_zdf"     />
+          <field ref="Strd_ldf"     name="Strd_ldf"     />
+          <field ref="Strd_zdf"     name="Strd_zdf"     />
+	</file>
+	
+	<file id="1m_grid_U" name="auto" description="ocean U grid variables" >
+	  <field ref="uoce"         name="vozocrtx"  />
+	  <field ref="utau"         name="sozotaux"  />
+          <field ref="uu"           name="uu" />
+          <field ref="ut"           name="ut" />
+          <field ref="us"           name="us" />
+          <field ref="urhop"        name="urhop" />
+	</file>
+	
+	<file id="1m_grid_V" name="auto" description="ocean V grid variables" >
+	  <field ref="voce"         name="vomecrty"  />
+	  <field ref="vtau"         name="sometauy"  />
+          <field ref="vv"           name="vv" />
+          <field ref="vt"           name="vt" />
+          <field ref="vs"           name="vs" />
+          <field ref="vrhop"        name="vrhop" />
+	</file>
+	
+	<file id="1m_grid_W" name="auto" description="ocean W grid variables" >
+	  <field ref="woce"         name="vovecrtz" />
+	  <field ref="avt"          name="votkeavt" />
+	  <field ref="avt_evd"      name="votkeevd" />
+	  <field ref="avm"          name="votkeavm" />
+	  <field ref="avm_evd"      name="votkeevm" />
+	  <field ref="avs"          name="voddmavs" />
+	  <field ref="aht2d"        name="soleahtw" />
+	</file>
+
+      </group>
+
+    </file_definition>
+    
+    <!-- 
+============================================================================================================
+=                                           grid definition                                                =
+=                                            DO NOT CHANGE                                                 =
+============================================================================================================
+    -->
+    
+    <axis_definition>  
+      <axis id="deptht" description="Vertical T levels" unit="m" positive=".false." />
+      <axis id="depthu" description="Vertical U levels" unit="m" positive=".false." />
+      <axis id="depthv" description="Vertical V levels" unit="m" positive=".false." />
+      <axis id="depthw" description="Vertical W levels" unit="m" positive=".false." />
+      <axis id="none" description="axe non defini" unit="none" size="1" />
+    </axis_definition> 
+    
+    <grid_definition>
+      <grid id="grid_T" description="grid T" >
+    <!--   Eq section   -->
+	<zoom id="EqT" ibegin="1" jbegin="0000" ni="0000" nj="1" />
+    <!--   TAO   -->
+      <!--   137e   -->
+	<zoom id="2n137eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5n137eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="8n137eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      <!--   147e   -->
+	<zoom id="0n147eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2n147eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5n147eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      <!--   156e   -->
+	<zoom id="5s156eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2s156eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="0n156eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2n156eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5n156eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="8n156eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      <!--   165e   -->
+	<zoom id="8s165eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5s165eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2s165eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="0n165eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2n165eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5n165eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="8n165eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      <!--   180w   -->
+	<zoom id="8s180wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5s180wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2s180wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="0n180wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2n180wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5n180wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="8n180wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      <!--   170w   -->
+	<zoom id="8s170wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5s170wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2s170wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="0n170wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2n170wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5n170wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="8n170wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      <!--   155w   -->
+	<zoom id="8s155wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5s155wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2s155wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="0n155wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2n155wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5n155wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="8n155wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      <!--   140w   -->
+	<zoom id="8s140wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5s140wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2s140wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="0n140wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2n140wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5n140wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="8n140wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      <!--   125w   -->
+	<zoom id="8s125wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5s125wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2s125wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="0n125wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2n125wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5n125wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="8n125wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      <!--   110w   -->
+	<zoom id="8s110wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5s110wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2s110wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="0n110wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2n110wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5n110wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="8n110wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      <!--   95w   -->
+	<zoom id="8s95wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5s95wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2s95wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="0n95wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="2n95wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5n95wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="8n95wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+    <!--   RAMA   -->
+      <!--   55e   -->
+	<zoom id="16s55eT"    ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="12s55eT"    ibegin="0000" jbegin="0000" ni="1" nj="1" />
+ 	<zoom id="8s55eT"     ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="4s55eT"     ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="1.5s55eT"   ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="0n55eT"     ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="1.5n55eT"   ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="4n55eT"     ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      <!--   65e   -->
+	<zoom id="15n65eT"    ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      <!--   67e   -->
+	<zoom id="16s67eT"    ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="12s67eT"    ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="8s67eT"     ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="4s67eT"     ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="1.5s67eT"   ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="0n67eT"     ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="1.5n67eT"   ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="4n67eT"     ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="8n67eT"     ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      <!--   80.5e   -->
+	<zoom id="16s80.5eT"  ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="12s80.5eT"  ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="8s80.5eT"   ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="4s80.5eT"   ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="1.5s80.5eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="0n80.5eT"   ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="1.5n80.5eT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="4n80.5eT"   ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      <!--   90e   -->
+	<zoom id="1.5s90eT"   ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="0n90eT"     ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="1.5n90eT"   ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="4n90eT"     ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="8n90eT"     ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="12n90eT"    ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="15n90eT"    ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      <!--   95e   -->
+	<zoom id="16s95eT"    ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="12s95eT"    ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="8s95eT"     ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="5s95eT"     ibegin="0000" jbegin="0000" ni="1" nj="1" />
+    <!--   PIRATA   -->
+      <!--   38w-30w   -->
+	<zoom id="19s34wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="14s32wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="8s30wT"  ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="0n35wT"  ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="4n38wT"  ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="8n38wT"  ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="12n38wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="15n38wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="20n38wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      <!--   23w   -->
+	<zoom id="0n23wT"  ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="4n23wT"  ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="12n23wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="21n23wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      <!--   10w   -->
+	<zoom id="10s10wT" ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="6s10wT"  ibegin="0000" jbegin="0000" ni="1" nj="1" />
+	<zoom id="0n10wT"  ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      <!--   0e   -->
+	<zoom id="0n0eT"   ibegin="0000" jbegin="0000" ni="1" nj="1" />
+      </grid>
+
+      <grid id="grid_U" description="grid U" >
+    <!--   Eq section   -->
+	<zoom id="EqU" ibegin="1" jbegin="0000" ni="0000" nj="1" />
+      </grid>
+
+      <grid id="grid_V" description="grid V" >
+      </grid>
+
+      <grid id="grid_W" description="grid W" >
+    <!--   Eq section   -->
+	<zoom id="EqW" ibegin="1" jbegin="0000" ni="0000" nj="1" />
+      </grid>
+
+      <grid id="scalarpoint" description="scalar" >
+	<zoom id="1point" ibegin="1" jbegin="1" ni="1" nj="1" />
+      </grid>
+
+    </grid_definition>    
+    
+  </context>
+
+</simulation>

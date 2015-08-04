@@ -1,0 +1,528 @@
+#!/usr/bin/env bash
+# *****************************COPYRIGHT******************************
+# (C) Crown copyright Met Office. All rights reserved.
+# For further details please refer to the file COPYRIGHT.txt
+# which you should have received as part of this distribution.
+# *****************************COPYRIGHT******************************
+#-----------------------------------------------------------------------
+# Code Owner: Please refer to the UM file CodeOwners.txt
+# This file belongs in section: Rose scripts
+#-----------------------------------------------------------------------
+# NAME
+#     run_nemo_cice
+#
+# SYNOPSIS
+#     run_nemo_cice [EXE ...]
+#
+# DESCRIPTION
+#     Set up the environment and namelists for running the coupled model and 
+#     passes an MPI command file to the um-atmos script.
+#
+# ARGUMENTS
+#     None.
+#
+# ENVIRONMENT VARIABLES
+#     This script uses the following variables:
+#
+#     CICE_ATMOS_DATA
+#          Directory for CICE atmosphere forcing data.
+#     CICE_GRID
+#          Full path to the CICE grid file.
+#     CICE_KMT
+#          Full path to the CICE kmt file.
+#     CICE_NL
+#          File containing the CICE input namelist. Default=ice_in.
+#     CICE_NPROC
+#          Number of processors for CICE in the ocean executable.
+#     CICE_OCEAN_DATA
+#          Directory for CICE ocean forcing data.
+#     CICE_RESTART
+#          File containing CICE restart data. Default=ice.restart_file.
+#     CICE_START
+#          Location of the CICE start dump.
+#     CONTINUE
+#          Flag for Nrun - If not provided a new history file is created from INITHIS.
+#          Default=false.
+#     DATAM
+#          Directory for time-stamped STASH and dump files. Default=$DATAW.
+#     DATAW
+#          Location of task-shared working directory. Defaults:
+#          1. $ROSE_DATA
+#          2. $PWD
+#     OCEAN_LINK
+#          Name of the symbolic link to the ocean executable. Default=toyoce.
+#     MODELBASIS
+#          The basis time for the model run. If not provided, read from the
+#          UM namelists.
+#     NEMO_NL
+#          File containing the NEMO input namelist. Default=namelist.
+#     NEMO_IPROC
+#          Number of NEMO processors east-west.
+#     NEMO_JPROC
+#          Number of NEMO processors north-south.
+#     NEMO_NPROC
+#          Number of processors for NEMO in the ocean executable.
+#     NEMO_VERSION
+#          The version of NEMO being run in the form XY, where X is the major
+#          version number and Y is the 2-digit minor version number. 
+#          Default=302.
+#     TASKEND
+#          End time for this model run. If not provided, the run length is
+#          calculated from the UM namelists.
+#     TASKSTART
+#          The start time for this model run.
+#     RUNID
+#          Stem name of output files. Default=ocean.
+#-----------------------------------------------------------------------
+
+set -eu
+
+function expand_array()
+{
+# Expand shortened arrays containing 'n*m' entries into a full list
+# Arguments:
+  local namelist_item=$1
+  local filename=$2
+
+# Pipe through head in case the same item is repeated in multiple namelists:
+  local longlist=$(grep ^$namelist_item= $filename | head -n 1 | awk -F "=" {'print $2'})
+  longlist=$(echo $longlist | \
+    awk ' BEGIN { FS = ","; OFS = "," }
+          {
+          for (field=1; field<=NF; field++)
+              {
+              if ((x=index($field,"*")) > 0)
+                  {
+                  repeat = substr($field,1,x-1)
+                  value  = substr($field,x+1,length($field))
+                  $field = value;
+                  for (i=2; i<=repeat; i++)
+                      { $field=$field "," value }
+                  }
+              }
+          print $0
+          } ')
+
+  echo $longlist
+}
+
+export RUNID=${RUNID:-ocean}
+
+if [[ -z ${OCEAN_EXEC:-} ]]; then
+    echo "[FAIL] Ocean executable (OCEAN_EXEC=<full path to exec>) not defined in the environment." >&2
+    exit 110
+fi
+
+OCEAN_LINK=${OCEAN_LINK:-toyoce}
+export PATH=$PWD:$PATH
+
+echo "NEMO executable is $OCEAN_EXEC"
+
+ln -sf $OCEAN_EXEC $OCEAN_LINK
+
+# Redefine exec names for the setup scripts later:
+OCEAN_EXEC=$OCEAN_LINK
+export PATH=$PWD:$PATH
+
+TOT_NPES=$((NEMO_NPROC))
+
+# CALENDAR read in as environment variable to the nemo_cice app.
+echo "CALENDAR: $CALENDAR"
+
+# Determine start and end times, reading directly from namelists if not 
+# provided by the suite.
+OLDIFS=$IFS
+IFS=","
+MODEL_BASIS=($MODELBASIS)
+RUN_START=($TASKSTART)
+RUN_LENGTH=($TASKLENGTH)
+IFS=$OLDIFS
+RUN_DAYS=$(UMScr_CalcIncrementDays \
+           ${RUN_START[0]} ${RUN_START[1]} ${RUN_START[2]} \
+           ${RUN_LENGTH[0]} ${RUN_LENGTH[1]} ${RUN_LENGTH[2]} $(echo $CALENDAR | sed 's/day//g'))
+
+DAYS_TO_BASIS=$(UMScr_Time2Days ${MODEL_BASIS[0]} ${MODEL_BASIS[1]} ${MODEL_BASIS[2]} $(echo $CALENDAR | sed 's/day//g'))
+DAYS_TO_START=$(UMScr_Time2Days ${RUN_START[0]} ${RUN_START[1]} ${RUN_START[2]} $(echo $CALENDAR | sed 's/day//g'))
+########################################################################
+### NEMO
+########################################################################
+
+NEMO_NL=${NEMO_NL:-namelist}
+
+export NEMO_VERSION=${NEMO_VERSION:-302}
+export NEMO_NL_ICE=${NEMO_NL_ICE:-}
+export NEMO_START=${NEMO_START:-}
+
+if [[ "$CALENDAR" == "360day" ]]; then
+    NLEAPY=30  #I think this must require a NEMO branch?
+elif [[ "$CALENDAR" == "365day" ]]; then
+    NLEAPY=0
+else
+    NLEAPY=1
+fi
+echo "NLEAPY: $NLEAPY"
+
+NEMO_RST=$(grep "cn_rst_dir" $NEMO_NL | awk -F "[\"\']" {'print $2'})
+NEMO_RST=${NEMO_RST%%/}
+#Think next two lines are for LIM model?
+NEMO_ICERST=$(grep "cn_icerst_dir" $NEMO_NL | awk -F "[\"\']" {'print $2'})
+NEMO_ICERST=${NEMO_ICERST%%/}
+#######
+for dir in ${NEMO_RST:-} ${NEMO_ICERST:-}; do
+    if [[ -d $dir && "$dir" != "./" && -z ${CONTINUE:-} ]]; then
+        echo "[INFO] dir is $dir"
+        echo "[INFO] RUN_NEMO_CICE: This is a New Run. Renaming old NEMO history directory."
+        mv $dir $dir.$(date +%Y%m%d%H%M)
+        mkdir -p $dir
+    elif [[ ! -d $dir ]]; then
+        echo "[INFO] RUN_NEMO_CICE: Creating NEMO restart directory:"
+        echo "       $dir"
+        mkdir -p $dir
+    fi
+done
+NEMO_RSTFILES=(${NEMO_RST:-$DATAM}/*_restart*nc)
+LATEST_NEMO_DUMP=${NEMO_RSTFILES[@]:(-1)}
+INIT_DIR="."
+if  [[ -z ${CONTINUE:-} ]]; then
+    echo '[INFO] RUN_NEMO_CICE: This is a New Run.'
+    if [[ -f $LATEST_NEMO_DUMP ]] || [[ -L $LATEST_NEMO_DUMP ]]; then
+        echo "[INFO] RUN_NEMO_CICE: Deleting old NEMO restart data."
+        rm -rf ${NEMO_RST:-$DATAM}/*restart* ${NEMO_ICERST:-$DATAM}/*restart* $PWD/*restart* 2>/dev/null
+    fi
+
+elif [[ -f $LATEST_NEMO_DUMP ]] || [[ -L $LATEST_NEMO_DUMP ]]; then
+    echo "[INFO] RUN_NEMO_CICE: Restart available in ${NEMO_RST:-$DATAM} - restarting from previous task output."
+    INIT_DIR=${NEMO_RST:-$DATAM}   
+
+else
+    echo "[FAIL] RUN_NEMO_CICE: No restart data available in NEMO restart directory:"
+    echo "                  ${NEMO_RST:-$DATAM}"
+    exit 115
+fi
+
+S_RSTDATE='!'
+FIRST_STEP_MATCH="nn_it000="
+LAST_STEP_MATCH="nn_itend.*=" 
+STEP_INT_MATCH="rn_rdt="
+
+#Read last time step from namelist from previous job step 
+NEMO_FIRST_STEP=$(grep "$FIRST_STEP_MATCH" $INIT_DIR/$NEMO_NL |awk -F ' *[\=\,] *' {'print $2'})
+NEMO_LAST_STEP=$(grep "$LAST_STEP_MATCH" $INIT_DIR/$NEMO_NL |awk -F ' *[\=\,] *' {'print $2'})
+NEMO_LAST_STEP=$( echo $NEMO_LAST_STEP )
+NEMO_STEP_INT=$(grep "$STEP_INT_MATCH" $NEMO_NL |awk -F ' *[\=\.\!] *' {'print $2'})
+NEMO_NDATE0=$(printf "%04d%02d%02d" ${MODEL_BASIS[0]#0} ${MODEL_BASIS[1]#0} ${MODEL_BASIS[2]#0})
+NEMO_RESTART_DATE=$(grep "ln_rstdate" $INIT_DIR/$NEMO_NL |awk -F ' *[\=\,] *' {'print $2'})
+
+if [[ -f $LATEST_NEMO_DUMP ]]; then
+    NEMO_DUMP_TIME=$(echo $LATEST_NEMO_DUMP | awk -F "/" {'print $NF'} | cut -c8-15)
+
+    # Link restart files so that last output one becomes next input one:
+    if [[ -L restart.nc ]]; then rm -f restart.nc; fi
+    if [[ -L restart_ice_in.nc ]]; then rm -f restart_ice_in.nc; fi
+    if [[ $NEMO_NPROC -eq 1 ]]; then
+        ln -sf $INIT_DIR/${RUNID}o_${NEMO_DUMP_TIME}_restart.nc restart.nc
+        if [[ -s ${NEMO_ICERST:-$INIT_DIR}/${RUNID}o_${NEMO_DUMP_TIME}_restart_ice.nc ]]; then 
+            ln -sf ${NEMO_ICERST:-$INIT_DIR}/${RUNID}o_${NEMO_DUMP_TIME}_restart_ice.nc restart_ice_in.nc
+        fi
+    else    
+        i=0
+        while [[ $i -lt $NEMO_NPROC ]]; do
+            tag=$(printf "%04d" $i)
+            ln -sf $INIT_DIR/${RUNID}o_${NEMO_DUMP_TIME}_restart_${tag}.nc restart_${tag}.nc
+            if [[ -s ${NEMO_ICERST:-$INIT_DIR}/${RUNID}o_${NEMO_DUMP_TIME}_restart_ice_${tag}.nc ]]; then
+                ln -sf ${NEMO_ICERST:-$INIT_DIR}/${RUNID}o_${NEMO_DUMP_TIME}_restart_ice_${tag}.nc restart_ice_in_${tag}.nc
+            fi
+            let i=$i+1
+        done
+    fi
+
+    if [[ ${NEMO_RESTART_DATE:-} = ".true." ]]; then
+        NEMO_DUMP_YEARS=$(echo $NEMO_DUMP_TIME | cut -c1-4)
+        NEMO_DUMP_MONTHS=$(echo $NEMO_DUMP_TIME | cut -c5-6)
+        NEMO_DUMP_DAYS=$(echo $NEMO_DUMP_TIME | cut -c7-8)
+
+        NEMO_DAYS_TO_DUMP=$(UMScr_Time2Days $NEMO_DUMP_YEARS \
+            $NEMO_DUMP_MONTHS $NEMO_DUMP_DAYS $(echo $CALENDAR | sed 's/day//g'))
+
+    else
+        NEMO_DUMP_TIME=$(( 10#$NEMO_DUMP_TIME ))
+        NEMO_DAYS_TO_DUMP=$(( (NEMO_DUMP_TIME * NEMO_STEP_INT / 86400) + DAYS_TO_BASIS ))
+        echo "[INFO] RUN_NEMO_CICE: NEMO has previously completed $(( NEMO_DUMP_TIME * NEMO_STEP_INT / 86400))  days."
+    fi
+
+    LN_RSTART=".true."
+    RESTART_CTL=2
+
+    NEMO_NEXT_STEP=$(( NEMO_LAST_STEP + 1 ))
+
+else  # NRuns...
+    if [[ -n ${NEMO_START} ]]; then
+        ln -sf ${NEMO_START} restart.nc
+        LN_RSTART=".true."
+    else
+        echo "[WARN] NEMO_START not set, NEMO will use climatology." 
+        LN_RSTART=".false."
+    fi
+    RESTART_CTL=0
+
+    NEMO_NEXT_STEP=$(echo $NEMO_FIRST_STEP)
+    NEMO_LAST_STEP=$(( NEMO_NEXT_STEP - 1 ))
+fi
+
+TOT_RUNLEN_SEC=$(( RUN_DAYS * 86400 ))
+TOT_RUNLEN_SEC=$(( TOT_RUNLEN_SEC + (RUN_LENGTH[3] * 3600) ))
+TOT_RUNLEN_SEC=$(( TOT_RUNLEN_SEC + (RUN_LENGTH[4] * 60) ))
+TOT_RUNLEN_SEC=$(( TOT_RUNLEN_SEC + RUN_LENGTH[5] ))
+NEMO_FINAL_STEP=$(( (TOT_RUNLEN_SEC / NEMO_STEP_INT) + NEMO_LAST_STEP ))
+
+update_nemo_nl --file $NEMO_NL        \
+    --runid ${RUNID}o                 \
+    --restart $LN_RSTART              \
+    --restart_ctl $RESTART_CTL        \
+    --next_step $NEMO_NEXT_STEP       \
+    --final_step $NEMO_FINAL_STEP     \
+    --start_date $NEMO_NDATE0         \
+    --leapyear $NLEAPY                \
+    --iproc $NEMO_IPROC               \
+    --jproc $NEMO_JPROC               \
+    --ijproc $NEMO_NPROC              \
+    --verbose
+
+########################################################################
+### CICE
+########################################################################
+
+CICE_NL=${CICE_IN:-ice_in}
+echo "CICE_IN is $CICE_IN"
+
+if [[ "$CALENDAR" == "360day" ]]; then
+    CALDAYS=360
+    CICE_LEAP_YEARS=".false."
+elif [[ "$CALENDAR" = "365day" ]]; then
+    CALDAYS=365
+    CICE_LEAP_YEARS=".false."
+else
+    CALDAYS=365
+    CICE_LEAP_YEARS=".true."
+fi
+
+if [[ -z ${CICE_GRID:-} ]]; then
+    echo "[FAIL] CICE input grid file (CICE_GRID=<file>) not defined in the environment." >&2
+    exit 140
+fi
+if [[ -z ${CICE_KMT:-} ]]; then
+    echo "[FAIL] CICE land-sea mask file (CICE_KMT=<file>) not defined in the environment." >&2
+    exit 150
+fi
+
+CICE_STEP_INT=$(grep ^dt= $CICE_NL | awk -F '=' {'print int($2)'})
+CICE_STEPS=$(expr $TOT_RUNLEN_SEC / $CICE_STEP_INT)
+# Must handle both the "1,1,1" and "3*1" forms Rose produces:
+CICE_HISTFREQ=$(expand_array histfreq $CICE_NL | awk -F "[=',.]" {'print $2'})
+CICE_HISTFREQ_N=$(expand_array histfreq_n $CICE_NL | awk -F "[=,.]" {'print $1'})
+CICE_AGE_REST=$(grep ^restart_age= $CICE_NL | awk -F '[=.]' {'print $3'} )
+
+DAYS_TO_YEAR_INIT=$(UMScr_Time2Days ${MODEL_BASIS[0]} 1 1 $(echo $CALENDAR | sed 's/day//g'))
+CICE_ISTEP0=$(( (DAYS_TO_START - DAYS_TO_YEAR_INIT) * 86400 / CICE_STEP_INT ))
+
+ATM_DATA_DIR=unknown_atm_data_dir:${CICE_ATMOS_DATA:-}
+OCN_DATA_DIR=unknown_ocn_data_dir:${CICE_OCEAN_DATA:-}
+CICE_START=${CICE_START:-}
+CICE_RST=$(grep "restart_dir" $CICE_NL |awk -F "[\"\']" {'print $2'})
+CICE_RST=${CICE_RST%%/}
+if [[ $CICE_RST -ef $PWD ]]; then 
+    CICE_RESTART=$(echo $DATAM/${CICE_RESTART:-ice.restart_file} | sed 's.\/\/.\/.g')
+else 
+    CICE_RESTART=$(echo $CICE_RST/${CICE_RESTART:-ice.restart_file})
+fi
+
+CICE_HIST=$(grep "history_dir" $CICE_NL |awk -F "[\"\']" {'print $2'})
+CICE_INCOND=$(grep "incond_dir" $CICE_NL |awk -F "[\"\']" {'print $2'})
+for dir in $CICE_RST $CICE_HIST $CICE_INCOND; do
+    if [[ -d $dir && "$dir" != "./" && -z ${CONTINUE:-} ]]; then
+        echo "[INFO] dir is $dir"
+        echo "[INFO] RUN_NEMO_CICE: This is a New Run. Renaming old CICE history directory."
+        mv $dir $dir.$(date +%Y%m%d%H%M)
+        mkdir -p $dir
+    elif [[ ! -d $dir ]]; then
+        echo "[INFO] RUN_NEMO_CICE Creating CICE output directory:"
+        echo "       $dir"
+        mkdir -p $dir
+    fi
+done
+
+CICE_RSTFILES=($CICE_RST/*i.restart.*)
+LATEST_CICE_RSTFILE=${CICE_RSTFILES[@]:(-1)}
+
+if  [[ -z ${CONTINUE:-} ]]; then
+    echo '[INFO] RUN_NEMO_CICE: This is a New Run.'
+    if [[ -f $LATEST_CICE_RSTFILE ]] || [[ -L $LATEST_CICE_RSTFILE ]]; then
+        echo "[INFO] RUN_NEMO_CICE: Deleting old CICE restart data."
+        rm -rf ${CICE_RST}/*restart* 2>/dev/null
+    fi
+
+    if [[ -n $CICE_START ]]; then
+        if [[ $CICE_AGE_REST = "true" ]]; then
+            CICE_RUNTYPE=continue
+            ICE_IC='set_in_pointer_file'
+            echo $CICE_START > $CICE_RESTART
+        else
+            CICE_RUNTYPE=initial
+            ICE_IC=${CICE_START}
+        fi
+        RESTART=.true.
+    else 
+        ICE_IC=default
+        CICE_RUNTYPE=initial
+        RESTART=.false.
+    fi
+
+elif [[ -f $LATEST_CICE_RSTFILE ]] || [[ -L $LATEST_CICE_RSTFILE ]]; then
+    echo "[INFO] RUN_NEMO_CICE: CICE restart available in ${CICE_RST} - restarting from previous task output."
+
+    CICE_RUNTYPE=continue
+    RESTART=.true.
+    if [[ -n $CICE_START ]]; then
+        ICE_IC='set_in_pointer_file'
+    else
+        ICE_IC=default
+    fi
+
+else
+    echo "[FAIL] RUN_NEMO_CICE: No restart data available in CICE restart directory:"
+    echo "                  ${CICE_RST}"
+    exit 115
+fi
+
+# Modify main CICE namelist 
+ed $CICE_NL <<EOF
+/days_per_year=/c
+days_per_year=$CALDAYS,
+.
+/history_file=/c
+history_file='${RUNID}i.${CICE_HISTFREQ_N}${CICE_HISTFREQ}',
+.
+/ice_ic=/c
+ice_ic='$ICE_IC',
+.
+/incond_file=/c
+incond_file='${RUNID}i_ic',
+.
+/istep0=/c
+istep0=$CICE_ISTEP0,
+.
+/npt=/c
+npt=$CICE_STEPS,
+.
+/pointer_file=/c
+pointer_file='$CICE_RESTART',
+.
+/restart=/c
+restart=$RESTART,
+.
+/restart_file=/c
+restart_file='${RUNID}i.restart',
+.
+/runtype=/c
+runtype='$CICE_RUNTYPE',
+.
+/use_leap_years=/c
+use_leap_years=$CICE_LEAP_YEARS,
+.
+/year_init=/c
+year_init=${MODEL_BASIS[0]},
+.
+/grid_file=/c
+grid_file='${CICE_GRID}',
+.
+/kmt_file=/c
+kmt_file='${CICE_KMT}',
+.
+/nprocs=/c
+nprocs=$CICE_NPROC,
+.
+/atm_data_dir=/c
+atm_data_dir='$ATM_DATA_DIR',
+.
+/ocn_data_dir=/c
+ocn_data_dir='$OCN_DATA_DIR',
+.
+w
+q
+EOF
+
+
+SIGNALS='EXIT'
+FINALLY() {
+    for S in $SIGNALS; do
+        trap '' $S # Switch off traps
+    done
+
+    NEMO_STDOUT_FILE=ocean.output
+    if [[ -f $NEMO_STDOUT_FILE ]]; then
+        echo '%NEMO OUTPUT%'
+        cat $NEMO_STDOUT_FILE
+    fi
+    
+    NEMO_SOLVER_FILE=solver.stat
+    if [[ -f $NEMO_SOLVER_FILE ]]; then
+        echo '%NEMO SOLVER STATS%'
+        cat $NEMO_SOLVER_FILE
+    fi
+}
+
+for S in $SIGNALS; do
+    trap 'FINALLY' $S
+done
+
+echo "ocean exec $OCEAN_EXEC"
+echo "our working directory is $(pwd)"
+echo "our call to aprun:"
+echo "aprun -n $NEMO_NPROC -N 32 -S 16 -j 1 -d 1 ./$OCEAN_EXEC"
+aprun -n ${NEMO_NPROC} -N 32 -j 1 -d 1 ./${OCEAN_EXEC}
+
+
+# For resubmitting jobs, store the history files somewhere accessible as required
+# This should be done OUTSIDE finally() because we don't want failed runs copying 
+# incomplete data to restart or archive directories.
+NEMO_RSTFILES=($NEMO_RST/*_restart*nc)
+if [[ -z $NEMO_RST ]] || [[ $NEMO_RST -ef $PWD ]]; then
+    if [[ -f "${NEMO_RSTFILES[@]:(-1)}" ]]; then
+        for dump in $PWD/*_restart*nc; do
+            ln -sf $dump $DATAM
+        done
+    fi
+    NEMO_RST=$DATAM
+fi
+
+if [[ -d $NEMO_RST ]] && [[ -f $NEMO_NL ]]; then
+    if [[ ! $NEMO_RST -ef $PWD ]]; then
+        # Copy namelist file to restart directory
+        cp $NEMO_NL $NEMO_RST
+    fi
+    if [[ -n ${HIST_ARCHIVE:-} ]] && [[ -f "${NEMO_RSTFILES[@]:(-1)}" ]]; then
+        mkdir -p $HIST_ARCHIVE
+        if [[ ! $HIST_ARCHIVE -ef $NEMO_RST ]]; then
+            cp $NEMO_NL $HIST_ARCHIVE
+            for dump in "${NEMO_RSTFILES[@]}"; do
+                ln -sf $dump $HIST_ARCHIVE
+            done
+        fi
+    fi
+fi
+   
+if [[ -d $CICE_RST ]] && [[ -f $CICE_RESTART ]]; then
+    if [[ ! $CICE_RST -ef $PWD ]]; then
+        # Keep a copy of the restart file for this task
+        cp $CICE_RESTART $PWD
+    fi
+    if [[ -n ${HIST_ARCHIVE:-} ]] && [[ -f $(echo $(head -1 $CICE_RESTART)) ]]; then
+        if [[ ! $HIST_ARCHIVE -ef $CICE_RST ]]; then
+            cp $CICE_RESTART $HIST_ARCHIVE
+            for dump in $CICE_RST/*i.restart.*; do
+                ln -sf $dump $HIST_ARCHIVE
+            done
+        fi
+    fi
+fi
+
