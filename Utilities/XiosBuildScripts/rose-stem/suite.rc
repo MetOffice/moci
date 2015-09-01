@@ -1,0 +1,120 @@
+#!jinja2
+{% set TASK_RUN = 'rose task-run --verbose' %}
+
+[cylc]
+    # Timeout handlers
+    [[event hooks]]
+        timeout handler = "rose suite-hook --shutdown"
+        timeout = P3D
+
+# This links a name specified on the command in rose-stem with a
+# set of cylc task dependencies
+{# name_graphs contains test_option-dependency key-value pairs -#}
+{%- set name_graphs = {
+    "test_xios" :  
+        "fcm_make_xiosScript_local => validate_xios
+         fcm_make_xiosScript_remote => buildXios => testXios
+         testXios => validate_xios => housekeeping_xios
+         validation_prepare => testXios", 
+    "test_nemo_gyre" :  
+        "fcm_make_xiosScript_local => validate_xios
+         fcm_make_xiosScript_local => validate_nemo
+         fcm_make_xiosScript_remote => buildXios 
+         buildXios => testXios => validate_xios => housekeeping_xios
+         buildXios => buildNemo => testNemo => validate_nemo => housekeeping_nemo
+         validation_prepare => testXios & testNemo"
+                      }
+-%}
+# Define groups as lists of jobs and other groups
+{# groups contains group_option-trigger_list key-value pairs. -#}
+{# If a group option is set, each group or task in the trigger list will be set. -#}
+{%- set groups = {
+    "all"       : ["test_xios",  "test_nemo_gyre"]
+    }
+%}
+
+# This loops over all tasks specified in the RUN_NAMES Jinja2 variable
+[scheduling]
+    [[dependencies]]
+        graph = """
+{#- Recursively add dependencies from RUN_NAMES, replacing groups with subgroups/tasks #}
+{%- set name_graphs_out = [] %}
+{%- set graphs_out = [] %}
+{%- for name in RUN_NAMES %}
+    {%- set namestack = [name] %}
+    {%- for stackname in namestack recursive %}
+        {%- if stackname in name_graphs %}
+            {%- if name_graphs_out.append(stackname) %}
+            {%- endif %}
+            {%- set outgraph = name_graphs[stackname] %}
+            {%- if outgraph not in graphs_out %}
+            {#- Add new dependency. #}
+{{ outgraph }}
+                {%- if graphs_out.append(outgraph) %}
+                {%- endif %}
+            {%- endif %}
+        {%- elif stackname in groups %}
+        {#- Add the group contents to the stack. #}
+{{ loop(groups[stackname]) }}
+        {%- endif %}
+    {%- endfor %}
+{%- endfor %}
+"""
+
+[runtime]
+%include 'runtime.rc'
+    
+    [[LOCAL_APP]]
+        [[[remote]]]
+            host={{ROSE_ORIG_HOST}}
+        [[[job submission]]]
+            method=at
+
+    [[fcm_make_xiosScript_local]]
+        inherit = None,LOCAL_APP
+
+    [[validation_prepare]]
+        inherit=None,LOCAL_APP
+        command scripting = "mkdir ${XIOS_RESULT_DIR}; mkdir ${NEMO_RESULT_DIR}"
+        [[[environment]]]
+            XIOS_RESULT_DIR=$ROSE_DATA/{{XIOS}}/
+            NEMO_RESULT_DIR=$ROSE_DATA/{{NEMO}}/
+
+    [[validate_xios]]
+        inherit=None,LOCAL_APP
+        [[[environment]]]
+            XIOS_KGO_DIR={{KGO_DIR}}/{{XIOS}}
+            XIOS_RESULT_DIR=$ROSE_DATA/{{XIOS}}/
+	    XIOS_REMOTE_RESULT_DIR=$(rose host-select {{HPC_HOST}} ):cylc-run/$CYLC_SUITE_NAME/share/data/{{XIOS}}
+    
+    [[validate_nemo]]
+        inherit=None,LOCAL_APP
+        [[[environment]]]
+            NEMO_KGO_DIR={{KGO_DIR}}/{{NEMO}}
+            NEMO_RESULT_DIR=$ROSE_DATA/{{NEMO}}/
+	    NEMO_REMOTE_RESULT_DIR=$(rose host-select {{HPC_HOST}} ):cylc-run/$CYLC_SUITE_NAME/share/data/{{NEMO}}
+    [[HOUSEKEEPING]]
+        inherit=None,REMOTE_APP
+{%- if HOUSEKEEPING == true %}
+        command scripting = "rose task-run --verbose"
+{%- else %}
+        command scripting = "echo Not deleting $RUN_DIR"
+{%- endif %}
+       [[[directives]]]
+{% if TEST_SYSTEM == "UKMO_CRAY_XC40" %}
+            -l walltime=00:05:00
+            -l ncpus=1
+            -q = shared
+{% endif %}        
+
+    [[housekeeping_xios]]
+        inherit=None, HOUSEKEEPING
+        [[[environment]]]
+            RUN_DIR=../testXios
+
+    [[housekeeping_nemo]]
+        inherit=None, HOUSEKEEPING
+        [[[environment]]]
+            RUN_DIR=../testNemo
+    
+

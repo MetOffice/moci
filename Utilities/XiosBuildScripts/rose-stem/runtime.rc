@@ -1,0 +1,281 @@
+    [[root]]
+{% if TEST_SYSTEM == "UKMO_IBM_PW7" %}
+        pre-command scripting = ". /critical/opt/Modules/default/init/ksh; module load xlf/v14.1.0.1; module load xlcpp/v12.1.0.0"
+{% endif %}
+        command scripting = rose task-run
+        environment scripting = "eval $(rose task-env)"
+        [[[event hooks]]]
+           succeeded handler = rose suite-hook
+           failed handler = rose suite-hook --shutdown
+           submission failed handler = rose suite-hook --shutdown
+           submission timeout handler = rose suite-hook --mail
+           execution timeout handler = rose suite-hook --mail
+           submission timeout = P1D # 24 hours
+           execution timeout = PT3H # 3 hours
+           submitted handler = "echo queue start time $(rose date) >> ~/rose.log"
+           started handler =  "echo job started time $(rose date) >> ~/rose.log"
+    [[[environment]]]
+            TasksPerNode={{TasksPerNode}}
+            XIOS={{XIOS}}
+            NEMO={{NEMO}} 
+            ZLIB={{ZLIB}}
+            HDF5={{HDF5}}
+            NETCDF={{NETCDF}}
+            TEST_SYSTEM={{TEST_SYSTEM}}
+{% if USE_OASIS %}
+            OASIS_ROOT={{OASIS_ROOT}}
+            USE_OASIS=true
+{% else %}
+            USE_OASIS=false
+{% endif %}
+            XLF_MODULE={{XLF_MODULE}}
+            XLCPP_MODULE={{XLCPP_MODULE}}
+{% if TOOLS_USE_PREBUILT %}
+            TOOLS_USE_PREBUILT=true
+{% else %}
+            TOOLS_USE_PREBUILT=false
+{% endif %}
+
+
+    [[REMOTE_APP]]
+        [[[remote]]]
+{% if TEST_SYSTEM == "UKMO_IBM_PW7" %}
+            host = hpc2e
+{% elif TEST_SYSTEM == "UKMO_CRAY_XC40" %}
+            host = $(rose host-select {{ HPC_HOST }})
+{% endif %}
+        [[[job submission]]]
+{% if TEST_SYSTEM == "UKMO_IBM_PW7" %}
+            method = loadleveler
+{% elif TEST_SYSTEM == "UKMO_CRAY_XC40" %}
+            method = pbs
+{% endif %}
+
+    [[BUILD_TOOL]]
+        [[[environment]]]
+{% if TOOLS_USE_PREBUILT == false %}
+            DEPENDENCY_SRC_DIR={{DEPENDENCY_SRC_DIR}}
+            TOOLS_BUILD_PATH=$CYLC_SUITE_SHARE_DIR/{{TOOLS_BUILD_DIR}}
+{% endif %}
+
+    [[TOOL_USER]]
+        [[[environment]]]
+{% if TOOLS_USE_PREBUILT %}
+            MTOOLS={{TOOLS_PREBUILT_DIR}}
+            NETCDF_PATH={{TOOLS_PREBUILT_DIR}}
+{% else %}
+            MTOOLS=$CYLC_SUITE_SHARE_DIR/{{TOOLS_BUILD_DIR}}
+            NETCDF_PATH=$CYLC_SUITE_SHARE_DIR/{{TOOLS_BUILD_DIR}}
+{% endif %}
+
+    [[XIOS_APP]]
+        [[[environment]]]
+{% if XIOS_USE_PREBUILT_LIB %}
+            XIOS_USE_PREBUILT_LIB=true
+	    XIOS_PREBUILT_DIR={{XIOS_PREBUILT_DIR}}
+{% else %}
+            XIOS_USE_PREBUILT_LIB=false
+{% endif %}
+{% if TEST_SYSTEM == "UKMO_IBM_PW7" %}
+            XIOS_PATH=$CYLC_SUITE_SHARE_DIR/{{XIOS}}
+{% endif %}
+
+            BUILD_PATH=$CYLC_SUITE_SHARE_DIR
+
+    [[NEMO_APP]]
+        [[[environment]]]
+            JP_CFG = '50'
+            NEMO_PATH=$CYLC_SUITE_SHARE_DIR/{{NEMO}}
+
+    [[fcm_make_xiosScript_remote]]
+        inherit = None,REMOTE_APP
+{% if TEST_SYSTEM == "UKMO_CRAY_XC40" %}
+        [[[directives]]]
+            -q = shared
+            -P = climate
+            -l walltime = 00:01:00
+            -l ncpus=1
+{% endif %}            
+
+    [[buildZlib]]
+        inherit = None,BUILD_TOOL, REMOTE_APP
+        [[[job submission]]]
+            method = at
+        
+    [[buildHdf5]]
+        inherit=None,BUILD_TOOL,REMOTE_APP
+        [[[directives]]]
+{% if TEST_SYSTEM == "UKMO_IBM_PW7" %}
+            class            = parallel
+            job_type         = parallel
+            node = 1
+            tasks_per_node = 1
+            job_name         = build_hdf5
+            wall_clock_limit = 00:45:00
+            resources = ConsumableMemory(2500Mb)
+            notification = never
+{% elif TEST_SYSTEM == "UKMO_CRAY_XC40" %}
+            -l walltime=00:45:00
+            -l select=1
+            -q = parallel
+{% endif %}
+    
+    [[buildNetcdf]]
+        inherit=None,BUILD_TOOL,REMOTE_APP
+        [[[directives]]]
+{% if TEST_SYSTEM == "UKMO_IBM_PW7" %}
+            class            = parallel
+            job_type         = parallel
+            job_name         = build_netcdf
+            node = 1
+            total_tasks = 1
+            node_usage = shared
+            wall_clock_limit = 01:00:00
+            notification = never
+{% elif TEST_SYSTEM == "UKMO_CRAY_XC40" %}
+            -l select=1:ncpus=1
+            -l walltime=01:00:00
+            -q = shared
+{% endif %}
+
+     [[buildXios]]
+        inherit = None,XIOS_APP, REMOTE_APP, TOOL_USER
+        [[[environment]]]
+{% if XIOS_USE_PREBUILT_LIB == false %}
+            XIOS_NUM_CORES={{XIOS_NUM_CORES}}
+{% endif %}
+            {% if DEPLOY_AS_MODULE %}
+                DEPLOY_AS_MODULE=true
+            {% else %}
+                DEPLOY_AS_MODULE=false
+            {% endif %}
+
+            MODULE_INSTALL_PATH={{MODULE_INSTALL_PATH}}
+            MODULE_VERSION={{MODULE_VERSION}}
+
+        [[[directives]]]
+{% if TEST_SYSTEM == "UKMO_IBM_PW7" %}
+            class  = serial
+            job_type = serial
+            job_name = build_xios
+    {% if XIOS_USE_PREBUILT_LIB == false %}
+            resources = ConsumableCpus({{XIOS_NUM_CORES}}) ConsumableMemory(8000mb)
+    {% else %}
+            resources = ConsumableCpus(1) ConsumableMemory(8000mb)
+    {% endif %}
+            wall_clock_limit = 01:40:00
+            notification = never
+{% elif TEST_SYSTEM == "UKMO_CRAY_XC40" %}
+            -l walltime=00:40:00
+    {% if XIOS_USE_PREBUILT_LIB == false %}
+            -l ncpus={{XIOS_NUM_CORES}}
+    {% else %}
+            -l ncpus=1
+    {% endif %}
+            -l mem=2000MB
+            -q = shared
+            -P = climate
+{% endif %}
+
+
+    [[testXios]]
+        inherit = None,XIOS_APP,REMOTE_APP
+{% if TEST_SYSTEM == "UKMO_CRAY_XC40" %}
+        pre-command scripting = "module use {{MODULE_INSTALL_PATH}}/modules; module load cray-hdf5-parallel/1.8.13; module load cray-netcdf-hdf5parallel/4.3.2; module load {{XIOS}}/{{MODULE_VERSION}}"
+{% endif %}
+        [[[directives]]]
+{% if TEST_SYSTEM == "UKMO_IBM_PW7" %}
+            class            = parallel			 
+            job_type         = parallel			 
+            job_name         = test_detached_multiple	 
+            notification     = error			 
+            resources        = ConsumableMemory(1500mb)	 
+            node             = 1				 
+            total_tasks      = 10			 
+            node_usage       = not_shared			 
+            task_affinity    = core(1)			 
+            cpu_limit        = 00:01:00			 
+            wall_clock_limit = 00:01:00			 
+{% elif TEST_SYSTEM == "UKMO_CRAY_XC40" %}
+            -l walltime=00:10:00
+            -l select=2
+            -q = normal
+            -P = climate
+            
+{% endif %}
+        [[[environment]]]
+	    XIOS_RESULT_DIR=$ROSE_DATA/{{XIOS}}
+
+    [[buildNemo]]
+        inherit = None,XIOS_APP,NEMO_APP,REMOTE_APP, TOOL_USER
+{% if TEST_SYSTEM == "UKMO_CRAY_XC40" %}
+        pre-command scripting = "module use {{MODULE_INSTALL_PATH}}/modules; module load cray-hdf5-parallel/1.8.13; module load cray-netcdf-hdf5parallel/4.3.2; module load {{XIOS}}/{{MODULE_VERSION}}"
+{% endif %}
+        [[[environment]]]
+            NEMO_REPO_URL = {{NEMO_REPO_URL}}
+            NEMO_REV = {{NEMO_REV}}
+        [[[directives]]]
+{% if TEST_SYSTEM == "UKMO_IBM_PW7" %}
+            class            = serial
+            job_type         = serial
+            job_name         = build_nemo
+            resources        = ConsumableCpus(8) ConsumableMemory(8000mb)
+            wall_clock_limit = 00:20:00
+            notification = never
+{% elif TEST_SYSTEM == "UKMO_CRAY_XC40" %}
+            -q = shared
+            -l select=1:ncpus=8
+            -l walltime=00:20:00
+{% endif %}
+
+    [[testNemo]]
+        inherit=None,NEMO_APP,XIOS_APP,REMOTE_APP
+{% if TEST_SYSTEM == "UKMO_CRAY_XC40" %}
+        pre-command scripting = "module use {{MODULE_INSTALL_PATH}}/modules; module load cray-hdf5-parallel/1.8.13; module load cray-netcdf-hdf5parallel/4.3.2; module load {{XIOS}}/{{MODULE_VERSION}}"
+{% endif %}
+        [[[directives]]]
+{% if TEST_SYSTEM == "UKMO_IBM_PW7" %}
+            class            = parallel
+            job_type         = parallel
+            job_name         = test_nemo
+            resources        = ConsumableMemory(1500mb)
+    {% if (nemoTasksJpi*nemoTasksJpj + xiosTasks)%32 == 0 %}
+            node             = {{(nemoTasksJpi*nemoTasksJpj + xiosTasks)//32 }}
+    {% else %}
+            node             = {{(nemoTasksJpi*nemoTasksJpj + xiosTasks)//32 + 1 }}
+    {% endif %}
+            total_tasks      = {{nemoTasksJpi*nemoTasksJpj + xiosTasks}}
+            wall_clock_limit = 01:15:00
+            cpu_limit        = 01:15:00
+            node_usage       = not_shared
+            notification = never
+{% elif TEST_SYSTEM == "UKMO_CRAY_XC40" %}
+            -q = normal
+    {% if (nemoTasksJpi*nemoTasksJpj)%TasksPerNode == 0 %}
+        {% if (xiosTasks % XiosTasksPerNode == 0) %}
+            -l select={{(nemoTasksJpi*nemoTasksJpj)//TasksPerNode + (xiosTasks//XiosTasksPerNode) }}
+        {% else %}
+            -l select={{(nemoTasksJpi*nemoTasksJpj)//TasksPerNode + (xiosTasks//XiosTasksPerNode) + 1 }}
+        {% endif %}
+    {% else %}
+        {% if (xiosTasks % XiosTasksPerNode == 0) %}
+            -l select={{(nemoTasksJpi*nemoTasksJpj)//TasksPerNode + (xiosTasks//XiosTasksPerNode) + 1}}
+        {% else %}
+            -l select={{(nemoTasksJpi*nemoTasksJpj)//TasksPerNode + (xiosTasks//XiosTasksPerNode) + 2 }}
+        {% endif %}
+    {% endif %}
+            -l walltime={{NEMO_TEST_TIME_LIMIT}}
+            -P = climate
+{% endif %}
+        [[[environment]]]
+            nemoTasksJpi={{nemoTasksJpi}}
+            nemoTasksJpj={{nemoTasksJpj}}
+            xiosTasks={{xiosTasks}}
+            XiosTasksPerNode={{XiosTasksPerNode}}
+            NEMO_TEST_TIME_LIMIT={{NEMO_TEST_TIME_LIMIT}}
+            NEMO_RESULT_DIR=$ROSE_DATA/{{NEMO}}
+
+
+            
+
+    
