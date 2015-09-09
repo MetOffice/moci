@@ -1,0 +1,256 @@
+#!/usr/bin/env python2.7
+'''
+*****************************COPYRIGHT******************************
+(C) Crown copyright Met Office. All rights reserved.
+For further details please refer to the file COPYRIGHT.txt
+which you should have received as part of this distribution.
+*****************************COPYRIGHT******************************
+--------------------------------------------------------------------
+ Code Owner: Please refer to the UM file CodeOwners.txt
+ This file belongs in section: Rose scripts
+--------------------------------------------------------------------
+NAME
+    common/moo.py
+
+DESCRIPTION
+    Moose archiving system commands
+
+ENVIRONMENT VARIABLES
+  Standard Cylc environment:
+    CYLC_TASK_LOG_ROOT
+    CYLC_TASK_CYCLE_POINT
+    CYLC_TASK_CYCLE_TIME (Pre-Cylc 6.0 only)
+
+  Suite specific environment:
+    ARCHIVE FINAL - Suite defined: Logical to indicate final cycle
+                    -> Default: False
+    END_CYCLE_TIME (Pre-Cylc 6.0 only) - Suite defined
+                    -> Default: False
+
+  External environment:
+    JOBTEMP
+    UM_TMPDIR set using JOBTEMP if it exists
+'''
+import os
+import re
+import subprocess
+
+import utils
+
+
+class _Moose(object):
+    """
+    Compile and run Moose archiving commands.
+    Intended as a private input class for a CommandExec instance.
+    """
+    def __init__(self, comms):
+        self._rqst_name = comms['CURRENT_RQST_NAME']
+        self._suiteID = comms['RUNID']
+        self._sourcedir = comms['DATAM']
+        try:
+            self._cat = comms['CATEGORY']
+        except KeyError:
+            self._cat = 'UNCATEGORISED'
+        self.moopath = '/critical/opt/ukmo/mass/moose-batch-node-client/bin/ibm-cn/'
+
+        # Define the collection name
+        runid, rqst = re.split('[._]', os.path.basename(self._rqst_name), 1)
+        self._modelID = runid[-1]
+        self._fileID = rqst[:2]
+        self.mkset()  # Create a set
+
+    @property
+    def dataset(self):
+        return 'moose:crum/' + self._suiteID
+
+    def mkset(self):
+        '''Create Moose set'''
+        mkset_cmd = self.moopath + 'moo mkset -v '
+        if self._cat != 'UNCATEGORISED':
+            mkset_cmd += '-c ' + self._cat + ' '
+        mkset_cmd += self.dataset
+
+        utils.log_msg('mkset command: ' + mkset_cmd)
+        ret_code, output = utils.exec_subproc(mkset_cmd, verbose=False)
+
+        level = 1
+        if ret_code == 0:
+            msg = 'mkset: Successfully created set: ' + self.dataset
+        elif ret_code == 10:
+            msg = 'mkset: Set already exists:' + self.dataset
+        else:
+            msg = 'mkset: System error (Error={})'.format(ret_code)
+            msg += '\n\t Unable to create set:' + self.dataset
+            level = 4
+        utils.log_msg(msg, level)
+
+    def _collection(self):
+        """
+        Create the file extension based on the three letters following
+        the runid in the filename
+        """
+        ext = ''
+        modelID = self._modelID
+        fileID = self._fileID
+
+        if modelID == 'a':  # Atmosphere output
+            if re.search('[mp][1-9|a-m|s-z]', fileID):
+                ext = '.pp'
+            elif re.search('v[1-5|a-j|lmsvy]', fileID):
+                ext = '.pp'
+            elif re.search('n[1-9|a-m|s-z]', fileID):
+                ext = '.nc.file'
+            elif re.search('b[a-j|mxy]', fileID):
+                ext = '.file'
+            elif re.search('d[amsy]', fileID):
+                ext = '.file'
+            elif re.search('r[a-m|qstuvwxz]', fileID):
+                ext = '.file'
+
+        elif modelID in 'io':  # NEMO/CICE means and restart dumps
+            if re.search('\d[msy]', fileID):
+                ext = '.nc.file'
+                fileID = 'n' + fileID[-1]
+            elif re.search('\d{2}|re', fileID):
+                ext = '.file'
+                fileID = 'da'  # These are restart dumps - reassign ID
+
+        else:
+            msg = 'moo.py - Model id "{}" in filename  not recognised.'.\
+                format(modelID)
+            msg += '\n -> Please contact crum@metoffice.gov.uk ' \
+                'if your requirements are not being met by this script.'
+            utils.log_msg(msg, 5)
+
+        self._fl_pp = True if ext == '.pp' else False
+        return modelID + fileID + ext
+
+    def putData(self):
+        """ Archive the data using moose """
+        collection_name = self._collection()
+        crn = self._rqst_name
+        if crn.startswith('$'):  # For $PREFIX$RUNID cases
+            # Get the file extension
+            runid, postfix = re.split('[._]', crn, 1)
+            sep = crn[len(runid[0]):len(runid)+1]
+            collection_name = self._suiteID + sep + postfix
+        crn = os.path.expandvars(crn)
+
+        # Because of full path, need to get the filename at the end
+        crn = os.path.join(self._sourcedir, crn)
+
+        moo_cmd = self.moopath + 'moo put -f -vv '
+        if self._fl_pp:
+            crn_pp = os.path.basename(crn) + '.pp'
+            filepath = os.path.join(self.dataset, collection_name, crn_pp)
+            moo_cmd += '-c=umpp {} {}'.format(crn, filepath)
+        else:
+            filepath = os.path.join(self.dataset, collection_name)
+            moo_cmd += '{} {}'.format(crn, filepath)
+
+        if os.path.exists(crn):
+            try:
+                jobtemp = os.environ['JOBTEMP']
+                if jobtemp:
+                    os.environ['UM_TMPDIR'] = jobtemp
+                else:
+                    msg = 'JOBTEMP not set: moo, convpp, ieee likely to fail'
+                    utils.log_msg(msg, 3)
+
+            except KeyError:
+                pass
+
+            utils.log_msg('The command to archive is: ' + moo_cmd)
+            ret_code, output = utils.exec_subproc(moo_cmd)
+
+        else:
+            msg = 'moo.py: No archiving done. Path/file does not exist:' + crn
+            msg += '\n -> The command to archive would have been:\n' + moo_cmd
+            utils.log_msg(msg, 4)
+            ret_code = 99
+
+        put_rtncode = {
+            0:  'Moose: Archiving OK. (ReturnCode=0)',
+            2:  'Moose Error: user-error (see Moose docs). (ReturnCode=2)',
+            3:  'Moose Error: error in Moose or its supporting systems '
+                '(storage, database etc.). (ReturnCode=3)',
+            4:  'Moose Error: error in an external system or utility. '
+                '(ReturnCode=4)',
+            11: 'Moose System Warning: Fieldsfile contained no fields '
+                'and was therefore not archived (ReturnCode=11)',
+            99: 'System Error: The archiving file does not exist '
+                '(ReturnCode=99)',
+            230: 'System Error: Archiving command failed - Failed to find VM '
+                '- Check network access to archive',
+        }
+
+        if ret_code == 0:
+            utils.log_msg(put_rtncode[0])
+            msg = '{} added to the {} collection'.format(crn, collection_name)
+            level = 1
+        elif ret_code in put_rtncode:
+            msg = 'moo.py: {} File: {}'.format(put_rtncode[ret_code], crn)
+            level = 4
+        else:
+            msg = 'moo.py: Unknown Error - Return Code =' + ret_code
+            level = 4
+        utils.log_msg(msg, level)
+
+        return ret_code
+
+
+class CommandExec(object):
+    def archive(self, comms):
+        """ Carry out the archiving """
+        mooInstance = _Moose(comms)
+        ret_code = mooInstance.putData()
+        return ret_code
+
+    def delete(self, comms):
+        """ Carry out the delete command """
+        print("Deleting file: %s" % comms['CURRENT_RQST_NAME'])
+        delComm = ['rm %s' % (comms['CURRENT_RQST_NAME'])]
+        child_process = subprocess.Popen(delComm, shell=True)
+        child_process.communicate()
+
+    def execute(self, commands):
+        ''' Run the archiving and deletion as required '''
+        ret_code = {}
+        if (commands['CURRENT_RQST_ACTION'] == "ARCHIVE"):
+            ret_code[commands['CURRENT_RQST_NAME']] \
+                = self.archive(commands)
+        elif (commands['CURRENT_RQST_ACTION'] == "DELETE"):
+            # Make sure only archived files are deleted
+            if commands['CURRENT_RQST_NAME'] in ret_code:
+                if ret_code[commands['CURRENT_RQST_NAME']] == 0 \
+                        or ret_code[commands['CURRENT_RQST_NAME']] == 11:
+                    self.delete(commands)
+                    ret_code["DELETE"] = 0
+                elif ret_code[commands['CURRENT_RQST_NAME']] == 99:
+                    print("File %s does not exist"
+                          % commands['CURRENT_RQST_NAME'])
+                    ret_code["DELETE"] = 0
+                else:
+                    print("Not deleting un-archived file: %s"
+                          % commands['CURRENT_RQST_NAME'])
+                    ret_code["DELETE"] = 1
+            elif commands['CURRENT_RQST_NAME'] not in ret_code:
+                if os.path.exists(commands['CURRENT_RQST_NAME']):
+                    self.delete(commands)
+                    ret_code["DELETE"] = 0
+                else:
+                    ret_code["DELETE"] = 0
+            else:
+                print("Not deleting un-archived file: %s"
+                      % commands['CURRENT_RQST_NAME'])
+                ret_code["DELETE"] = 1
+        else:
+            print("Request action neiher ARCHIVE nor DELETE")
+            ret_code['NO ACTION'] = 0
+        print("\n")  # for clarity in output file.
+
+        return ret_code
+
+
+if __name__ == '__main__':
+    pass
