@@ -149,7 +149,7 @@ class AtmosPostProc(control.runPostProc):
             else:
                 msg = 'File {} does not exist - cannot archive'.format(fn)
                 utils.log_msg(msg, 3)
-                logfile.write(fn + ' ARCHIVE FAILED. File does not exist\n')
+                log_file.write(fn + ' FILE NOT ARCHIVED. File does not exist\n')
 
         # Perform the archiving
         if files_to_archive:

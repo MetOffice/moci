@@ -1,6 +1,5 @@
 #!/usr/bin/env python2.7
 
-import sys
 import argparse
 import unittest
 
@@ -22,6 +21,10 @@ def main():
     groups = {
         'all':      'test_*.py',
         'common':   'test_common_*.py',
+        'suitegen': 'test_common_suitegen.py',
+        'nlist':    'test_common_nlist.py',
+        'utils':    'test_common_utils.py',
+        'moo':      'test_common_moo.py',
         }
 
     if args.group:

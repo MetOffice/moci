@@ -33,7 +33,6 @@ ENVIRONMENT VARIABLES
 '''
 import os
 import re
-import subprocess
 
 import utils
 
@@ -51,23 +50,38 @@ class _Moose(object):
             self._cat = comms['CATEGORY']
         except KeyError:
             self._cat = 'UNCATEGORISED'
-        self.moopath = '/critical/opt/ukmo/mass/moose-batch-node-client/bin/ibm-cn/'
+        self._class = comms['DATACLASS']
+        self._moopath = comms['MOOPATH']
+        self._project = comms['PROJECT']
 
         # Define the collection name
         runid, rqst = re.split('[._]', os.path.basename(self._rqst_name), 1)
         self._modelID = runid[-1]
         self._fileID = rqst[:2]
-        self.mkset()  # Create a set
+        if not self.chkset():
+            self.mkset()  # Create a set
 
     @property
     def dataset(self):
-        return 'moose:crum/' + self._suiteID
+        return 'moose:' + self._class + "/" + self._suiteID
+
+    def chkset(self):
+        '''Test whether Moose set exists'''    
+        chkset_cmd = self._moopath + 'moo test -sw ' + self.dataset
+        ret_code, output = utils.exec_subproc(chkset_cmd, verbose=False)
+
+        exist = True if output.strip() == 'true' else False
+        if exist:
+            utils.log_msg('chkset: Using existing Moose set', 1)
+        return exist
 
     def mkset(self):
         '''Create Moose set'''
-        mkset_cmd = self.moopath + 'moo mkset -v '
+        mkset_cmd = self._moopath + 'moo mkset -v '
         if self._cat != 'UNCATEGORISED':
             mkset_cmd += '-c ' + self._cat + ' '
+        if self._project:
+            mkset_cmd += '-p ' + self._project + ' '
         mkset_cmd += self.dataset
 
         utils.log_msg('mkset command: ' + mkset_cmd)
@@ -132,14 +146,14 @@ class _Moose(object):
         if crn.startswith('$'):  # For $PREFIX$RUNID cases
             # Get the file extension
             runid, postfix = re.split('[._]', crn, 1)
-            sep = crn[len(runid[0]):len(runid)+1]
-            collection_name = self._suiteID + sep + postfix
+            sep = crn[len(runid)]
+            collection_name = os.environ['RUNID'] + sep + postfix
         crn = os.path.expandvars(crn)
 
         # Because of full path, need to get the filename at the end
         crn = os.path.join(self._sourcedir, crn)
 
-        moo_cmd = self.moopath + 'moo put -f -vv '
+        moo_cmd = self._moopath + 'moo put -f -vv '
         if self._fl_pp:
             crn_pp = os.path.basename(crn) + '.pp'
             filepath = os.path.join(self.dataset, collection_name, crn_pp)
@@ -188,11 +202,16 @@ class _Moose(object):
             utils.log_msg(put_rtncode[0])
             msg = '{} added to the {} collection'.format(crn, collection_name)
             level = 1
+        elif ret_code == 11:
+            utils.log_msg(put_rtncode[11])
+            msg = '{} not added to the {} collection since it contains no fields'.\
+                format(crn, collection_name)
+            level = 3
         elif ret_code in put_rtncode:
             msg = 'moo.py: {} File: {}'.format(put_rtncode[ret_code], crn)
             level = 4
         else:
-            msg = 'moo.py: Unknown Error - Return Code =' + ret_code
+            msg = 'moo.py: Unknown Error - Return Code =' + str(ret_code)
             level = 4
         utils.log_msg(msg, level)
 
@@ -203,15 +222,20 @@ class CommandExec(object):
     def archive(self, comms):
         """ Carry out the archiving """
         mooInstance = _Moose(comms)
-        ret_code = mooInstance.putData()
-        return ret_code
+        return mooInstance.putData()
 
-    def delete(self, comms):
+    def delete(self, fn, prior_code=None):
         """ Carry out the delete command """
-        print("Deleting file: %s" % comms['CURRENT_RQST_NAME'])
-        delComm = ['rm %s' % (comms['CURRENT_RQST_NAME'])]
-        child_process = subprocess.Popen(delComm, shell=True)
-        child_process.communicate()
+        if prior_code in [None, 0, 11, 99]:
+            try:
+                os.remove(fn)
+            except OSError:
+                pass
+            finally:
+                utils.log_msg('moo.py: Deleting file: ' + fn, 1)
+        else:
+            utils.log_msg('moo.py: Not deleting un-archived file: ' + fn, 3)
+        return 1 if os.path.exist(fn) else 0
 
     def execute(self, commands):
         ''' Run the archiving and deletion as required '''
@@ -219,33 +243,17 @@ class CommandExec(object):
         if (commands['CURRENT_RQST_ACTION'] == "ARCHIVE"):
             ret_code[commands['CURRENT_RQST_NAME']] \
                 = self.archive(commands)
+
         elif (commands['CURRENT_RQST_ACTION'] == "DELETE"):
-            # Make sure only archived files are deleted
-            if commands['CURRENT_RQST_NAME'] in ret_code:
-                if ret_code[commands['CURRENT_RQST_NAME']] == 0 \
-                        or ret_code[commands['CURRENT_RQST_NAME']] == 11:
-                    self.delete(commands)
-                    ret_code["DELETE"] = 0
-                elif ret_code[commands['CURRENT_RQST_NAME']] == 99:
-                    print("File %s does not exist"
-                          % commands['CURRENT_RQST_NAME'])
-                    ret_code["DELETE"] = 0
-                else:
-                    print("Not deleting un-archived file: %s"
-                          % commands['CURRENT_RQST_NAME'])
-                    ret_code["DELETE"] = 1
-            elif commands['CURRENT_RQST_NAME'] not in ret_code:
-                if os.path.exists(commands['CURRENT_RQST_NAME']):
-                    self.delete(commands)
-                    ret_code["DELETE"] = 0
-                else:
-                    ret_code["DELETE"] = 0
-            else:
-                print("Not deleting un-archived file: %s"
-                      % commands['CURRENT_RQST_NAME'])
-                ret_code["DELETE"] = 1
+            try:
+                prior_code = ret_code[commands['CURRENT_RQST_NAME']]
+            except KeyError:
+                prior_code = None
+            ret_code['DELETE'] = self.delete(commands['CURRENT_RQST_NAME'],
+                                             prior_code)
         else:
-            print("Request action neither ARCHIVE nor DELETE")
+            msg = 'moo.py: Neither ARCHIVE nor DELETE requested: '
+            utils.log_msg(msg + commands['CURRENT_RQST_NAME'], 3)
             ret_code['NO ACTION'] = 0
         print("\n")  # for clarity in output file.
 

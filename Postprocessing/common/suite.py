@@ -111,11 +111,11 @@ class SuiteEnvironment(object):
             finalcycle = self._finalcycle
         except AttributeError:
             if self.cylc6:
+                self.envars = utils.loadEnv('ARCHIVE_FINAL',
+                                            append=self.envars)
                 try:
-                    self.envars = utils.loadEnv('ARCHIVE_FINAL',
-                                                append=self.envars)
                     finalcycle = ('true' in self.envars.ARCHIVE_FINAL.lower())
-                except Exception:
+                except AttributeError:
                     finalcycle = False
             else:
                 self.envars = utils.loadEnv('END_CYCLE_TIME',
@@ -148,7 +148,10 @@ class SuiteEnvironment(object):
                 'CURRENT_RQST_NAME':   filename,
                 'DATAM':               self.sourcedir,
                 'RUNID':               self.suitename,
-                'CATEGORY':            'UNCATEGORISED'
+                'CATEGORY':            'UNCATEGORISED',
+                'DATACLASS':           self.nl.dataclass,
+                'MOOPATH':             self.nl.moopath,
+                'PROJECT':             self.nl.mooproject
             }
 
             moose_arch_inst = moo.CommandExec()
@@ -195,6 +198,9 @@ class suitePostProc(object):
     cycleperiod = 0, 1, 0, 0, 0
     archive_command = 'Moose'
     archive_set = '$CYLC_SUITE_REG_NAME'
+    dataclass = 'crum'
+    moopath = '/critical/opt/ukmo/mass/moose-batch-node-client/bin/ibm-cn/'
+    mooproject = ''
 
 NAMELISTS = {'suitegen': suitePostProc}
 
