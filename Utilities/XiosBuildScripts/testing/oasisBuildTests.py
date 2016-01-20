@@ -20,6 +20,14 @@ class OasisBuildCrayTests(unittest.TestCase):
                                   'r1217_port_mct_xcf/oasis3-mct' )
         settingsDict['OASIS_REPO_URL'] = self.OasisRepostoryUrl
         settingsDict['OASIS_REV_NO'] = '1313'
+        self.ExternalRepoUrl = 'http://server.name/path/to/repository'
+        self.ExternalRevNo = '1234'
+        settingsDict['OASIS_EXTERNAL_REPO_URL'] = self.ExternalRepoUrl
+        settingsDict['OASIS_EXTERNAL_REV_NO'] = self.ExternalRevNo
+        settingsDict['ROSE_SUITE_URL'] = 'path/to/repository'
+        settingsDict['ROSE_SUITE_REV_NO'] = '1234'
+        
+        
         settingsDict['OASIS_PLATFORM_NAME'] = 'crayxc40'
         self.Verbose = True
         if self.Verbose:
@@ -102,16 +110,24 @@ make -f TopMakefileOasis3
         self.assertTrue(filecmp.cmp(scriptFilePath,refFilePath), errMsg1)
         
     def test_moduleWrite(self):
-        mw1 = oasisBuild.OasisCrayModuleWriter(self.BuildSystem.ModuleVersion, 
-                                               self.BuildSystem.ModuleRootDir,
-                                               self.BuildSystem.OasisRepositoryUrl,
-                                               self.BuildSystem.OasisRevisionNumber,
-                                               self.BuildSystem.LibraryName,
-                                               self.BuildSystem.SYSTEM_NAME)
+        mw1 = oasisBuild.OasisCrayModuleWriter(
+                self.BuildSystem.ModuleVersion,
+                self.BuildSystem.ModuleRootDir,
+                self.BuildSystem.OasisRepositoryUrl,
+                self.BuildSystem.OasisRevisionNumber,
+                self.ExternalRepoUrl,
+                self.ExternalRevNo,
+                self.BuildSystem.SuiteUrl,
+                self.BuildSystem.SuiteRevisionNumber,
+                self.BuildSystem.LibraryName,
+                self.BuildSystem.SYSTEM_NAME)
         mw1.WriteModule()
         
         # check for existence of module
-        moduleFilePath = '{ModuleRootDir}/modules/{LibraryName}/{ModuleVersion}'
+        tempModStr1 = '{root_dir}/modules/{rel_path}'
+        moduleFilePath = tempModStr1.format(
+                             root_dir = self.BuildSystem.ModuleRootDir,
+                             rel_path = mw1.ModuleRelativePath)
         moduleFilePath = moduleFilePath.format( **self.BuildSystem.__dict__)
         self.assertTrue(os.path.exists(moduleFilePath),
                         'Module file {0} not found'.format(moduleFilePath))
@@ -121,9 +137,15 @@ make -f TopMakefileOasis3
         referenceFilePath = referenceFilePath.format(self.BuildSystem.WorkingDir)
         modFileString = '''#%Module1.0####################################################################
 proc ModulesHelp {{ }} {{
-    puts stderr "Sets up Oasis3-MCT coupler I/O server for use. Built 
-from source branch {OasisRepositoryUrl} 
-at revision {OasisRevisionNumber}"
+    puts stderr "Sets up Oasis3-MCT coupler I/O server for use. 
+Met Office source code URL: {OasisRepositoryUrl} 
+Revision: {OasisRevisionNumber}
+External URL: {OasisExternalUrl}
+ External revision number: {OasisExternalRevisionNum}
+Build using Rose suite:
+URL: {SuiteUrl}
+Revision: {SuiteRevisionNumber}
+"
 }}
 
 module-whatis The Oasis3-mct coupler for use with weather/climate models
@@ -132,7 +154,7 @@ conflict {LibraryName}
 
 set version {ModuleVersion}
 set module_base {ModuleRootDir}
-set oasisdir $module_base/packages/{LibraryName}/{ModuleVersion}
+set oasisdir $module_base/packages/{rel_path}
 
 prereq PrgEnv-cray/5.2.40
 prereq cray-mpich/7.0.4
@@ -146,7 +168,8 @@ setenv OASIS_MODULE_VERSION {ModuleVersion}
 
 
 '''
-        modFileString = modFileString.format(**self.BuildSystem.__dict__)
+        modFileString = modFileString.format(rel_path=mw1.ModuleRelativePath,
+                                             **self.BuildSystem.__dict__)
         
         with open(referenceFilePath,'w') as refFile:
             refFile.write(modFileString)

@@ -34,6 +34,11 @@ class XiosBuildCrayTests(unittest.TestCase):
         self.environment['XIOS_PRGENV_VERSION'] = '1.0'
         self.environment['OASIS_MODULE_VERSION'] = '1.0'
         self.environment['OASIS3_MCT'] = "oasis3-mct"
+        self.environment['ROSE_SUITE_URL'] = 'path/to/repository'
+        self.environment['ROSE_SUITE_REV_NO'] = '1234'
+        self.ExternalRepoUrl = 'http://external.server.gov/path/to/repository'
+        self.environment['XIOS_EXTERNAL_REPO_URL'] = self.ExternalRepoUrl
+
         
         # NOTE: 
         self.BuildSystem = xiosBuild.XiosCrayBuildSystem(self.environment)
@@ -47,6 +52,8 @@ class XiosBuildCrayTests(unittest.TestCase):
         self.assertEqual(self.BuildSystem.TestSystem, self.SystemName)
         self.assertEqual(self.BuildSystem.XiosRepositoryUrl, self.XiosRepoUrl)
         self.assertEqual(self.NetCdfDirStr, self.BuildSystem.ThirdPartyLibs)
+        self.assertEqual(self.ExternalRepoUrl,
+                         self.BuildSystem.XiosExternalUrl)
         
     def test_ExtractionScript(self):
         self.BuildSystem.extractXiosSourceCode()
@@ -73,28 +80,40 @@ class XiosBuildCrayTests(unittest.TestCase):
                                              self.BuildSystem.ModuleRootDir,
                                              self.BuildSystem.XiosRepositoryUrl,
                                              self.BuildSystem.XiosRevisionNumber,
+                                             self.BuildSystem.XiosExternalUrl,
+                                             self.BuildSystem.SuiteUrl,
+                                             self.BuildSystem.SuiteRevisionNumber,                                          
                                              self.BuildSystem.SYSTEM_NAME)
         mw1.WriteModule()
         
         # check for existence of module
-        moduleFilePath = '{ModuleRootDir}/modules/{LibraryName}/{ModuleVersion}'.format( **self.BuildSystem.__dict__)
+        tempModStr1 = '{root_dir}/modules/{rel_path}'
+        moduleFilePath = tempModStr1.format(
+                             root_dir = self.BuildSystem.ModuleRootDir,
+                             rel_path = mw1.ModuleRelativePath)
         self.assertTrue(os.path.exists(moduleFilePath),'Module file {0} not found'.format(moduleFilePath))
                 
         # check contents
         referenceFilePath='{0}/xiosBuild_cray_moduleFile'.format(self.BuildSystem.workingDir)
         modFileString = '''#%Module1.0####################################################################
 proc ModulesHelp {{ }} {{
-    puts stderr "Sets up XIOS I/O server for use. Built from source
-branch {XiosRepositoryUrl} revision {XiosRevisionNumber}"
+    puts stderr "Sets up XIOS I/O server for use.
+Met Office Source URL {XiosRepositoryUrl} 
+Revision: {XiosRevisionNumber}
+External URL: {XiosExternalUrl}
+Build using Rose suite:
+URL: {SuiteUrl}
+Revision: {SuiteRevisionNumber}
+"
 }}
 
 module-whatis The XIOS I/O server for use with weather/climate models
 
 conflict XIOS
 
-set version 1.0
+set version {ModuleVersion}
 set module_base {ModuleRootDir}
-set xiosdir $module_base/packages/XIOS/1.0
+set xiosdir $module_base/packages/{rel_path}
 
 prereq PrgEnv-cray/5.2.40
 prereq cray-mpich/7.0.4
@@ -105,14 +124,20 @@ setenv XIOS_PATH $xiosdir
 setenv xios_path $xiosdir
 setenv XIOS_INC $xiosdir/inc
 setenv XIOS_LIB $xiosdir/lib
+setenv XIOS_EXEC $xiosdir/bin/xios_server.exe
 
 prepend-path PATH $xiosdir/bin
 \n'''
-        modFileString = modFileString.format(**self.BuildSystem.__dict__)
+        modFileString = modFileString.format(rel_path=mw1.ModuleRelativePath,
+                                             **self.BuildSystem.__dict__)
         with open(referenceFilePath,'w') as refFile:
             refFile.write(modFileString)
 
-        self.assertTrue(filecmp.cmp(moduleFilePath, referenceFilePath), 'module file {0} not identical to reference file {1}'.format(moduleFilePath, referenceFilePath))    
+        self.assertTrue(filecmp.cmp(moduleFilePath, 
+                                    referenceFilePath), 
+                        'module file {0} not identical to '
+                        'reference file {1}'.format(moduleFilePath, 
+                                                    referenceFilePath))    
         
         
     def test_writeBuildScript(self):

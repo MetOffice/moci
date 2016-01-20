@@ -64,9 +64,10 @@ test suite. You can also use "--group=test_xios" to not build or test the NEMO
 GYRE configuration.
 
 To run them individually, several environment variables need to be set up 
-for each each script. These can be set up by running a script  in the 
-setupScripts/ directory. See setupScripts/README.txt for more info.
-
+for each each script. In the test/manual directory there are scripts that
+setup up the environment and then launch the relevant script. For example
+to run the xiosBuild.py script on the Cray XC40 platform, you can run 
+the testing/manual/cray_xc40/runXiosBuild.py script.
 
 
 Testing the scripts
@@ -91,7 +92,7 @@ testing.
 
 Alternatively the scripts can be run individually from the command line as 
 described in the "Running the scripts" section above. To test all functionality, 
-the following scripts should be run. When running
+the following scripts should be run:
 * oasisBuild.py
 * oasisTest.py
 * xiosBuild.py
