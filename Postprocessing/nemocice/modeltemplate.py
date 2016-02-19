@@ -377,47 +377,79 @@ class ModelTemplate(control.runPostProc):
         return self.nl.buffer_archive if self.nl.buffer_archive else 0
 
     def archive_means(self):
-        archive_required = False
+        '''
+        Compile list of restart files to archive.
+        Only delete if all files are successfully archived.
+        '''
+        to_archive = []
         for inputs in self.loop_inputs(self.fields, archive=True):
             for setend in self.periodend(inputs, archive=True):
                 inputs.date = self.get_date(setend) if setend else (None,)*3
                 for mean in self.periodset(inputs, archive=True):
-                    archive_required = True
-                    self.archive_file(mean)
-        if not archive_required:
+                     to_archive.append(mean)
+
+        if to_archive:
+            arch_files = self.archive_files(to_archive)
+            if not [fn for fn in arch_files if arch_files[fn] == 'FAILED']:
+                msg = 'Deleting archived files: \n\t' + '\n\t'.join(to_archive)
+                utils.log_msg(msg)
+                utils.remove_files(to_archive, self.share)
+        else:
             utils.log_msg(' -> Nothing to archive')
 
     def archive_restarts(self):
+        '''
+        Compile list of restart files to archive and subsequently deletes them.
+        Rebuild files as necessary on a model by model basis.
+        '''
         # Rebuild restart files as required
         self.rebuild_restarts()
 
         for rsttype in ['', '\.age']:
             rstfiles = self.periodset(RegexArgs(period=RR, field=rsttype))
-            archive_required = len(rstfiles) > self.buffer_archive
+            to_archive = []
             while len(rstfiles) > self.buffer_archive:
-                archive_required = True
                 rst = rstfiles.pop(0)
                 _, month, day = self.get_date(rst)
                 if self.timestamps(month, day):
-                    self.archive_file(rst)
+                    to_archive.append(rst)
                 else:
                     msg = 'Only archiving periodic restarts.'
                     msg += '\n -> Deleting file:\n\t' + str(rst)
                     utils.log_msg(msg)
                     utils.remove_files(rst, self.share)
-            if rstfiles and not archive_required:
-                msg = ' -> Nothing to archive. {} restart{} files available.'.\
-                    format(len(rstfiles), rsttype)
-                msg += ' ({} retained).'.format(self.buffer_archive)
-                utils.log_msg(msg)
 
-    def archive_file(self, rst):
-        rcode = self.suite.archive_file(rst, debug=self.nl.debug)
-        if rcode == 0:
-            utils.log_msg('Archive successful.', 2)
-            utils.log_msg('Deleting file: ' + rst)
-            utils.remove_files(rst, self.share)
-        else:
-            msg = 'Failed to archive file: {}. Will try again later.'.\
-                format(rst)
-            utils.log_msg(msg, 3)
+            if to_archive:
+                arch = self.archive_files(to_archive)
+                to_delete = [fn for fn in arch if arch[fn] == 'SUCCESS']
+                msg = 'Deleting archived files: \n\t' + '\n\t'.join(to_delete)
+                utils.remove_files(to_delete, self.share)
+            else:
+                msg = ' -> Nothing to archive'
+                if rstfiles:
+                    msg = '{} - {} restart{} files available ({} retained).'.\
+                        format(msg, len(rstfiles), rsttype,
+                               self.buffer_archive)
+            utils.log_msg(msg)
+
+    def archive_files(self, filenames):
+        '''
+        Archive a one or more files.
+        Returns a dictionary of requested files reporting success or failure.
+        '''
+        returnfiles = {}
+        if type(filenames) != list:
+            filenames = [filenames]
+
+        for fname in filenames:
+            rcode = self.suite.archive_file(fname, debug=self.nl.debug)
+            if rcode == 0:
+                utils.log_msg('Archive successful.', 2)
+                returnfiles[fname] = 'SUCCESS'
+            else:
+                msg = 'Failed to archive file: {}. Will try again later.'.\
+                    format(fname)
+                returnfiles[fname] = 'FAILED'
+                utils.log_msg(msg, 3)
+
+        return returnfiles
