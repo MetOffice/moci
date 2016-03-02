@@ -16,6 +16,7 @@ import unittest
 import mock
 import os
 import sys
+import re
 
 import runtimeEnvironment
 import testing_functions as func
@@ -25,13 +26,157 @@ import nemo
 import nemoNamelist
 
 
+class StencilTests(unittest.TestCase):
+    '''Unit tests relating to the NEMO output filename stencils'''
+    def setUp(self):
+        self.files = [
+            'RUNIDo_19951130_restart.nc',
+            'RUNIDo_icebergs_19951130_restart.nc',
+            'RUNIDo_10d_19950901_19950910_FIELD.nc',
+            'RUNIDo_10d_19950921_19950930_FIELD.nc',
+            'RUNIDo_1m_19951101_19951130_FIELD.nc',
+            'RUNIDo_1s_19950901_19951130_FIELD.nc',
+            'RUNIDo_1y_19941201_19951130_FIELD.nc',
+            'RUNIDo_1y_19951201_19961130_FIELD.nc',
+            ]
+        self.nemo = nemo.NemoPostProc()
+        self.nemo.suite = mock.Mock()
+        self.nemo.suite.prefix = 'RUNID'
+        self.date = ('1995', '09')
+        self.ssn = ('09', '10', '11', 0)
+        self.setstencil = self.nemo.set_stencil
+        self.endstencil = self.nemo.end_stencil
+        self.meanstencil = self.nemo.mean_stencil
+
+    def tearDown(self):
+        try:
+            os.remove('nemocicepp.nl')
+        except OSError:
+            pass
+
+    def test_set_stencil_restarts(self):
+        '''Test the regular expressions of the set_stencil method - restarts'''
+        func.logtest('Assert restart pattern matching of set_stencil:')
+        patt = re.compile(self.setstencil['Restarts']('', None, None, ''))
+        nemo_rst = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(nemo_rst,
+                         [fname for fname in self.files if 'restart' in fname
+                          and 'ice' not in fname])
+
+    def test_set_stencil_iceberg_rsts(self):
+        '''Test the regex of the set_stencil method - iceberg restarts'''
+        func.logtest('Assert iceberg restart pattern matching of set_stencil:')
+        args = (None, None, None, 'icebergs')
+        patt = re.compile(self.setstencil['Restarts'](*args))
+        ice_rst = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(ice_rst,
+                         [fname for fname in self.files if 'iceberg' in fname])
+
+    def test_set_stencil_monthly(self):
+        '''Test the regex of the set_stencil method - monthly'''
+        func.logtest('Assert monthly pattern matching of set_stencil:')
+        args = (self.date[0], self.date[1], None, 'FIELD')
+        patt = re.compile(self.setstencil['Monthly'](*args))
+        month_set = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(month_set,
+                         [fname for fname in self.files if '10d_' in fname])
+
+    def test_set_stencil_seasonal(self):
+        '''Test the regex of the set_stencil method - seasonal'''
+        func.logtest('Assert seasonal pattern matching of set_stencil:')
+        args = (self.date[0], None, self.ssn, 'FIELD')
+        patt = re.compile(self.setstencil['Seasonal'](*args))
+        season_set = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(season_set,
+                         [fname for fname in self.files if '1m_' in fname])
+
+    def test_set_stencil_annual(self):
+        '''Test the regex of the set_stencil method - annual'''
+        func.logtest('Assert annual pattern matching of set_stencil:')
+        args = (self.date[0], None, None, 'FIELD')
+        patt = re.compile(self.setstencil['Annual'](*args))
+        annual_set = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(annual_set,
+                         [fname for fname in self.files if '1s_' in fname])
+
+    def test_end_stencil_restarts(self):
+        '''Test the regular expressions of the set_stencil method - restarts'''
+        func.logtest('Assert restart pattern matching of end_stencil:')
+        self.assertEqual(self.endstencil['Restarts'], None)
+
+    def test_end_stencil_monthly(self):
+        '''Test the regex of the end_stencil method - monthly'''
+        func.logtest('Assert monthly pattern matching of end_stencil:')
+        args = (None, 'FIELD')
+        patt = re.compile(self.endstencil['Monthly'](*args))
+        annual_set = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(annual_set,
+                         [fname for fname in self.files if
+                          '10d_' in fname and '30_FIELD' in fname])
+
+    def test_end_stencil_seasonal(self):
+        '''Test the regex of the end_stencil method - seasonal'''
+        func.logtest('Assert seasonal pattern matching of end_stencil:')
+        args = (self.ssn, 'FIELD')
+        patt = re.compile(self.endstencil['Seasonal'](*args))
+        annual_set = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(annual_set,
+                         [fname for fname in self.files if '1m_' in fname])
+
+    def test_end_stencil_annual(self):
+        '''Test the regex of the end_stencil method - annual'''
+        func.logtest('Assert annual pattern matching of end_stencil:')
+        args = (None, 'FIELD')
+        patt = re.compile(self.endstencil['Annual'](*args))
+        annual_set = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(annual_set,
+                         [fname for fname in self.files if '1s_' in fname])
+
+    def test_mean_stencil_monthly(self):
+        '''Test the regular expressions of the mean_stencil method - monthly'''
+        func.logtest('Assert monthly pattern matching of mean_stencil:')
+        args = (self.date[0], '11', None, 'FIELD')
+        patt = re.compile(self.meanstencil['Monthly'](*args))
+        annual_set = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(annual_set,
+                         [fname for fname in self.files if '1m_' in fname])
+
+    def test_mean_stencil_seasonal(self):
+        '''Test the regexes of the mean_stencil method - seasonal'''
+        func.logtest('Assert seasonal pattern matching of mean_stencil:')
+        args = (self.date[0], self.date[1], self.ssn, 'FIELD')
+        patt = re.compile(self.meanstencil['Seasonal'](*args))
+        annual_set = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(annual_set,
+                         [fname for fname in self.files if '1s_' in fname])
+
+    def test_mean_stencil_annual(self):
+        '''Test the regular expressions of the mean_stencil method - annual'''
+        func.logtest('Assert annual pattern matching of mean_stencil:')
+        args = (self.date[0], None, None, 'FIELD')
+        patt = re.compile(self.meanstencil['Annual'](*args))
+        annual_set = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(annual_set,
+                         [fname for fname in self.files if
+                          '1y_' in fname and self.date[0] + '1130' in fname])
+
+    def test_mean_stencil_all_years(self):
+        '''Test the regex of the mean_stencil method - all years'''
+        func.logtest('Assert all years pattern matching of mean_stencil:')
+        args = ('.*', None, None, 'FIELD')
+        patt = re.compile(self.meanstencil['Annual'](*args))
+        annual_set = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(annual_set,
+                         [fname for fname in self.files if '1y_' in fname])
+
+
 class RebuildTests(unittest.TestCase):
     '''Unit tests relating to the rebuilding of restart and means files'''
     def setUp(self):
         self.nemo = nemo.NemoPostProc()
         self.nemo.suite = mock.Mock()
         self.nemo.suite.finalcycle = False
-        self.defaults = nemoNamelist.nemoNamelist()
+        self.defaults = nemoNamelist.NemoNamelist()
         self.buffer_rst = self.nemo.buffer_rebuild('rst')
         self.buffer_mean = self.nemo.buffer_rebuild('mean')
 
@@ -41,6 +186,42 @@ class RebuildTests(unittest.TestCase):
                 os.remove(fname)
             except OSError:
                 pass
+
+    def test_call_rebuild_restarts(self):
+        '''Test call to rebuild_restarts method'''
+        func.logtest('Assert call to rebuild_fileset from rebuild_restarts:')
+        with mock.patch('nemo.NemoPostProc.rebuild_fileset') as mock_fs:
+            with mock.patch.object(nemo.NemoPostProc, 'rsttypes') as mock_rst:
+                mock_rst.__get__ = mock.Mock(return_value=('',))
+                mynemo = nemo.NemoPostProc()
+                mynemo.suite = mock.Mock()
+                mynemo.suite.prefix = os.environ['RUNID']
+                mynemo.rebuild_restarts()
+        mock_fs.assert_called_with(
+            os.environ['PWD'],
+            '^{}o_{}_?\d{{8}}_restart(\.nc)?'.format(os.environ['RUNID'], '')
+            )
+
+    def test_call_rebuild_iceberg_rsts(self):
+        '''Test call to rebuild_restarts method with iceberg restart files'''
+        func.logtest('Assert call to rebuild_fileset from rebuild_restarts:')
+        self.nemo.suite.prefix = os.environ['RUNID']
+        with mock.patch('nemo.NemoPostProc.rebuild_fileset') as mock_fs:
+            self.nemo.rebuild_restarts()
+        mock_fs.assert_called_with(
+            os.environ['PWD'],
+            '^{}o_{}_?\d{{8}}_restart(\.nc)?'.format(os.environ['RUNID'],
+                                                     self.nemo.rsttypes[-1])
+            )
+
+    def test_call_rebuild_means(self):
+        '''Test call to rebuild_means method'''
+        func.logtest('Assert call to rebuild_fileset from rebuild_means:')
+        self.nemo.suite.prefix = os.environ['RUNID']
+        with mock.patch('nemo.NemoPostProc.rebuild_fileset') as mock_fs:
+            self.nemo.rebuild_means()
+        mock_fs.assert_called_with(os.environ['PWD'], self.nemo.fields[-1],
+                                   rebuildall=True)
 
     def test_namlist_properties(self):
         '''Test definition of NEMO namelist properties'''
@@ -74,8 +255,9 @@ class RebuildTests(unittest.TestCase):
     def test_rebuild_periodic_only(self, mock_subset):
         '''Test rebuild function for periodic files not found'''
         func.logtest('Assert only periodic files are rebuilt:')
-        mock_subset.return_value = ['file1', 'file2']
-        self.nemo.rebuild_fileset(os.environ['PWD'], 'field')
+        mock_subset.return_value = ['file1_19990101', 'file2_19990101']
+        with mock.patch('nemo.NemoPostProc.check_fileformat'):
+            self.nemo.rebuild_fileset(os.environ['PWD'], 'field')
         self.assertIn('only rebuilding periodic', func.capture().lower())
         self.assertIn('deleting component files', func.capture().lower())
 
@@ -94,18 +276,64 @@ class RebuildTests(unittest.TestCase):
     @mock.patch('nemo.NemoPostProc.rebuild_namelist')
     def test_rebuild_pattern(self, mock_nl):
         '''Test rebuild pattern matching function'''
-        func.logtest('Assert rebuild pattern natching function:')
-        myfiles = ['file_19980530_yyyymmdd_field_0000.nc',
-                   'file_19980530_yyyymmdd_field_0001.nc',
-                   'file_19980530_yyyymmdd_field_0002.nc',
-                   'file_19980530_yyyymmdd_field.nc',
-                   'file_19981130_yyyymmdd_field_0000.nc']
+        func.logtest('Assert rebuild pattern matching function:')
+        myfiles = ['RUNIDo_19980530_restart_0000.nc',
+                   'RUNIDo_19980530_yyyymmdd_field_0000.nc',
+                   'RUNIDo_19980530_yyyymmdd_field_0001.nc',
+                   'RUNIDo_19980530_yyyymmdd_field_0002.nc',
+                   'RUNIDo_19980530_yyyymmdd_field.nc',
+                   'RUNIDo_19981130_yyyymmdd_field_0000.nc']
         for fname in myfiles:
             open(fname, 'w').close()
         self.nemo.rebuild_fileset(os.environ['PWD'], 'field')
         mock_nl.assert_called_with(os.environ['PWD'],
-                                   'file_19980530_yyyymmdd_field',
+                                   'RUNIDo_19980530_yyyymmdd_field',
                                    3, omp=1)
+        for fname in myfiles:
+            os.remove(fname)
+
+    @mock.patch('nemo.NemoPostProc.rebuild_namelist')
+    def test_rebuild_pattern_restarts(self, mock_nl):
+        '''Test rebuild restarts pattern matching function'''
+        func.logtest('Assert rebuild restarts pattern matching function:')
+        myfiles = ['RUNIDo_19980530_restart_0000.nc',
+                   'RUNIDo_19980530_restart_0001.nc',
+                   'RUNIDo_19980530_restart_0002.nc',
+                   'RUNIDo_19980530_restart.nc',
+                   'RUNIDo_19981130_restart_0000.nc',
+                   'RUNIDo_icebergs_19980530_restart_0000.nc']
+        self.nemo.buffer_rebuild = mock.Mock()
+        self.nemo.buffer_rebuild.return_value = 0
+        for fname in myfiles:
+            open(fname, 'w').close()
+
+        self.nemo.rebuild_fileset(os.environ['PWD'],
+                                  'RUNIDo_19980530_restart')
+        mock_nl.assert_called_with(os.environ['PWD'],
+                                   'RUNIDo_19980530_restart',
+                                   3, omp=1)
+        for fname in myfiles:
+            os.remove(fname)
+
+    @mock.patch('nemo.NemoPostProc.rebuild_namelist')
+    def test_rebuild_pattern_icebergs(self, mock_nl):
+        '''Test rebuild icebergs restarts pattern matching function'''
+        func.logtest('Assert rebuild iceberg rsts pattern matching function:')
+        myfiles = ['RUNIDo_19980530_yyyymmdd_field_0000.nc',
+                   'RUNIDo_19980530_restart_0000.nc',
+                   'RUNIDo_19980530_restart_0001.nc',
+                   'RUNIDo_19980530_restart_0002.nc',
+                   'RUNIDo_icebergs_19980530_restart_0000.nc',
+                   'RUNIDo_icebergs_19980530_restart_0001.nc']
+        self.nemo.buffer_rebuild = mock.Mock()
+        self.nemo.buffer_rebuild.return_value = 0
+        for fname in myfiles:
+            open(fname, 'w').close()
+        self.nemo.rebuild_fileset(os.environ['PWD'],
+                                  'RUNIDo_icebergs_19980530_restart')
+        mock_nl.assert_called_with(os.environ['PWD'],
+                                   'RUNIDo_icebergs_19980530_restart',
+                                   2, omp=1)
         for fname in myfiles:
             os.remove(fname)
 
@@ -139,8 +367,9 @@ class RebuildTests(unittest.TestCase):
         self.assertIn('successfully rebuilt', func.capture().lower())
         self.assertIn('file_19980530_yyyymmdd', func.capture().lower())
         mock_exec.assert_called_with(
-            'cd {}; {}'.format(os.environ['PWD'],
-                               self.defaults.exec_rebuild))
+            '{}'.format(os.path.join(os.environ['PWD'],
+                                     self.defaults.exec_rebuild)),
+            cwd=os.environ['PWD'])
         self.assertTrue(os.path.exists('nam_rebuild'))
         txt = open('nam_rebuild', 'r').read()
         self.assertNotIn('dims=\'1\',\'2\'', txt)
@@ -182,13 +411,48 @@ class RebuildTests(unittest.TestCase):
     def test_rebuild_namelist_fail(self, mock_exec):
         '''Test failure mode of rebuild namelist function'''
         func.logtest('Assert failure behaviour of rebuild_namelist function:')
-        mock_exec.return_value = (0, '')
+        mock_exec.return_value = (1, '')
+        os.path.isfile = mock.Mock(return_value=True)
         with self.assertRaises(SystemExit):
             self.nemo.rebuild_namelist(os.environ['PWD'],
                                        'file_19980530_yyyymmdd',
                                        3)
         self.assertIn('failed to rebuild file', func.capture('err').lower())
         self.assertIn('file_19980530_yyyymmdd', func.capture('err').lower())
+
+    def test_rebuild_icebergs_call(self):
+        '''Test call to external iceberg rebuilding routine: icb_combrest'''
+        func.logtest('Assert call to external iceberg rebuilding routine:')
+        os.path.isfile = mock.Mock(return_value=True)
+        with mock.patch('utils.exec_subproc', return_value=(0, '')):
+            with mock.patch('nemo.NemoPostProc.rebuild_icebergs') as mock_rbld:
+                mock_rbld.return_value = 0
+                self.nemo.rebuild_namelist(os.environ['PWD'],
+                                           'file_icebergs_yyyymmdd', 2)
+        mock_rbld.assert_called_with(os.environ['PWD'],
+                                     'file_icebergs_yyyymmdd', 2)
+        self.assertIn('Successfully rebuilt', func.capture())
+
+    def test_rebuild_icebergs_cmd(self):
+        '''Test call to external iceberg rebuilding routine: icb_combrest'''
+        func.logtest('Assert call to external iceberg rebuilding routine:')
+        with mock.patch('utils.exec_subproc') as mock_exec:
+            mock_exec.return_value = (0, '')
+            self.nemo.rebuild_icebergs('TestDir', 'filebase', '1')
+        cmd = 'python2.7 {} -f TestDir/filebase_ -n 1 -o TestDir/filebase.nc'.\
+            format(self.defaults.exec_rebuild_icebergs)
+        mock_exec.assert_called_with(cmd, cwd='TestDir')
+        self.assertIn('Successfully rebuilt', func.capture())
+
+    def test_rebuild_icebergs_fail(self):
+        '''Test call to external iceberg rebuilding routine: icb_combrest'''
+        func.logtest('Assert call to external iceberg rebuilding routine:')
+        with mock.patch('utils.exec_subproc') as mock_exec:
+            mock_exec.return_value = (1, 'err output')
+            with self.assertRaises(SystemExit):
+                self.nemo.rebuild_icebergs('TestDir', 'filebase', '1')
+        self.assertIn('Failed to rebuild file', func.capture('err'))
+        self.assertIn('err output', func.capture('err'))
 
 
 def main():

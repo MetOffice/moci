@@ -127,7 +127,7 @@ class _Moose(object):
             if re.search('\d[msy]', fileID):
                 ext = '.nc.file'
                 fileID = 'n' + fileID[-1]
-            elif re.search('\d{2}|re', fileID):
+            elif re.search('\d{2}|re|ic', fileID):
                 ext = '.file'
                 fileID = 'da'  # These are restart dumps - reassign ID
 

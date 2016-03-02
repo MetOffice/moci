@@ -79,6 +79,12 @@ class ExecTests(unittest.TestCase):
     def setUp(self):
         self.cmd = 'echo Hello World!'
 
+    def tearDown(self):
+        try:
+            os.rmdir('TestDir')
+        except OSError:
+            pass
+
     def test_success(self):
         '''Test shell out to subprocess command'''
         func.logtest('Shell out with simple echo command:')
@@ -115,12 +121,11 @@ class ExecTests(unittest.TestCase):
     def test_change_directory(self):
         '''Test subprocess with a change of working directory'''
         func.logtest('Attempt to shell out alternative working directory:')
-        os.mkdir('./TestDir')
-        cmd = 'cd ./TestDir; echo Hello'
+        os.mkdir('TestDir')
+        cmd = 'cd TestDir; echo Hello'
         _, output = utils.exec_subproc(cmd)
         # Code should catch exception: OSError
         self.assertEqual(output.strip(), 'Hello')
-        os.rmdir('./TestDir')
 
     def test_bad_multi_command(self):
         '''Test subprocess with consecutive commands'''

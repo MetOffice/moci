@@ -116,6 +116,12 @@ class MooseTests(unittest.TestCase):
             'MOOPATH':             '',
             'PROJECT':             ''
         }
+        if 'iceberg' in self.id():
+            cmd['CURRENT_RQST_NAME'] = \
+                'RUNIDo_icebergs_YYYYMMDD_restart.nc'
+        elif 'ocean' in self.id():
+            cmd['CURRENT_RQST_NAME'] = \
+                'RUNIDo_19951130_restart.nc'
         os.environ['PREFIX'] = 'PATH/'
         self.inst = moo._Moose(cmd)
 
@@ -173,14 +179,14 @@ class MooseTests(unittest.TestCase):
 
     def test_collection_atmos_dump(self):
         '''Test formation of collection name - atmosphere dump'''
-        func.logtest('test foramtion of collection name with atmos dump:')
+        func.logtest('test formation of collection name with atmos dump:')
         collection = self.inst._collection()
         self.assertEqual(collection, 'ada.file')
         self.assertFalse(self.inst._fl_pp)
 
     def test_collection_atmos_pp(self):
         '''Test formation of collection name - atmosphere mean'''
-        func.logtest('test foramtion of collection name with atmos mean:')
+        func.logtest('test formation of collection name with atmos mean:')
         self.inst._modelID = 'a'
         self.inst._fileID = 'pm'
         collection = self.inst._collection()
@@ -189,16 +195,21 @@ class MooseTests(unittest.TestCase):
 
     def test_collection_ocean_restart(self):
         '''Test formation of collection name - NEMO restart'''
-        func.logtest('test foramtion of collection name with NEMO restart:')
-        self.inst._modelID = 'o'
-        self.inst._fileID = 're'
+        func.logtest('test formation of collection name with NEMO restart:')
+        collection = self.inst._collection()
+        self.assertEqual(collection, 'oda.file')
+        self.assertFalse(self.inst._fl_pp)
+
+    def test_collection_iceberg_restart(self):
+        '''Test formation of collection name - iceberg restart'''
+        func.logtest('test formation of collection name with iceberg restart:')
         collection = self.inst._collection()
         self.assertEqual(collection, 'oda.file')
         self.assertFalse(self.inst._fl_pp)
 
     def test_collection_ice_mean(self):
         '''Test formation of collection name - CICE mean'''
-        func.logtest('test foramtion of collection name with CICE mean:')
+        func.logtest('test formation of collection name with CICE mean:')
         self.inst._modelID = 'i'
         self.inst._fileID = '1s'
         collection = self.inst._collection()

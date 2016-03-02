@@ -67,6 +67,10 @@ class CicePostProc(mt.ModelTemplate):
             format(self.prefix, y),
         }
 
+    @property
+    def rsttypes(self):
+        return ('', '\.age')
+
     @staticmethod
     def get_date(fname):
         for string in fname.split('.'):

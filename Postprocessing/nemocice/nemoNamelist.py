@@ -20,10 +20,13 @@ DESCRIPTION
 import os
 
 
-class nemoNamelist:
+class NemoNamelist:
+    '''Default values for the nemopostproc namelist'''
     pp_run = False
     restart_directory = os.environ['DATAM']
     exec_rebuild = '/projects/ocean/hadgem3/scripts/GC2.0/rebuild_nemo.exe'
+    exec_rebuild_icebergs = os.environ['CYLC_SUITE_SHARE_DIR'] + \
+        '/fcm_make_pp/build/bin/icb_combrest.py'
     rebuild_timestamps = '05-30', '11-30', '06-01', '12-01'
     buffer_rebuild_rst = 5
     buffer_rebuild_mean = 1
@@ -37,4 +40,4 @@ class nemoNamelist:
     archive_set = os.environ['CYLC_SUITE_NAME']
     debug = False
 
-NAMELISTS = {'nemopostproc': nemoNamelist}
+NAMELISTS = {'nemopostproc': NemoNamelist}

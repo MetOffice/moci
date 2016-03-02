@@ -57,9 +57,20 @@ def loadEnv(*envars, **append):
 
 
 def exec_subproc(cmd, verbose=True, cwd=os.environ['PWD']):
+    '''
+    Execute given shell command.
+    'cmd' input should be in the form of either a: 
+      string        - "cd DIR; command arg1 arg2"
+      list of words - ["command", "arg1", "arg2"]
+    Optional arguments:
+      verbose = False: only reproduce the command std.out upon
+                failure of the command
+                True: reprodude std.out regardless of outcome
+      cwd     = Directory in which to execute the command
+    '''
     import subprocess
     cmd_array = [cmd]
-    if type(cmd) != list:
+    if not isinstance(cmd, list):
         cmd_array = cmd.split(';')
         for i, cmd in enumerate(cmd_array):
             cmd_array[i] = cmd.split()
@@ -81,8 +92,8 @@ def exec_subproc(cmd, verbose=True, cwd=os.environ['PWD']):
             output = exc.strerror
             rcode = exc.errno
         if rcode != 0:
-            log_msg('[SUBPROCESS]: Command: {}'.format(rcode, output, 4))
-            log_msg('[SUBPROCESS]: Error = {}:\n\t{}'.format(rcode, output, 4))
+            log_msg('[SUBPROCESS]: Command: {}'.format(' '.join(cmd)), 4)
+            log_msg('[SUBPROCESS]: Error = {}:\n\t{}'.format(rcode, output), 4)
             break
     return rcode, output
 

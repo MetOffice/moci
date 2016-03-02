@@ -151,6 +151,10 @@ class ModelTemplate(control.runPostProc):
     def fields(self):
         return ('',)
 
+    @property
+    def rsttypes(self):
+        return ('',)
+
     @abc.abstractproperty
     def set_stencil(self):
         msg = 'SET_STENCIL not implemented. Required return:\n\t'
@@ -236,12 +240,10 @@ class ModelTemplate(control.runPostProc):
                     yield inputs
 
     # *** REBUILD *** #########################################################
-    @staticmethod
-    def rebuild_restarts():
+    def rebuild_restarts(self):
         pass
 
-    @staticmethod
-    def rebuild_means():
+    def rebuild_means(self):
         pass
 
     # *** MEANING *** #########################################################
@@ -405,7 +407,7 @@ class ModelTemplate(control.runPostProc):
         # Rebuild restart files as required
         self.rebuild_restarts()
 
-        for rsttype in ['', '\.age']:
+        for rsttype in self.rsttypes:
             rstfiles = self.periodset(RegexArgs(period=RR, field=rsttype))
             to_archive = []
             while len(rstfiles) > self.buffer_archive:

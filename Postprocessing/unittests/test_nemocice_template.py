@@ -24,6 +24,22 @@ sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'nemocice'))
 import modeltemplate
 
 
+class RestartTests(unittest.TestCase):
+    '''Unit tests relating to processing of restart files'''
+
+    def setUp(self):
+        with mock.patch('nlist.loadNamelist'):
+            with mock.patch('suite.SuiteEnvironment'):
+                self.model = modeltemplate.ModelTemplate()
+
+    def tearDown(self):
+        pass
+
+    def test_archive_restarts(self):
+        '''Test restart archiving functionality'''
+        func.logtest('Assert ability to archive restart files:')
+
+
 class MeansTests(unittest.TestCase):
     '''Unit tests relating to creation of means'''
 
