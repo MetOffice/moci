@@ -69,7 +69,9 @@ class _Moose(object):
 
     def chkset(self):
         '''Test whether Moose set exists'''
-        chkset_cmd = self._moopath + 'moo test -sw ' + self.dataset
+        chkset_cmd = '{} test -sw {}'.format(
+            os.path.join(self._moopath, 'moo'), self.dataset
+            )
         ret_code, output = utils.exec_subproc(chkset_cmd, verbose=False)
 
         exist = True if output.strip() == 'true' else False
@@ -79,7 +81,7 @@ class _Moose(object):
 
     def mkset(self):
         '''Create Moose set'''
-        mkset_cmd = self._moopath + 'moo mkset -v '
+        mkset_cmd = os.path.join(self._moopath, 'moo') + ' mkset -v '
         if self._cat != 'UNCATEGORISED':
             mkset_cmd += '-c ' + self._cat + ' '
         if self._project:
@@ -155,8 +157,8 @@ class _Moose(object):
         # Because of full path, need to get the filename at the end
         crn = os.path.join(self._sourcedir, crn)
 
-        moo_cmd = self._moopath + 'moo put -f -vv '
-        if self._fl_pp:
+        moo_cmd = os.path.join(self._moopath, 'moo') + ' put -f -vv '
+        if self._fl_pp and not crn.endswith('.pp'):
             crn_pp = os.path.basename(crn) + '.pp'
             filepath = os.path.join(self.dataset, collection_name, crn_pp)
             moo_cmd += '-c=umpp {} {}'.format(crn, filepath)
@@ -197,7 +199,7 @@ class _Moose(object):
             99: 'System Error: The archiving file does not exist '
                 '(ReturnCode=99)',
             230: 'System Error: Archiving command failed - Failed to find VM '
-                '- Check network access to archive',
+            '- Check network access to archive',
         }
 
         if ret_code == 0:

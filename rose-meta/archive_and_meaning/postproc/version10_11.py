@@ -1,6 +1,6 @@
 import rose.upgrade
-import re
 import sys
+import os
 
 class UpgradeError(Exception):
 
@@ -43,5 +43,24 @@ class pp10_t48(rose.upgrade.MacroUpgrade):
         self.add_setting(config,
                          ["namelist:cicepostproc", "chunking_arguments",],
                          "time/1,nc/1,ni/288,nj/204")
+
+        return config, self.reports
+
+
+class pp10_t28(rose.upgrade.MacroUpgrade):
+
+    """Upgrade macro for ticket #28 by Erica Neininger."""
+    BEFORE_TAG = "pp10_t48"
+    AFTER_TAG = "pp10_t28"
+
+    def upgrade(self, config, meta_config=None):
+        """Upgrade a Postproc app configuration."""
+        # Input your macro commands here
+        utils = self.get_setting_value(config,
+                                       ["namelist:atmospp", "pumf_path"])
+        self.add_setting(config, ["namelist:atmospp", "um_utils"],
+                         os.path.dirname(utils))
+        self.remove_setting(config, ["namelist:atmospp", "pumf_path"])
+        self.add_setting(config, ["namelist:archiving", "convert_pp"], "true")
 
         return config, self.reports

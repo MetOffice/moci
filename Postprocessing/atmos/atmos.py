@@ -131,7 +131,7 @@ class AtmosPostProc(control.runPostProc):
         try:
             log_file = open(self.suite.logfile, action)
         except IOError:
-            utils.log_msg('Failed to open archive log file', 5)
+            utils.log_msg('Failed to open archive log file', level=5)
 
         # Get files to archive
         pp_to_archive = self.get_marked_files() if \
@@ -140,20 +140,25 @@ class AtmosPostProc(control.runPostProc):
             self.nl.archiving.archive_dumps else []
 
         files_to_archive = []
-        for fn in pp_to_archive + dumps_to_archive:
+        for fname in pp_to_archive + dumps_to_archive:
             # Perform the header verification on each file
-            fn = os.path.join(self.share, fn)
-            if os.path.exists(fn):
-                if validation.verify_header(self.nl.atmospp, fn, log_file,
+            fnfull = os.path.join(self.share, fname)
+            if os.path.exists(fnfull):
+                if validation.verify_header(self.nl.atmospp, fnfull, log_file,
                                             self.suite.envars.
                                             CYLC_TASK_LOG_ROOT):
-                    files_to_archive.append(fn)
+                    if self.nl.archiving.convert_pp and fname in pp_to_archive:
+                        # Convert fieldsfiles to pp format
+                        fnfull = housekeeping.convert_to_pp(
+                            fnfull, self.share, self.nl.atmospp.um_utils
+                            )
+                    files_to_archive.append(fnfull)
                 else:
                     self.suite.archiveOK = False
             else:
-                msg = 'File {} does not exist - cannot archive'.format(fn)
-                utils.log_msg(msg, 3)
-                msg = fn + ' FILE NOT ARCHIVED. File does not exist\n'
+                msg = 'File {} does not exist - cannot archive'.format(fnfull)
+                utils.log_msg(msg, level=3)
+                msg = fnfull + ' FILE NOT ARCHIVED. File does not exist\n'
                 log_file.write(msg)
 
         # Perform the archiving
@@ -162,8 +167,8 @@ class AtmosPostProc(control.runPostProc):
             msg += '\n '.join(files_to_archive)
             utils.log_msg(msg)
 
-            for fn in files_to_archive:
-                self.suite.archive_file(fn, logfile=log_file,
+            for fname in files_to_archive:
+                self.suite.archive_file(fname, logfile=log_file,
                                         debug=self.nl.atmospp.debug)
         else:
             utils.log_msg(' -> Nothing to archive')
@@ -181,6 +186,7 @@ class AtmosPostProc(control.runPostProc):
 
         housekeeping.delete_dumps(self, dump, archived)
         housekeeping.delete_ppfiles(self, pp_inst, pp_mean, archived)
+
 
 INSTANCE = ('atmospp.nl', AtmosPostProc)
 

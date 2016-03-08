@@ -67,29 +67,34 @@ def identify_filedate(fn):
         return filedate
     else:
         msg = 'Unable to retrieve a valid date from the filename: ' + fn
-        utils.log_msg(msg, 5)
+        utils.log_msg(msg, level=5)
 
 
-def verify_header(atmospp, fn, logfile, logdir):
+def verify_header(atmospp, fname, logfile, logdir):
+    '''
+    Returns True/False dependent on whether the (year, month, day) of the
+    filename matches the validity time in the UM fixed header
+    '''
     pumfout = logdir + '-pumfhead.out'
-    headers = {int(k): str(v).zfill(2) for k, v in genlist(fn, pumfout,
-                                                           atmospp.pumf_path)}
+    pumfexe = os.path.join(atmospp.um_utils, 'um-pumf')
+    headers = {int(k): str(v).zfill(2) for k, v in genlist(fname, pumfout,
+                                                           pumfexe)}
     try:
         valid_date = tuple([headers[hd] for hd in range(28, 34)])
     except KeyError:
-        utils.log_msg('No header information available', 3)
+        utils.log_msg('No header information available', level=3)
         valid_date = ('',)*6
 
-    filedate = identify_filedate(fn)
+    filedate = identify_filedate(fname)
 
     validfile = (filedate == valid_date[:len(filedate)])
     if validfile:
-        utils.log_msg('Validation OK.  File will be archived: ' + fn)
+        utils.log_msg('Validation OK.  File will be archived: ' + fname)
     else:
         msg = 'Validity time mismatch in file {} to be archived: Ignoring'.\
-            format(fn)
-        utils.log_msg(msg, 3)
-        logfile.write(fn + ' ARCHIVE FAILED. Validity mismatch \n')
+            format(fname)
+        utils.log_msg(msg, level=3)
+        logfile.write(fname + ' ARCHIVE FAILED. Validity mismatch \n')
 
     return validfile
 
@@ -106,7 +111,7 @@ def genlist(ppfile, header, pumfpath):
     except AssertionError:
         msg = 'The version of pumf selected must vn9.1 or later. '
         msg += 'Currently attemping to use version {}'.format(str(pumfver))
-        utils.log_msg(msg, 5)
+        utils.log_msg(msg, level=5)
     cmd = '{} -h {} {}'.format(pumfpath, header, ppfile)
     pumf_rcode, _ = utils.exec_subproc(cmd)
 

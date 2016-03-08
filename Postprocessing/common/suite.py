@@ -43,8 +43,8 @@ class SuiteEnvironment(object):
         try:
             self.nl = loadNamelist(input_nl).suitegen
         except AttributeError:
-            msg = 'SuiteEnvironment: Failed to load '
-            '&suitegen namelist from namelist file: ' + input_nl
+            msg = 'SuiteEnvironment: Failed to load ' \
+                '&suitegen namelist from namelist file: ' + input_nl
             utils.log_msg(msg, 5)
 
         self.envars = utils.loadEnv('CYLC_TASK_LOG_ROOT')

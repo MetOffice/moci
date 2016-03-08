@@ -15,8 +15,9 @@ NAME
     housekeeping.py
 
 DESCRIPTION
-    Atmosphere file deletion methods
-
+    Atmosphere housekeeping methods:
+      File deletion utilities
+      File processing utilities - conversion to pp format
 '''
 
 import re
@@ -123,3 +124,25 @@ def delete_ppfiles(atmos, pp_inst_names, pp_mean_names, archived):
         utils.log_msg(msg)
         for workdir in atmos.work:
             utils.remove_files(del_dot_arch, workdir, ignoreNonExist=True)
+
+
+def convert_to_pp(fieldsfile, sharedir, umutils):
+    '''
+    Create the command to call UM utility ff2pp for file
+    conversion to pp format
+    '''
+    ppfname = fieldsfile + '.pp'
+    cmd = ' '.join([os.path.join(umutils, 'um-ff2pp'),
+                    fieldsfile, ppfname])
+    ret_code, output = utils.exec_subproc(cmd, cwd=sharedir)
+
+    if ret_code == 0:
+        msg = 'convert_to_pp: Converted to pp format: ' + ppfname
+        level = 1
+    else:
+        msg = 'convert_to_pp: Conversion to pp format failed: {}\n {}\n'.\
+            format(fieldsfile, output)
+        level = 5
+
+    utils.log_msg(msg, level)
+    return ppfname

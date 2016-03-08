@@ -21,14 +21,17 @@ DESCRIPTION
 import os
 
 
-class atmosNamelist:
+class AtmosNamelist:
     pp_run = False
-    share_directory = os.environ['PWD']
-    pumf_path = '/projects/um1/vn10.3/xc40/utilities/um-pumf'
+    share_directory = os.getcwd()
     debug = False
+    try:
+        um_utils = '/projects/um1/vn{}/xc40/utilities'.format(os.environ['VN'])
+    except KeyError:
+        um_utils = '/projects/um1/vn10.3/xc40/utilities'
 
 
-class archiving:
+class Archiving:
     '''UM Atmosphere archiving namelist'''
     archive_switch = False
     arch_dump_freq = 'Monthly'
@@ -36,9 +39,10 @@ class archiving:
     archive_dumps = False
     archive_pp = False
     arch_year_month = 1
+    convert_pp = True
 
 
-class delete_sc:
+class Deletion:
     '''UM Atmosphere file deletion namelist'''
     del_switch = False
     gcmdel = False
@@ -46,7 +50,7 @@ class delete_sc:
 
 
 NAMELISTS = {
-    'atmospp': atmosNamelist,
-    'archiving': archiving,
-    'delete_sc': delete_sc
+    'atmospp': AtmosNamelist,
+    'archiving': Archiving,
+    'delete_sc': Deletion
 }
