@@ -242,6 +242,32 @@ class SuiteEnvironment(object):
 
         return ret_code
 
+    def preproc_ncdump(self, fname, **kwargs):
+        '''
+        Invoke NetCDF utility ncdump for reading file data
+        Arguments shold be provided in the form of a dictionary
+        '''
+
+        cmd = self.nl.ncdump_path
+        if not os.path.basename(cmd) == 'ncdump':
+            cmd = os.path.join(cmd, 'ncdump')
+           
+        for key, val in kwargs.items():
+            cmd = ' '.join([cmd, '-' + key, val])
+        cmd = ' '.join([cmd, fname])
+
+        utils.log_msg('ncdump: Getting file info: {}'.format(cmd), level=1)
+        ret_code, output = utils.exec_subproc(cmd)
+        level = 2
+        if ret_code == 0:
+            msg = 'ncdump: Command successful'
+        else:
+            msg = 'ncdump: Command failed:\n{}'.format(output)
+            level = 5
+        utils.log_msg(msg, level=level)    
+        
+        return output
+
 
 class SuitePostProc(object):
     ''' Default namelist for model independent properties '''
@@ -255,6 +281,7 @@ class SuitePostProc(object):
     moopath = ''
     mooproject = ''
     nccopy_path = ''
+    ncdump_path = ''
 
 NAMELISTS = {'suitegen': SuitePostProc}
 

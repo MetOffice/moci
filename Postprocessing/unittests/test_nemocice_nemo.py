@@ -455,6 +455,91 @@ class RebuildTests(unittest.TestCase):
         self.assertIn('err output', func.capture('err'))
 
 
+class MeansProcessingTests(unittest.TestCase):
+    '''Unit tests relating to the processing of means files'''
+    def setUp(self):
+        self.nemo = nemo.NemoPostProc()
+        self.nemo.suite = mock.Mock()
+        self.defaults = nemoNamelist.NemoNamelist()
+        self.ncdumpout = '''
+  DOMAIN_size_global = x, 1207;
+  dummy arg = some value;
+  DOMAIN_position_last = x, 151;
+  DOMAIN_position_first = x, 1;
+  dummy arg2 = some other value;
+'''
+
+    def tearDown(self):
+        try:
+            os.remove('nemocicepp.nl')
+        except OSError:
+            pass
+
+    def test_global_attr_to_zonal(self):
+        '''Test method to transform global attributes to zonal ones'''
+        func.logtest('Assert functionality of global_attr_to_zonal method:')
+        self.nemo.suite.preprocess_file.return_value = self.ncdumpout
+        with mock.patch('utils.exec_subproc') as mock_exec:
+            mock_exec.return_value = (0, '')
+            self.nemo.global_attr_to_zonal('TestDir', 'File1')
+        mock_exec.assert_called_with(' '.join([
+            self.defaults.ncatted_cmd,
+            '-a DOMAIN_size_global,global,m,l,1,1207',
+            '-a DOMAIN_position_first,global,m,l,1,1',
+            '-a DOMAIN_position_last,global,m,l,1,151',
+            '-a ibegin,global,m,l,1', 'TestDir/File1',
+            ]))
+        self.assertIn('Changing nc file attributes using', func.capture())
+        self.assertIn('ncatted - Successful', func.capture())
+
+    def test_global_to_zonal_multifile(self):
+        '''Test transform global attributes to zonal - multiple files'''
+        func.logtest('Assert global_attr_to_zonal method - multiple files:')
+        self.nemo.suite.preprocess_file.return_value = self.ncdumpout
+        with mock.patch('utils.exec_subproc') as mock_exec:
+            mock_exec.return_value = (0, '')
+            self.nemo.global_attr_to_zonal('TestDir', ['File1', 'File2'])
+        mock_exec.assert_called_with(' '.join([
+            self.defaults.ncatted_cmd,
+            '-a DOMAIN_size_global,global,m,l,1,1207',
+            '-a DOMAIN_position_first,global,m,l,1,1',
+            '-a DOMAIN_position_last,global,m,l,1,151',
+            '-a ibegin,global,m,l,1', 'TestDir/File2'
+            ]))
+        self.assertIn('Changing nc file attributes', func.capture())
+        self.assertIn('ncatted - Successful', func.capture())
+
+    def test_global_to_zonal_fail(self):
+        '''Test method to transform global attributes to zonal - failure'''
+        func.logtest('Assert failure of global_attr_to_zonal method:')
+        self.nemo.suite.preprocess_file.return_value = self.ncdumpout
+        with mock.patch('utils.exec_subproc') as mock_exec:
+            mock_exec.return_value = (1, '')
+            with self.assertRaises(SystemExit):
+                self.nemo.global_attr_to_zonal('TestDir', 'File1')
+        self.assertIn('Changing nc file attributes', func.capture('err'))
+        self.assertIn('ncatted - Failed', func.capture('err'))
+
+    def test_global_to_zonal_missing(self):
+        '''Test method global attributes to zonal ones - missing attributes'''
+        func.logtest('Assert missing attributes with global_attr_to_zonal:')
+        ncdumpout = '''
+  dummy arg = some value;
+  DOMAIN_position_last = x, 151;
+  DOMAIN_position_first = x, 1;
+  dummy arg2 = some other value;
+'''
+        self.nemo.suite.preprocess_file.return_value = ncdumpout
+        with mock.patch('utils.exec_subproc') as mock_exec:
+            mock_exec.return_value = (1, '')
+            with self.assertRaises(SystemExit):
+                self.nemo.global_attr_to_zonal('TestDir', 'File1')
+        self.assertIn('attribute(s) DOMAIN_size_global not found',
+                      func.capture('err'))
+        self.assertIn('DOMAIN_size_global', func.capture('err'))
+        mock_exec.assert_not_called()
+
+
 def main():
     '''Main function'''
     unittest.main(buffer=True)

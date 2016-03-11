@@ -110,22 +110,19 @@ class NemoPostProc(mt.ModelTemplate):
         }
 
     @property
-    def rebuild_cmd(self):
-        return self.nl.exec_rebuild
-
-    @property
     def rebuild_iceberg_cmd(self):
         '''Returns the namelist value path for the icb_combrest.py script'''
         return self.nl.exec_rebuild_icebergs
+
+    @property
+    def ncatted_cmd(self):
+        '''Command: Exec + Args upto but not including filename(s)'''
+        return self.nl.ncatted_cmd
 
     def buffer_rebuild(self, filetype):
         '''Returns the rebuild buffer for the given filetype'''
         buffer_rebuild = getattr(self.nl, 'buffer_rebuild_' + filetype)
         return buffer_rebuild if buffer_rebuild else 0
-
-    @property
-    def means_cmd(self):
-        return self.nl.means_cmd
 
     @staticmethod
     def get_date(fname):
@@ -150,7 +147,7 @@ class NemoPostProc(mt.ModelTemplate):
                         rebuildall=False):
         '''Rebuild partial files for given filetype'''
         bldfiles = utils.get_subset(datadir,
-                                    '^.*{}{}$'.format(filetype, suffix))
+                                    '^.*{}.*{}$'.format(filetype, suffix))
         buff = self.buffer_rebuild('rst') if \
             'restart' in filetype else self.buffer_rebuild('mean')
         rebuild_required = len(bldfiles) > buff
@@ -161,10 +158,14 @@ class NemoPostProc(mt.ModelTemplate):
                                       '^{}_\d{{4}}\.nc$'.format(corename))
 
             year = month = day = None
-            for part in reversed(corename.split('_')):
-                if re.search('\d{8}', part):
+            for part in corename.split('_'):
+                # Retrieve the data start-date from the filename
+                if re.search('^\d{8}$', part):
                     year, month, day = self.get_date(part)
                     break
+
+            if filetype == 'diaptr':
+                self.global_attr_to_zonal(datadir, bldset)
 
             if rebuildall or self.timestamps(month, day, process='rebuild'):
                 utils.log_msg('Rebuilding: ' + corename, level=1)
@@ -191,6 +192,63 @@ class NemoPostProc(mt.ModelTemplate):
             msg = 'Nothing to rebuild - {} {} files available ' \
                 '({} retained).'.format(len(bldfiles), filetype, buff)
             utils.log_msg(msg, level=1)
+
+    def global_attr_to_zonal(self, datadir, fileset):
+        '''
+        XIOS_v1.x has a bug which results in incorrect representation of mean data
+        in some NEMO fields.
+        Fix netcdf meta data in given file[s] so that they represent
+        zonal mean data and not global data.
+        '''
+        if not isinstance(fileset, list):
+            fileset = [fileset]
+
+        for filename in fileset:
+            full_file = os.path.join(datadir, filename)
+
+            # Run ncdump to interrogate the netcdf file
+            output = self.suite.preprocess_file('ncdump', full_file, h='')
+            global_ny = 'DOMAIN_size_global'
+            pos_first_y = 'DOMAIN_position_first'
+            pos_last_y = 'DOMAIN_position_last'
+
+            for line in output.splitlines():
+                # Split lines on '=', then ',' to get y dimension
+                if 'DOMAIN_size_global' in line:
+                    global_ny = re.split('=|,', line)[-1].strip(';').strip()
+                elif 'DOMAIN_position_first' in line:
+                    pos_first_y = re.split('=|,', line)[-1].strip(';').strip()
+                elif 'DOMAIN_position_last' in line:
+                    pos_last_y = re.split('=|,', line)[-1].strip(';').strip()
+
+            notfound = [x for x in [global_ny, pos_first_y, pos_last_y] if
+                        'DOMAIN' in x]
+            if any(notfound):
+                msg = 'global_attr_to_zonal - attribute(s) {} not found in: '.\
+                    format(','.join(notfound))
+                utils.log_msg(msg + full_file, level=5)
+
+            cmd = ' '.join([
+                self.ncatted_cmd,
+                '-a DOMAIN_size_global,global,m,l,1,{}'.format(global_ny),
+                '-a DOMAIN_position_first,global,m,l,1,{}'.format(pos_first_y),
+                '-a DOMAIN_position_last,global,m,l,1,{}'.format(pos_last_y),
+                '-a ibegin,global,m,l,1',
+                full_file
+                ])
+
+            # Use ncatted to change the attributes
+            msg = 'global_attr_to_zonal - Changing nc file attributes ' \
+                'using command: ' + cmd
+            ret_code, output = utils.exec_subproc(cmd)
+            if ret_code == 0:
+                msg = msg + '\nncatted - Successful for file {}'.\
+                    format(full_file)
+                level = 2
+            else:
+                msg = msg + '\nncatted - Failed for file {}'.format(full_file)
+                level = 5
+            utils.log_msg(msg, level=level)
 
     def rebuild_namelist(self, datadir, filebase, ndom,
                          omp=16, chunk=None, dims=None):

@@ -311,7 +311,7 @@ class ModelTemplate(control.runPostProc):
         try:
             return self.nl.means_cmd
         except AttributeError:
-            raise UserWarning('[FAIL] MEANS exectuable not defined for model.')
+            raise UserWarning('[FAIL] MEANS executable not defined for model.')
 
     def meantemplate(self, inputs):
         '''Return the mean template filename for the given inputs'''

@@ -252,10 +252,9 @@ class PreProcessTests(unittest.TestCase):
         '''Test preprocess_file command'''
         func.logtest('File pre-processing - select nccopy:')
         with mock.patch('suite.SuiteEnvironment.preproc_nccopy') as mock_cmd:
-            # self.mysuite.preprocess_file('nccopy', arg1='ARG1', arg2='ARG2')
             self.mysuite.preprocess_file('nccopy', 'File',
                                          arg1='ARG1', arg2='ARG2')
-        mock_cmd.assert_called_with('File', arg1='ARG1', arg2='ARG2')
+            mock_cmd.assert_called_with('File', arg1='ARG1', arg2='ARG2')
 
     def test_preproc_file_select_fail(self):
         '''Test preprocess_file command failure mode'''
@@ -274,8 +273,8 @@ class PreProcessTests(unittest.TestCase):
                 mock_exec.return_value = (0, '')
                 self.mysuite.preproc_nccopy(infile, compression=5,
                                             chunking=['a/1', 'b/2', 'c/3'])
-        mock_mv.assert_called_with(infile + '.tmp', infile)
-        mock_exec.assert_called_with(cmd)
+                mock_mv.assert_called_with(infile + '.tmp', infile)
+            mock_exec.assert_called_with(cmd)
 
     def test_nccopy_complete_path(self):
         '''Test file compression with nccopy (complete path given)'''
@@ -289,8 +288,8 @@ class PreProcessTests(unittest.TestCase):
                 mock_exec.return_value = (0, '')
                 self.mysuite.preproc_nccopy(infile, compression=5,
                                             chunking=['a/1', 'b/2', 'c/3'])
-        mock_mv.assert_called_with(infile + '.tmp', infile)
-        mock_exec.assert_called_with(cmd)
+                mock_mv.assert_called_with(infile + '.tmp', infile)
+            mock_exec.assert_called_with(cmd)
 
     def test_nccopy_fail(self):
         '''Test file compression with nccopy'''
@@ -303,7 +302,7 @@ class PreProcessTests(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 self.mysuite.preproc_nccopy(infile, compression=5,
                                             chunking=['a/1', 'b/2', 'c/3'])
-        mock_exec.assert_called_with(cmd)
+            mock_exec.assert_called_with(cmd)
 
     def test_nccopy_rename_fail(self):
         '''Test file compression with nccopy'''
@@ -316,7 +315,39 @@ class PreProcessTests(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 self.mysuite.preproc_nccopy(infile, compression=5,
                                             chunking=['a/1', 'b/2', 'c/3'])
-        mock_exec.assert_called_with(cmd)
+            mock_exec.assert_called_with(cmd)
+
+    def test_ncdump(self):
+        '''Test call to ncdump utility'''
+        func.logtest('Assert call to ncdump file utility:')
+        infile = 'TestDir/myFile'
+        with mock.patch('utils.exec_subproc') as mock_exec:
+            mock_exec.return_value = (0, 'NCDUMP output')
+            rtn = self.mysuite.preproc_ncdump(infile, h='')
+            mock_exec.assert_called_with('ncdump -h  TestDir/myFile')
+        self.assertEqual('NCDUMP output', rtn)
+
+    def test_ncdump_path(self):
+        '''Test call to ncdump utility with util path provided'''
+        func.logtest('Assert call to ncdump file utility - path provided:')
+        infile = 'TestDir/myFile'
+        self.mysuite.nl.ncdump_path = 'path/to/ncutils'
+        with mock.patch('utils.exec_subproc') as mock_exec:
+            mock_exec.return_value = (0, '')
+            self.mysuite.preproc_ncdump(infile)
+            cmdstring = 'path/to/ncutils/ncdump TestDir/myFile'
+            mock_exec.assert_called_with(cmdstring)
+
+    def test_ncdump_fail(self):
+        '''Test call to ncdump utility - failure'''
+        func.logtest('Assert failure in call to ncdump file utility:')
+        infile = 'TestDir/myFile'
+        with mock.patch('utils.exec_subproc') as mock_exec:
+            mock_exec.return_value = (1, 'I failed')
+            with self.assertRaises(SystemExit):
+                self.mysuite.preproc_ncdump(infile, h='')
+            mock_exec.assert_called_with('ncdump -h  TestDir/myFile')
+        self.assertIn('I failed', func.capture('err'))
 
 
 def main():

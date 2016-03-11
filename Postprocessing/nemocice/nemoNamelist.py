@@ -39,6 +39,7 @@ class NemoNamelist:
     buffer_archive = 0
     means_cmd = '/projects/ocean/hadgem3/scripts/GC2.0/mean_nemo.exe'
     means_directory = os.environ['CYLC_TASK_WORK_DIR'] + '/../coupled'
+    ncatted_cmd='/projects/ocean/hadgem3/nco/nco-4.4.7/bin/ncatted'
     create_means = False
     archive_means = False
     archive_set = os.environ['CYLC_SUITE_NAME']
