@@ -41,5 +41,8 @@ class CiceNamelist:
     compress_means = 'nccopy'
     compression_level = 0
     chunking_arguments = 'time/1,nc/1,ni/288,nj/204'
+    correct_time_variables = False
+    correct_time_bounds_variables = False
+    time_vars = 'time'
 
 NAMELISTS = {'cicepostproc': CiceNamelist}

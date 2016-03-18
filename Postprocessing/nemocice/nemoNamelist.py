@@ -47,5 +47,8 @@ class NemoNamelist:
     compress_means = 'nccopy'
     compression_level = 0
     chunking_arguments = 'time_counter/1,y/205,x/289'
+    correct_time_variables = False
+    correct_time_bounds_variables = False
+    time_vars = 'time_counter', 'time_centered'
 
 NAMELISTS = {'nemopostproc': NemoNamelist}

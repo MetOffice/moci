@@ -28,6 +28,7 @@ import control
 import nlist
 import suite
 import utils
+import netcdf_utils
 
 # Define constants
 MM = 'Monthly'
@@ -363,6 +364,12 @@ class ModelTemplate(control.runPostProc):
                                                                   meanfile)):
                         msg = 'Created {}: {}'.format(describe, meanfile)
                         utils.log_msg(msg, 2)
+
+                        # Meaning gets the time_bounds variables wrong
+                        # so correct them here
+                        self.fix_mean_time(utils.add_path(meanset, self.share),
+                                           os.path.join(self.share, meanfile))
+
                         if inputs.period == MM:
                             msg = 'Deleting 10-day means files used ' \
                                 'to create ' + meanfile
@@ -525,3 +532,26 @@ class ModelTemplate(control.runPostProc):
                                        chunking=self.nl.chunking_arguments)
         else:
             utils.log_msg('Preprocessing command not yet implemented', 5)
+
+    def fix_mean_time(self, infiles, meanfile):
+        '''
+        Call fix_times to ensure that time and time_bounds in meanfile 
+        are correct
+        '''
+        if self.nl.correct_time_variables or \
+                self.nl.correct_time_bounds_variables:
+            time_vars = self.nl.time_vars
+            if not isinstance(time_vars, (list, tuple)):
+                time_vars = [time_vars]
+
+            msg = 'fix_mean_time - Correcting mean time in file: '
+            utils.log_msg(msg + meanfile, level=1)
+            file_log = ''
+            for var in time_vars:
+                ret_msg = netcdf_utils.fix_times(
+                    infiles, meanfile, var,
+                    do_time=self.nl.correct_time_variables,
+                    do_bounds=self.nl.correct_time_bounds_variables)
+                file_log = file_log + ret_msg
+            if file_log:
+                utils.log_msg(ret_msg, level=2)

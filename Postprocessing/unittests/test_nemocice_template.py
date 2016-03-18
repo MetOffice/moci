@@ -150,6 +150,7 @@ class MeansTests(unittest.TestCase):
                                              'file3', 'file4']
         self.model.meantemplate = mock.Mock()
         self.model.meantemplate.return_value = 'meanfilename'
+        self.model.fix_mean_time = mock.Mock()
 
     def tearDown(self):
         try:
@@ -457,6 +458,53 @@ class PreprocessTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.model.compress_file('meanfile', 'utility')
         self.assertIn('command not yet implemented', func.capture('err'))
+
+    def test_fix_mean_time_one_var(self):
+        '''Test call to netcdf_utils '''
+        func.logtest('Assert call to netcdf_utils - single time var')
+        self.model.nl.time_vars = 'time_counter'
+        self.model.nl.correct_time_variables = True
+        self.model.nl.correct_time_bounds_variables = True
+        self.model.nl.time_bounds_suffix = '_bounds'
+        with mock.patch('netcdf_utils.fix_times') as mock_fix:
+            self.model.fix_mean_time('Filename', 'meanfile')
+            mock_fix.assert_called_with('Filename', 'meanfile', 'time_counter',
+                                        do_time=True, do_bounds=True)
+
+    def test_fix_mean_time_multi_var(self):
+        '''Test call to netcdf_utils '''
+        func.logtest('Assert call to netcdf_utils - single time var')
+        self.model.nl.time_vars = 'time_counter', 'time_centered'
+        self.model.nl.correct_time_variables = True
+        self.model.nl.correct_time_bounds_variables = True
+        with mock.patch('netcdf_utils.fix_times') as mock_fix:
+            self.model.fix_mean_time('Filename', 'meanfile')
+            mock_fix.assert_called_with('Filename', 'meanfile',
+                                        'time_centered',
+                                        do_time=True, do_bounds=True)
+
+    def test_fix_mean_time_only(self):
+        '''Test call to netcdf_utils '''
+        func.logtest('Assert call to netcdf_utils - time var only')
+        self.model.nl.time_vars = 'time_counter', 'time_centered'
+        self.model.nl.correct_time_variables = True
+        self.model.nl.correct_time_bounds_variables = False
+        with mock.patch('netcdf_utils.fix_times') as mock_fix:
+            self.model.fix_mean_time('Filename', 'meanfile')
+            mock_fix.assert_called_with('Filename', 'meanfile',
+                                        'time_centered', do_time=True,
+                                        do_bounds=False)
+
+    def test_fix_mean_bounds_only(self):
+        '''Test call to netcdf_utils '''
+        func.logtest('Assert call to netcdf_utils - bounds var only')
+        self.model.nl.time_vars = 'time'
+        self.model.nl.correct_time_variables = False
+        self.model.nl.correct_time_bounds_variables = True
+        with mock.patch('netcdf_utils.fix_times') as mock_fix:
+            self.model.fix_mean_time('Filename', 'meanfile')
+            mock_fix.assert_called_with('Filename', 'meanfile', 'time',
+                                        do_time=False, do_bounds=True)
 
 
 def main():

@@ -37,7 +37,8 @@ class pp10_t48(rose.upgrade.MacroUpgrade):
                          ["namelist:nemopostproc", "chunking_arguments",],
                          "time_counter/1,y/205,x/289")
         self.add_setting(config,
-                         ["namelist:cicepostproc", "compress_means",], "")
+                         ["namelist:cicepostproc", "compress_means",],
+                         "nccopy")
         self.add_setting(config,
                          ["namelist:cicepostproc", "compression_level",], "0")
         self.add_setting(config,
@@ -81,4 +82,33 @@ class pp10_t69(rose.upgrade.MacroUpgrade):
                          ["namelist:nemopostproc", "ncatted_cmd",],
                          "/projects/ocean/hadgem3/nco/nco-4.4.7/bin/ncatted")
 
+        return config, self.reports
+
+
+class pp10_t74(rose.upgrade.MacroUpgrade):
+
+    """Upgrade macro for ticket #74 by TimGraham."""
+    BEFORE_TAG = "pp10_t69"
+    AFTER_TAG = "pp10_t74"
+
+    def upgrade(self, config, meta_config=None):
+        """Upgrade a Postproc app configuration."""
+        self.add_setting(config,
+                         ["namelist:nemopostproc", "correct_time_variables", ],
+                         "false")
+        self.add_setting(config, ["namelist:nemopostproc",
+                                  "correct_time_bounds_variables",], "false")
+        self.add_setting(config,
+                         ["namelist:nemopostproc", "time_vars", ],
+                         "time_counter,time_centered")
+
+        self.add_setting(config,
+                         ["namelist:cicepostproc", "correct_time_variables", ],
+                         "false")
+        self.add_setting(config, ["namelist:cicepostproc", 
+                                  "correct_time_bounds_variables", ], "false")
+        self.add_setting(config,
+                         ["namelist:cicepostproc", "time_vars", ],
+                         "time")
+ 
         return config, self.reports

@@ -31,6 +31,7 @@ def main():
         'nlist':    'test_common_nlist.py',
         'utils':    'test_common_utils.py',
         'moo':      'test_common_moo.py',
+        'netcdf':   'test_common_netcdf_utils.py',
         'atmos':    'test_atmos_*.py',
         'atmbase':  'test_atmos_base.py',
         'atmutils': 'test_atmos_atmutils.py',
