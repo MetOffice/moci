@@ -26,7 +26,8 @@ def main():
     '''Run unit tests for postproc app'''
     groups = {
         'all':      'test_*.py',
-        'common':   'test_common*.py',
+        'main':     'test_main.py',
+        'common':   'test_common_*.py',
         'suitegen': 'test_common_suitegen.py',
         'nlist':    'test_common_nlist.py',
         'utils':    'test_common_utils.py',

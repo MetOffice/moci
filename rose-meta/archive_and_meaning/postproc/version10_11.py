@@ -112,3 +112,36 @@ class pp10_t74(rose.upgrade.MacroUpgrade):
                          "time")
  
         return config, self.reports
+        
+class pp10_t79(rose.upgrade.MacroUpgrade):
+
+    """Upgrade macro for ticket #79 by EricaNeininger."""
+    BEFORE_TAG = "pp10_t69"
+    AFTER_TAG = "pp10_t79"
+
+    def upgrade(self, config, meta_config=None):
+        """Upgrade a Postproc app configuration."""
+        # Call main_py.py script with appropriate arguments
+        cmd = self.get_setting_value(config, ["command", "default"])
+        args = cmd.split()[1:]
+
+        if not args:
+            args.append(cmd)
+            atmos = self.get_setting_value(config,
+                                           ["namelist:atmospp", "pp_run"])
+            if atmos.lower() == 'true':
+                args.append('atmos')
+            nemo = self.get_setting_value(config,
+                                          ["namelist:nemopostproc", "pp_run"])
+            if nemo.lower() == 'true':
+                args.append('nemo')
+            cice = self.get_setting_value(config,
+                                          ["namelist:cicepostproc", "pp_run"])
+            if nemo.lower() == 'true':
+                args.append('cice')
+
+            if len(args) < 4:
+                  self.change_setting_value(config, ["command", "default"],
+                                            ' '.join(args))
+
+        return config, self.reports        
