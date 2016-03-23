@@ -113,10 +113,11 @@ class pp10_t74(rose.upgrade.MacroUpgrade):
  
         return config, self.reports
         
+
 class pp10_t79(rose.upgrade.MacroUpgrade):
 
     """Upgrade macro for ticket #79 by EricaNeininger."""
-    BEFORE_TAG = "pp10_t69"
+    BEFORE_TAG = "pp10_t74"
     AFTER_TAG = "pp10_t79"
 
     def upgrade(self, config, meta_config=None):
@@ -150,7 +151,7 @@ class pp10_t79(rose.upgrade.MacroUpgrade):
 class pp10_t44(rose.upgrade.MacroUpgrade):
 
     """Upgrade macro for ticket #44 by Erica Neininger."""
-    BEFORE_TAG = "postproc_1.0"
+    BEFORE_TAG = "pp10_t79"
     AFTER_TAG = "pp10_t44"
 
     def upgrade(self, config, meta_config=None):
@@ -169,4 +170,16 @@ class pp10_t44(rose.upgrade.MacroUpgrade):
               self.change_setting_value(config, ["file:" + fname, "source"],
                                         source)
         
+        return config, self.reports
+
+
+class pp10_pp11(rose.upgrade.MacroUpgrade):
+
+    """Upgrade macro for Version 1.1 Release."""
+    BEFORE_TAG = "pp10_t44"
+    AFTER_TAG = "postproc_1.1"
+
+    def upgrade(self, config, meta_config=None):
+        """Upgrade a Postproc make app configuration."""
+        # No changes required
         return config, self.reports
