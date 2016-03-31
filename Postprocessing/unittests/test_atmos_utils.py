@@ -40,11 +40,13 @@ class HousekeepTests(unittest.TestCase):
         '''Test convert_to_pp functionality'''
         func.logtest('Assert functionality of the convert_to_pp method:')
         with mock.patch('utils.exec_subproc') as mock_exec:
-            mock_exec.return_value = (0, '')
-            ppfile = housekeeping.convert_to_pp('Filename', 'TestDir',
-                                                self.umutils)
-        cmd = self.umutils + '/um-ff2pp Filename Filename.pp'
-        mock_exec.assert_called_with(cmd, cwd='TestDir')
+            with mock.patch('utils.remove_files') as mock_rm:
+                mock_exec.return_value = (0, '')
+                ppfile = housekeeping.convert_to_pp('Filename', 'TestDir',
+                                                    self.umutils)
+                mock_rm.assert_Called_with('Filename', path='TestDir')
+            cmd = self.umutils + '/um-ff2pp Filename Filename.pp'
+            mock_exec.assert_called_with(cmd, cwd='TestDir')
         self.assertEqual(ppfile, 'Filename.pp')
 
     def test_convert_to_pp_fail(self):

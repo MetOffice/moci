@@ -35,7 +35,7 @@ def main():
         'netcdf':   'test_common_netcdf_utils.py',
         'atmos':    'test_atmos_*.py',
         'atmbase':  'test_atmos_base.py',
-        'atmutils': 'test_atmos_atmutils.py',
+        'atmutils': 'test_atmos_utils.py',
         'nemocice': 'test_nemocice*.py',
         'nemo':     'test_nemocice_nemo.py',
         'cice':     'test_nemocice_cice.py',

@@ -118,7 +118,8 @@ def delete_ppfiles(atmos, pp_inst_names, pp_mean_names, archived):
         utils.remove_files(to_delete, atmos.share)
 
         # Remove .arch files from work directory(s)
-        del_dot_arch = [os.path.basename(fn)+".arch" for fn in to_delete]
+        del_dot_arch = [os.path.basename(fn).rstrip('.pp') + ".arch" for
+                        fn in to_delete]
         msg = 'Removing .arch files from work directory:\n ' + \
             '\n '.join([f for f in del_dot_arch])
         utils.log_msg(msg)
@@ -138,6 +139,7 @@ def convert_to_pp(fieldsfile, sharedir, umutils):
 
     if ret_code == 0:
         msg = 'convert_to_pp: Converted to pp format: ' + ppfname
+        utils.remove_files(fieldsfile, path=sharedir)
         level = 1
     else:
         msg = 'convert_to_pp: Conversion to pp format failed: {}\n {}\n'.\
