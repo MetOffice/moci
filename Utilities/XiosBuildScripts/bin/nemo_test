@@ -1,0 +1,46 @@
+#!/usr/bin/env python2.7
+# *****************************COPYRIGHT******************************
+# (C) Crown copyright Met Office. All rights reserved.
+# For further details please refer to the file COPYRIGHT.txt
+# which you should have received as part of this distribution.
+# *****************************COPYRIGHT******************************
+"""
+Runs the specified NEMO configuration to test the build of NEMO.
+ Expected environment variables
+ - SYSTEM_NAME
+ - XIOS
+ - XIOS_PATH
+ - NEMO
+ - BUILD_PATH
+ - nemoTasksJpi
+ - nemoTasksJpj
+ - xiosTasks
+ - JP_CFG
+ - NEMO_EXP_REL_PATH
+"""
+
+import os
+import sys
+
+import NemoTestSystem
+
+def main():
+    """
+    Main function for script.
+    """
+    try:
+        system_name = os.environ['SYSTEM_NAME']
+    except KeyError as key_error_1:
+        err_msg1 = 'Error: Unable to determine system type, {0}\n' \
+                   'Aborting NEMO test.\n'
+        err_msg1 = err_msg1.format(str(key_error_1))
+        sys.stderr.write(err_msg1)
+        return 1
+
+    test_system = NemoTestSystem.build_test_system(system_name, os.environ)
+    test_system.run_test()
+    return 0
+
+if __name__ == '__main__':
+    test_status = main()
+    exit(test_status)

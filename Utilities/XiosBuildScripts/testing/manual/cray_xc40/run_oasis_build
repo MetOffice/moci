@@ -1,0 +1,68 @@
+#!/usr/bin/env python2.7
+'''
+*****************************COPYRIGHT******************************
+ (C) Crown copyright Met Office. All rights reserved.
+ For further details please refer to the file COPYRIGHT.txt
+ which you should have received as part of this distribution.
+*****************************COPYRIGHT******************************
+Created on 13 January 2016
+
+@author: Stephen Haddad
+'''
+
+import os
+import subprocess
+
+import OasisCommon
+import CrayXc40Common
+
+[SCRIPT_DIR, LIB_DIR, SCRIPT_ENV] = CrayXc40Common.setup_path_to_scripts()
+
+
+class OasisBuildCraySettings(OasisCommon.OasisCommonSettings,
+                             CrayXc40Common.CrayXc40CommonSettings):
+    """
+    Class to contain settings for running oasis build manual script.
+    """
+    def __init__(self):
+        CrayXc40Common.CrayXc40CommonSettings.__init__(self)
+        OasisCommon.OasisCommonSettings.__init__(self)
+        self.workingDir = os.getcwd()
+
+        self.OASIS_OUTPUT_DIR = os.path.join(self.workingDir,
+                                             'install',
+                                             self.OASIS3_MCT)
+        self.OASIS_PLATFORM_NAME = 'crayxc40'
+        self.VERBOSE = 'true'
+        self.BUILD_OASIS = 'true'
+        self.OASIS_BUILD_TUTORIAL = 'true'
+        self.USE_OASIS = 'true'
+        self.OASIS_EXTERNAL_REPO_URL = \
+            'http://oasis3mct.cerfacs.fr/svn/trunk/oasis3-mct'
+        self.OASIS_EXTERNAL_REV_NO = '1120'
+
+def main():
+    """
+    Main function for running oasis build manual script.
+    """
+    build_settings1 = OasisBuildCraySettings()
+    env_vars = SCRIPT_ENV.copy()
+    env_vars.update(build_settings1.__dict__)
+
+    exec_name1 = 'oasis_build'
+
+    cmd1 = ''
+    for module_path in build_settings1.XBS_PREREQ_MODULES.split(','):
+        cmd1 += 'module load {0}\n'.format(module_path)
+    cmd1 += '''
+echo $PYTHONPATH
+{EXEC}
+'''.format(EXEC=exec_name1)
+
+    #print 'running command {0}'.format(cmd1)
+    subprocess.call(cmd1,
+                    env=env_vars,
+                    shell=True)
+
+if __name__ == '__main__':
+    main()

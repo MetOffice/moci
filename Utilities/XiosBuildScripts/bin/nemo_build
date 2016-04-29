@@ -1,0 +1,42 @@
+#!/usr/bin/env python2.7
+# *****************************COPYRIGHT******************************
+# (C) Crown copyright Met Office. All rights reserved.
+# For further details please refer to the file COPYRIGHT.txt
+# which you should have received as part of this distribution.
+# *****************************COPYRIGHT******************************
+"""
+ Build nemo executable
+
+ Inputs
+
+   Environment variables:
+     SYSTEM_NAME
+     NEMO
+     NEMO_REPO_URL
+     NEMO_REV
+     BUILD_PATH
+     XIOS
+     MTOOLS
+     XIOS_PATH
+     USE_OASIS:
+      if true:
+        OASIS_ROOT
+     XLF_MODULE
+     XLCPP_MODULE
+     JP_CFG
+     NEMO_POST_BUILD_CLEANUP
+"""
+import os
+
+import NemoBuildSystem
+
+def main():
+    """
+    Main function for script.
+    """
+    system_name = os.environ['SYSTEM_NAME']
+    build_system = NemoBuildSystem.create_nemo_build_system(system_name)
+    build_system.run_build()
+
+if __name__ == '__main__':
+    main()

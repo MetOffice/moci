@@ -1,0 +1,53 @@
+#!/usr/bin/env python2.7
+# *****************************COPYRIGHT******************************
+# (C) Crown copyright Met Office. All rights reserved.
+# For further details please refer to the file COPYRIGHT.txt
+# which you should have received as part of this distribution.
+# *****************************COPYRIGHT******************************
+'''
+Created on 20 August 2015
+
+@author: Stephen Haddad
+
+Compares some of the output from OASIS tutorial app with KGO.
+'''
+import sys
+import os
+import subprocess
+
+import OasisTestSystem
+
+import compare_utils
+
+def main():
+    """
+    Main function for comparing oasis3-mct output against KGO.
+    """
+    oasis_kgo_dir = os.environ['OASIS_KGO_DIR']
+    oasis_result_dir = os.environ['OASIS_RESULT_DIR']
+    oasis_remote_result_dir = os.environ['OASIS_REMOTE_RESULT_DIR']
+
+    #copy files
+    copy_cmd = 'scp {remote_dir}/*.nc {result_dir}'
+    copy_cmd = copy_cmd.format(remote_dir=oasis_remote_result_dir,
+                               result_dir=oasis_result_dir)
+    subprocess.call(copy_cmd,
+                    shell=True)
+
+    print 'comparing Oasis3-mct output files'
+
+    for file_name1 in OasisTestSystem.OasisTestSystem.OUTPUT_FILE_NAMES:
+        print 'evaluating file {filename}'.format(filename=file_name1)
+        try:
+            compare_utils.compare_cube_list_files(oasis_kgo_dir,
+                                                  oasis_result_dir,
+                                                  file_name1)
+        except Exception as except1:
+            sys.stderr.write(str(except1))
+            raise except1
+
+    print 'Oasis3-mct output data match successful'
+    sys.exit(0)
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,68 @@
+#!/usr/bin/env python2.7
+'''
+*****************************COPYRIGHT******************************
+ (C) Crown copyright Met Office. All rights reserved.
+ For further details please refer to the file COPYRIGHT.txt
+ which you should have received as part of this distribution.
+*****************************COPYRIGHT******************************
+
+Created on 13 January 2016
+
+@author: Stephen Haddad
+'''
+import os
+import subprocess
+
+import OasisCommon
+import CrayXc40Common
+
+[SCRIPT_DIR, LIB_DIR, SCRIPT_ENV] = CrayXc40Common.setup_path_to_scripts()
+
+class OasisTestCraySettings(CrayXc40Common.CrayXc40CommonSettings,
+                            OasisCommon.OasisCommonSettings):
+    def __init__(self):
+        """
+        Class to contain settings for running oasis3-mct test manual script.
+        """
+        CrayXc40Common.CrayXc40CommonSettings.__init__(self)
+        OasisCommon.OasisCommonSettings.__init__(self)
+        self.working_dir = os.getcwd()
+        self.OASIS_DATA_DIRECTORY = '/data/d02/shaddad/oasis3-mct_tutorialData/'
+        self.OASIS_PLATFORM_NAME = 'crayxc40'
+        self.VERBOSE = 'true'
+        self.OASIS_OUTPUT_DIR = os.path.join(self.working_dir,
+                                             'install',
+                                             self.OASIS3_MCT)
+
+        self.OASIS_ROOT = self.OASIS_OUTPUT_DIR
+
+        self.OASIS_RESULT_DIR = os.path.join(self.working_dir,
+                                             'oasisOutput')
+        if not os.path.exists(self.OASIS_RESULT_DIR):
+            os.makedirs(self.OASIS_RESULT_DIR)
+        self.OASIS_TEST_NAME = 'oasis3mct_tutorial'
+
+
+def main():
+    """
+    Main function for running oasis test manual script.
+    """
+    test_settings1 = OasisTestCraySettings()
+    env_vars = SCRIPT_ENV.copy()
+    env_vars.update(test_settings1.__dict__)
+
+    exec_name1 = 'oasis_test'
+    cmd1 = ''
+    for module_path in test_settings1.XBS_PREREQ_MODULES.split(','):
+        cmd1 += 'module load {0}\n'.format(module_path)
+    cmd1 += '''
+module use $MODULE_INSTALL_PATH/modules
+module load $OASIS3_MCT/$OASIS_MODULE_VERSION/$ROSE_SUITE_REV_NO/$OASIS_REV_NO
+{EXEC}'''
+    cmd1 = cmd1.format(EXEC=exec_name1)
+    subprocess.call(cmd1,
+                    env=env_vars,
+                    shell=True)
+
+if __name__ == '__main__':
+    main()

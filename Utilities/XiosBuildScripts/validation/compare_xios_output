@@ -1,0 +1,52 @@
+#!/usr/bin/env python2.7
+# *****************************COPYRIGHT******************************
+# (C) Crown copyright Met Office. All rights reserved.
+# For further details please refer to the file COPYRIGHT.txt
+# which you should have received as part of this distribution.
+# *****************************COPYRIGHT******************************
+'''
+Created on 20 August 2015
+
+@author: Stephen Haddad
+
+Compares some of the output from the XIOS complete_test app with KGO.
+'''
+import sys
+import os
+import subprocess
+
+import XiosTestSystem
+
+import compare_utils
+
+
+def main():
+    xios_kgo_dir = os.environ['XIOS_KGO_DIR']
+    xios_result_dir = os.environ['XIOS_RESULT_DIR']
+    xios_remote_result_dir = os.environ['XIOS_REMOTE_RESULT_DIR']
+
+    #copy files
+    copy_cmd = 'scp {remoteDir}/*.nc {resultDir}'
+    copy_cmd = copy_cmd.format(remoteDir=xios_remote_result_dir,
+                               resultDir=xios_result_dir)
+
+    subprocess.call(copy_cmd,
+                    shell=True)
+
+    print 'comparing XIOS output files'
+
+    for file_name1 in XiosTestSystem.XiosTestSystem.OUTPUT_FILE_LIST:
+        print 'evaluating file {filename}'.format(filename=file_name1)
+        try:
+            compare_utils.compare_cube_list_files(xios_kgo_dir,
+                                                  xios_result_dir,
+                                                  file_name1)
+        except Exception as except1:
+            sys.stderr.write(str(except1))
+            raise except1
+
+    print 'xios output data match successful'
+    sys.exit(0)
+
+if __name__ == '__main__':
+    main()

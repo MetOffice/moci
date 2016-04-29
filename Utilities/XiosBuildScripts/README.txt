@@ -4,11 +4,11 @@ Overview
 ========
 The contents of this directory contain scripts to build and test XIOS and 
 associated libraries. These include OASIS and NEMO (GYRE configuration). 
-The scripts here were to written as part of a Rose suite (originally mi-ad949) 
+The scripts here were written as part of a Rose suite (u-ab692) 
 that primarily builds XIOS. In addition to building XIOS, apps in the suite 
 also 
 * build the OASIS3-MCT library
-* run the OSIS3-MCT tutorial application
+* run the OASIS3-MCT tutorial application
 * run the XIOS "test_complete" test
 * build the GYRE configuration of NEMO
 * run test GYRE config test
@@ -25,49 +25,44 @@ Source code overview
 ====================
 The scripts are written in Python. The code is structured as follows
 
-* oasisBuild.py - Script to build the oasis3-mct library and create environment modules using the output.
-* oasisTest.py - Script to run the oasis3-mct tutorial to test the build output.
-* xiosBuild.py - Script to build XIOS library and create an environment module for XIOS
-* xiosTest.py - Script to run the "test_complete" test found in the XIOS 
-                repository.
-* nemoBuild.py - script to build the NEMO application using the GYRE 
-                 configuration
-* nemoTest.py - script to test NEMO with XIOS using the GYRE configuration
-* EnvironmentModules.py - Classes to write out environment module files
+* bin directory - contains the executable scripts which call the main code in 
+                  the lib directory
 
+* lib directory - contains most of the core code. These fall into 4 categories:
+ * common.py, EnvironmentModules.py - contains common classes and functions
+ * *BuildSystem.py - Contains classes for build Oasis3-mct, XIOS & NEMO
+ * *TestSystem.py -  Contains classes for testing the libraries & executables that
+                     that have been built.
+ * *ModuleWriter.py - Classes to write environment modules for Oasis3-mct and XIOS.
 * testing  - contains unit tests for the build & test scripts. See 
              "Testing the scripts" section for more info on running tests.
-* setupScripts - contains shell script to set up environment to run the 
-                 the build and test scripts from the command line. The 
-                 scripts are designed to run as part of a Rose suite. 
-                 See setupScripts/README.txt for more info
-
+* testing/manual - Contains setup scripts for use by developers to run the 
+                   build and test scripts individually. See "Running the 
+                   scripts" for more info.
+* validation - contains small scripts used by rose-stem test suite to validate 
+               the output of the tests.
 
 Running the scripts
 ===================
 The scripts can be run individually or as part of a rose suite.
 
 The intended way of running these scripts is as part of a rose suite. To test
-the scripts there is a rose stem test as part of the build scripts. 
+the scripts there is a rose stem test as part of the build scripts. To run rose 
+stem you run the command "rose stem --group=XBS_ALL". This will run the complete 
+test suite. 
 
-!!IMPORTANT INFORMATION!!
-In the current version of Rose (2015.06.0), in order for rose stem to work, the
-checkout directory from the repository HAS to be be the one immediately
-above the level of the directory called rose-stem. If you check out a higher 
-level, for example checking out the root directory, rose stem will fail or run
-the wrong rose stem test. The level at which you check out the scripts to run
-rose stem should be the directory that contains this README file.
-
-To run rose stem that you have checked out correctly (see above paragraph) you 
-run the command "rose stem --group=test_nemo_gyre". This will run the complete 
-test suite. You can also use "--group=test_xios" to not build or test the NEMO
-GYRE configuration.
+There is also a standalone suite intended to be used for deploying the 
+libraries. The suite can be found in roses section of the Met Office Science
+Repository Service (https://code.metoffice.gov.uk/trac/roses-u/) with suite ID
+u-ab692. You can checkoput this suite and then run it to build and test the
+libraries.
 
 To run them individually, several environment variables need to be set up 
 for each each script. In the test/manual directory there are scripts that
 setup up the environment and then launch the relevant script. For example
 to run the xiosBuild.py script on the Cray XC40 platform, you can run 
-the testing/manual/cray_xc40/runXiosBuild.py script.
+the testing/manual/cray_xc40/run_xios_build script. This will launch the setup
+the envrionment for and run the bin/xios_build script.
 
 
 Testing the scripts
@@ -76,13 +71,13 @@ Testing the scripts
 Unit tests:
 The testing folder contains unit tests for each of the main test scripts for 
 each of the supported platforms. To run all the test scripts, you should run one 
-of the "run*Tests" scripts, e.g. runCrayTests on the Cray XC40. This will
+of the "run_*_tests" scripts, e.g. run_cray_tests on the Cray XC40. This will
 run all the unit tests for that platform. Temporary files for the unit tests
 will be put in a scratch directory whose name starts with "scratch_XBStests_".
 This directory will be default be created in the users current directory, but
 if an argument is supplied to the run test script, that will be used as the
 parent directory for the scratch directory. The directory can be deleted when
-the tests have run.
+the tests have run. The unit tests are also run as part of the rose-stem suite.
 
 Functional testing:
 To test that the scripts run as intended, the rose test suite can be run.
@@ -93,12 +88,12 @@ testing.
 Alternatively the scripts can be run individually from the command line as 
 described in the "Running the scripts" section above. To test all functionality, 
 the following scripts should be run:
-* oasisBuild.py
-* oasisTest.py
-* xiosBuild.py
-* xiosTest.py 
-* nemoBuild.py
-* nemoTest.py
+* testing/manual/crayxc40/run_oasis_build
+* testing/manual/crayxc40/run_oasis_test
+* testing/manual/crayxc40/run_xios_build
+* testing/manual/crayxc40/run_xios_test
+* testing/manual/crayxc40/run_nemo_build
+* testing/manual/crayxc40/run_nemo_test
 
 
 

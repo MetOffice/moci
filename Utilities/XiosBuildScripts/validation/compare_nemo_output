@@ -1,0 +1,50 @@
+#!/usr/bin/env python2.7
+# *****************************COPYRIGHT******************************
+# (C) Crown copyright Met Office. All rights reserved.
+# For further details please refer to the file COPYRIGHT.txt
+# which you should have received as part of this distribution.
+# *****************************COPYRIGHT******************************
+"""
+Created on 20 August 2015
+
+@author: Stephen Haddad
+
+Compares some of the output from NEMO test app with KGO.
+"""
+import sys
+import os
+import subprocess
+
+import compare_utils
+import NemoTestSystem
+
+def main():
+    """
+    Main function to compare NEMO output to KGO.
+    """
+    nemo_kgo_dir = os.environ['NEMO_KGO_DIR']
+    nemo_result_dir = os.environ['NEMO_RESULT_DIR']
+    nemo_remote_result_dir = os.environ['NEMO_REMOTE_RESULT_DIR']
+
+    #copy files
+    copy_cmd = 'scp {remote_dir}/*.nc {result_dir}'
+    copy_cmd = copy_cmd.format(remote_dir=nemo_remote_result_dir,
+                               result_dir=nemo_result_dir)
+    subprocess.call(copy_cmd,
+                    shell=True)
+
+    print 'comparing NEMO output files'
+    for file_name1 in NemoTestSystem.NemoTestSystem.OUTPUT_FILE_LIST:
+        print 'evaluating file {filename}'.format(filename=file_name1)
+        try:
+            compare_utils.compare_cube_list_files(nemo_kgo_dir,
+                                                  nemo_result_dir,
+                                                  file_name1)
+        except Exception as except1:
+            sys.stderr.write(str(except1))
+            raise except1
+
+    print 'NEMO output data match successful'
+
+if __name__ == '__main__':
+    main()
