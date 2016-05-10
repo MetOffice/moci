@@ -59,7 +59,7 @@ def loadEnv(*envars, **append):
 def exec_subproc(cmd, verbose=True, cwd=os.environ['PWD']):
     '''
     Execute given shell command.
-    'cmd' input should be in the form of either a: 
+    'cmd' input should be in the form of either a:
       string        - "cd DIR; command arg1 arg2"
       list of words - ["command", "arg1", "arg2"]
     Optional arguments:

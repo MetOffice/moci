@@ -17,13 +17,20 @@ class UpgradeError(Exception):
       __str__ = __repr__
 
 
-class pp11_tXXX(rose.upgrade.MacroUpgrade):
+class pp11_t75(rose.upgrade.MacroUpgrade):
 
-    """Upgrade macro for ticket #XXX by <author>."""
+    """Upgrade macro for ticket #75 by EricaNeininger."""
     BEFORE_TAG = "postproc_1.1"
-    AFTER_TAG = "pp11_tXXX"
+    AFTER_TAG = "pp11_t75"
 
     def upgrade(self, config, meta_config=None):
         """Upgrade a Postproc app configuration."""
-        # Input your macro commands here
+        self.add_setting(config,
+                         ["namelist:cicepostproc", "means_to_archive",], None)
+        self.add_setting(config,
+                         ["namelist:cicepostproc", "base_component",], '10d')
+        self.add_setting(config,
+                         ["namelist:nemopostproc", "means_to_archive",], None)
+        self.add_setting(config,
+                         ["namelist:nemopostproc", "base_component",], '10d')
         return config, self.reports

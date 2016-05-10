@@ -15,7 +15,7 @@ NAME
     netcdf_utils.py
 
 DESCRIPTION
-    Module containing methods to fix times and tims bounds in a mean 
+    Module containing methods to fix times and tims bounds in a mean
     netcdf file created from multiple input files
 '''
 from netCDF4 import Dataset, num2date, date2num
@@ -67,7 +67,7 @@ def time_bounds_var_to_date(fname, time_var):
 
 def first_and_last_dates(dates, target_units, calendar):
     '''
-    Return the earliest and latest dates as floats using 
+    Return the earliest and latest dates as floats using
     target_units and calendar.
     Input dates should be a list of netcdf.datetime objects
     '''
@@ -99,13 +99,13 @@ def correct_time(meanset, time_var, target_unit, calendar):
 
 def fix_times(meanset, meanfile, time_var, do_time=False, do_bounds=False):
     '''
-    Fix time variable in meanfile to the mean of the input times taking 
+    Fix time variable in meanfile to the mean of the input times taking
     account of calendar
     Fix time bounds variable in meanfile to the earliest and latest
     dates in the same variable in meanset
     Variables: meanset = A set of files that have been averaged together
                meanfile = Mean file created by averaging the files above
-               time_var = name of the time variable to be used to obtain the 
+               time_var = name of the time variable to be used to obtain the
                           units and calendar attributes
                time_bounds_var = name of time bounds variable to be corrected
     '''

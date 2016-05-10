@@ -53,7 +53,7 @@ class SuiteEnvironment(object):
             except AttributeError:
                 msg = 'SuiteEnvironment: Failed to load ' \
                     '&moose_arch namelist from namelist file: ' + input_nl
-                utils.log_msg(msg, level=5)           
+                utils.log_msg(msg, level=5)
 
         self.envars = utils.loadEnv('CYLC_TASK_LOG_ROOT')
 
@@ -262,7 +262,7 @@ class SuiteEnvironment(object):
         cmd = self.nl.ncdump_path
         if not os.path.basename(cmd) == 'ncdump':
             cmd = os.path.join(cmd, 'ncdump')
-           
+
         for key, val in kwargs.items():
             cmd = ' '.join([cmd, '-' + key, val])
         cmd = ' '.join([cmd, fname])
@@ -275,8 +275,8 @@ class SuiteEnvironment(object):
         else:
             msg = 'ncdump: Command failed:\n{}'.format(output)
             level = 5
-        utils.log_msg(msg, level=level)    
-        
+        utils.log_msg(msg, level=level)
+
         return output
 
 

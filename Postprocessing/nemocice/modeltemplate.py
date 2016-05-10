@@ -31,6 +31,7 @@ import utils
 import netcdf_utils
 
 # Define constants
+XX = 'General'
 MM = 'Monthly'
 SS = 'Seasonal'
 AA = 'Annual'
@@ -38,19 +39,25 @@ RR = 'Restarts'
 
 PDICT = OrderedDict([
     (RR, {'Restart': None}),
+    (XX, {'All': None}),
     (MM, {'Month': None}),
     (SS, {
-        'Winter, ending': (('12', 'December'),  ('01', 'January'),
-                           ('02', 'February'),  (1,    'YrEnd')),
-        'Spring':         (('03', 'March'),     ('04', 'April'),
-                           ('05', 'May'),       (0,    'YrEnd')),
-        'Summer':         (('06', 'June'),      ('07', 'July'),
-                           ('08', 'August'),    (0,    'YrEnd')),
-        'Autumn':         (('09', 'September'), ('10', 'October'),
-                           ('11', 'November'),  (0,    'YrEnd')),
-    }),
+        'Winter, ending': (('12', 'December'), ('01', 'January'),
+                           ('02', 'February'), (1, 'YrEnd')),
+        'Spring': (('03', 'March'), ('04', 'April'),
+                   ('05', 'May'), (0, 'YrEnd')),
+        'Summer': (('06', 'June'), ('07', 'July'),
+                   ('08', 'August'), (0, 'YrEnd')),
+        'Autumn': (('09', 'September'), ('10', 'October'),
+                   ('11', 'November'), (0, 'YrEnd')),
+        }),
     (AA, {'Year': None}),
 ])
+
+MONTH_BASE = {
+    # Number of files required to create a monthly mean file (360day calendar)
+    '1m': None, '15d': 2, '10d': 3, '5d': 6, '2d': 15, '1d': 30, '12h': 60
+    }
 
 
 class RegexArgs(object):
@@ -84,6 +91,7 @@ class ModelTemplate(control.runPostProc):
             self.suite = suite.SuiteEnvironment(self.share, input_nl)
             self.suite.envars = utils.loadEnv('CYLC_SUITE_INITIAL_CYCLE_POINT',
                                               append=self.suite.envars)
+            self.del_base = []
 
     @property
     def runpp(self):
@@ -100,6 +108,8 @@ class ModelTemplate(control.runPostProc):
         main program
         '''
         return OrderedDict([('archive_restarts', self.nl.archive_restarts),
+                            ('move_to_share',
+                             self.nl.create_means or self.nl.archive_means),
                             ('create_means', self.nl.create_means),
                             ('archive_means', self.nl.archive_means)])
 
@@ -121,6 +131,21 @@ class ModelTemplate(control.runPostProc):
         return self.suite.prefix
 
     @property
+    def month_base(self):
+        '''Base component used to create the monthly mean file'''
+        return self.nl.base_component
+
+    @property
+    def additional_means(self):
+        '''
+        Returns a list of means to be archived; additional to the standard
+        monthly, seasonal and annual means files
+        '''
+        if not isinstance(self.nl.means_to_archive, list):
+            self.nl.means_to_archive = [self.nl.means_to_archive]
+        return self.nl.means_to_archive
+
+    @property
     def rebuild_cmd(self):
         '''
         Command: Executable + Arguments upto but not including
@@ -133,16 +158,24 @@ class ModelTemplate(control.runPostProc):
             pass
 
     def move_to_share(self, pattern=None):
-        ''' Move unprocessed means files to SHARE '''
-        if pattern:
-            workfiles = utils.get_subset(self.work, pattern)
-        else:
-            # Default pattern - all 10day means files
-            inputs = RegexArgs(period=MM)
-            workfiles = self.periodset(inputs, datadir=self.work)
-        if workfiles:
-            utils.log_msg('Moving files to SHARE directory')
-            utils.move_files(workfiles, self.share, originpath=self.work)
+        '''
+        Move unprocessed means files to SHARE.
+        Finally, rebuild component files if necessary
+        '''
+        if self.work != self.share:
+            if pattern:
+                workfiles = utils.get_subset(self.work, pattern)
+            else:
+                # Default pattern - all means files
+                inputs = RegexArgs(period=XX, date=(None,)*3)
+                workfiles = utils.get_subset(self.work,
+                                             self.meantemplate(inputs))
+            if workfiles:
+                utils.log_msg('Moving files to SHARE directory')
+                utils.move_files(workfiles, self.share, originpath=self.work)
+
+        # Rebuild means files as required
+        self.rebuild_means()
 
     def timestamps(self, month, day, process='archive'):
         '''
@@ -158,7 +191,7 @@ class ModelTemplate(control.runPostProc):
 
     @property
     def fields(self):
-        ''' Returns a tuple of means fields availlable'''
+        '''Returns a tuple of means fields available'''
         return ('',)
 
     @property
@@ -173,7 +206,7 @@ class ModelTemplate(control.runPostProc):
         Overriding method in the calling model is required
         '''
         msg = 'SET_STENCIL not implemented. Required return:\n\t'
-        msg += 'dict={"period": lambda y,m,s,f: "^{}{}{}{}\.nc$".'\
+        msg += r'dict={"period": lambda y,m,s,f: "^{}{}{}{}\.nc$".'\
             'format(y,m,s,f)}'
         utils.log_msg(msg, 4)
         raise NotImplementedError
@@ -186,7 +219,7 @@ class ModelTemplate(control.runPostProc):
         Overriding method in the calling model is required
         '''
         msg = 'END_STENCIL not implemented. Required return:\n\t'
-        msg += 'dict={"period": lambda s,f: "^{}{}\.nc$".format(s,f)}'
+        msg += r'dict={"period": lambda s,f: "^{}{}\.nc$".format(s,f)}'
         utils.log_msg(msg, 4)
         raise NotImplementedError
 
@@ -198,13 +231,14 @@ class ModelTemplate(control.runPostProc):
         Overriding method in the calling model is required
         '''
         msg = 'MEAN_STENCIL not implemented. Required return:\n\t'
-        msg += 'dict={"period": lambda p,y,m,s,f: "^{}{}{}{}{}\.nc$"' \
+        msg += r'dict={"period": lambda p,y,m,s,f: "^{}{}{}{}{}\.nc$"' \
             '.format(p,y,m,s,f)}'
         utils.log_msg(msg, 4)
         raise NotImplementedError
 
+    @staticmethod
     @abc.abstractmethod
-    def get_date(self, filename):
+    def get_date(filename):
         '''
         Returns a tuple representing the date extracted from a filename
         Overriding method in the calling model is required
@@ -237,7 +271,7 @@ class ModelTemplate(control.runPostProc):
             period = inputs.period
             args = ('.*', '.*', '.*', inputs.field)
             pattern = self.mean_stencil[period](*args)
-            pattern = pattern.replace('.', '\.').replace('\.*', '.*')
+            pattern = pattern.replace('.', r'\.').replace(r'\.*', '.*')
 
         return utils.get_subset(datadir, pattern)
 
@@ -276,10 +310,12 @@ class ModelTemplate(control.runPostProc):
         inputs = RegexArgs()
         for field in fields:
             inputs.field = field
-            for i, period in enumerate(PDICT.keys()[1:]):
+            # Loop over PDICT periods: MM, SS and AA (ignoring RR and XX)
+            for i, period in enumerate(PDICT.keys()[2:]):
                 inputs.period = period
                 if archive:
-                    use_subp = PDICT.keys()[(i + 2) % len(PDICT)]
+                    # Period i+3 required to ignore RR and XX periods
+                    use_subp = PDICT.keys()[(i + 3) % len(PDICT)]
                 else:
                     use_subp = period
                 for subperiod in PDICT[use_subp]:
@@ -339,12 +375,6 @@ class ModelTemplate(control.runPostProc):
         Create monthly, seasonal, annual means.
         Delete component files as necessary.
         '''
-        if self.work != self.share:
-            self.move_to_share()
-
-        # Rebuild means files as required
-        self.rebuild_means()
-
         for inputs in self.loop_inputs(self.fields):
             # Loop over set of means which it should be possible to create
             # from files available.
@@ -352,14 +382,25 @@ class ModelTemplate(control.runPostProc):
                 inputs.date = self.get_date(setend)
                 describe = self.describe_mean(inputs)
                 meanset = self.periodset(inputs)
-                if len(meanset) == (4 if inputs.period == AA else 3):
-                    # Annual means require 3 component files to be available.
-                    # Seasonal and monthly means require 4 components.
+                lenset = {
+                    # Number of component files required for each mean
+                    MM: MONTH_BASE[self.month_base],
+                    SS: 3,
+                    AA: 4
+                    }
+                if not lenset[inputs.period]:
+                    # Base component of one month - no monthly mean to create
+                    msg = 'create_means: Monthly means output directly by model'
+                    utils.log_msg(msg, level=1)
+                    if len(meanset) > 1:
+                        # Delete component files
+                        utils.remove_files(meanset, path=self.share)
+
+                elif len(meanset) == lenset[inputs.period]:
                     meanfile = self.meantemplate(inputs)
-                    cmd = 'cd {}; {} {} {}'.format(self.share, self.means_cmd,
-                                                   (' ').join(meanset),
-                                                   meanfile)
-                    icode, output = utils.exec_subproc(cmd)
+                    cmd = '{} {} {}'.format(self.means_cmd, (' ').join(meanset),
+                                            meanfile)
+                    icode, output = utils.exec_subproc(cmd, cwd=self.share)
                     if icode == 0 and os.path.isfile(os.path.join(self.share,
                                                                   meanfile)):
                         msg = 'Created {}: {}'.format(describe, meanfile)
@@ -371,10 +412,12 @@ class ModelTemplate(control.runPostProc):
                                            os.path.join(self.share, meanfile))
 
                         if inputs.period == MM:
-                            msg = 'Deleting 10-day means files used ' \
-                                'to create ' + meanfile
-                            utils.log_msg(msg)
-                            utils.remove_files(meanset, self.share)
+                            if self.month_base in self.additional_means:
+                                self.del_base = self.del_base + meanset
+                            else:
+                                msg = 'Deleting component means for '
+                                utils.log_msg(msg + meanfile)
+                                utils.remove_files(meanset, path=self.share)
 
                     else:
                         msg = '{}: Error={}\n{}'.format(self.means_cmd,
@@ -444,7 +487,7 @@ class ModelTemplate(control.runPostProc):
 
     def archive_means(self):
         '''
-        Compile list of restart files to archive.
+        Compile list of means files to archive.
         Only delete if all files are successfully archived.
         '''
         to_archive = []
@@ -452,12 +495,27 @@ class ModelTemplate(control.runPostProc):
             for setend in self.periodend(inputs, archive=True):
                 inputs.date = self.get_date(setend) if setend else (None,)*3
                 for mean in self.periodset(inputs, archive=True):
-                    if self.nl.compression_level > 0 and \
-                            inputs.field != 'diaptr':
-                        self.compress_file(mean, self.nl.compress_means)
                     to_archive.append(mean)
 
+        for other_mean in self.additional_means:
+            if other_mean and other_mean not in ['1m', '1s', '1y']:
+                for field in self.fields:
+                    meanset = utils.get_subset(
+                        self.share,
+                        self.mean_stencil[XX](other_mean, None, None, field)
+                        )
+                    for mean in meanset:
+                        if self.month_base not in mean \
+                                or mean in self.del_base:
+                            to_archive.append(mean)
+
         if to_archive:
+            # Compress means files prior to archive.
+            if self.nl.compression_level > 0:
+                # NEMO diaptr files cannot currently be compressed.
+                for fname in [fn for fn in to_archive if '_diaptr' not in fn]:
+                    self.compress_file(fname, self.nl.compress_means)
+
             arch_files = self.archive_files(to_archive)
             if not [fn for fn in arch_files if arch_files[fn] == 'FAILED']:
                 msg = 'Deleting archived files: \n\t' + '\n\t'.join(to_archive)
@@ -535,7 +593,7 @@ class ModelTemplate(control.runPostProc):
 
     def fix_mean_time(self, infiles, meanfile):
         '''
-        Call fix_times to ensure that time and time_bounds in meanfile 
+        Call fix_times to ensure that time and time_bounds in meanfile
         are correct
         '''
         if self.nl.correct_time_variables or \

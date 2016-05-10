@@ -39,16 +39,17 @@ class CicePostProc(mt.ModelTemplate):
         them.  This is a consequence of the @property nature of the method
         '''
         return {
-            mt.RR: lambda y, m, s, f: r'^{}i.restart{}.\d{{4}}-[-\d]*(.nc)?$'.
+            mt.RR: lambda y, m, s, f:
+                   r'^{}i\.restart{}\.\d{{4}}-[-\d]*(\.nc)?$'.
                    format(self.prefix, f),
-            mt.MM: lambda y, m, s, f: r'^{}i.10d.{}-{}-\d{{2}}.nc$'.
-                   format(self.prefix, y, m),
-            mt.SS: lambda y, m, s, f: r'^{}i.1m.({}-{}|{}-{}|{}-{}).nc$'.
+            mt.MM: lambda y, m, s, f: r'^{}i\.{}\.{}-{}-\d{{2}}\.nc$'.
+                   format(self.prefix, self.month_base, y, m),
+            mt.SS: lambda y, m, s, f: r'^{}i\.1m\.({}-{}|{}-{}|{}-{})\.nc$'.
                    format(self.prefix,
-                          y if not isinstance(s[3], int) else 
+                          y if not isinstance(s[3], int) else
                           (int(y) - s[3]),
                           s[0], y, s[1], y, s[2]),
-            mt.AA: lambda y, m, s, f: r'^{}i.1s.{}-\d{{2}}.nc$'.
+            mt.AA: lambda y, m, s, f: r'^{}i\.1s\.{}-\d{{2}}\.nc$'.
                    format(self.prefix, y),
         }
 
@@ -64,11 +65,12 @@ class CicePostProc(mt.ModelTemplate):
         '''
         return {
             mt.RR: None,
-            mt.MM: lambda s, f: r'^{}i.10d.\d{{4}}-\d{{2}}-30.nc$'.
-                   format(self.prefix),
-            mt.SS: lambda s, f: r'^{}i.1m.\d{{4}}-{}.nc$'.
+            mt.MM: lambda s, f:
+                   r'^{}i\.{}\.\d{{4}}-\d{{2}}-30\.nc$'.
+                   format(self.prefix, self.month_base),
+            mt.SS: lambda s, f: r'^{}i\.1m\.\d{{4}}-{}\.nc$'.
                    format(self.prefix, s[2]),
-            mt.AA: lambda s, f: r'^{}i.1s.\d{{4}}-11.nc$'.
+            mt.AA: lambda s, f: r'^{}i\.1s\.\d{{4}}-11\.nc$'.
                    format(self.prefix),
         }
 
@@ -83,7 +85,9 @@ class CicePostProc(mt.ModelTemplate):
         them.  This is a consequence of the @property nature of the method
         '''
         return {
-            mt.RR: None,  # Required for rebuilding restart files
+            mt.XX: lambda y, m, s, f:
+                   r'^{}i\.{}\.\d{{4}}-\d{{2}}(-\d{{2}})?(-\d{{2}})?\.nc$'.
+                   format(self.prefix, y if y else r'\d+[hdmsy]'),
             mt.MM: lambda y, m, s, f: r'{}i.1m.{}-{}.nc'.
                    format(self.prefix, y, m),
             mt.SS: lambda y, m, s, f: r'{}i.1s.{}-{}.nc'.

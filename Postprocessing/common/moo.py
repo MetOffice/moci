@@ -59,8 +59,8 @@ class _Moose(object):
 
         # Define the collection name
         runid, rqst = re.split('[._]', os.path.basename(self._rqst_name), 1)
-        self._modelID = runid[-1]
-        self._fileID = rqst[:2]
+        self._model_id = runid[-1]
+        self._file_id = rqst
         if not self.chkset():
             self.mkset()  # Create a set
 
@@ -109,40 +109,45 @@ class _Moose(object):
         the runid in the filename
         """
         ext = ''
-        modelID = self._modelID
-        fileID = self._fileID
+        model_id = self._model_id
 
-        if modelID == 'a':  # Atmosphere output
-            if re.search('[mp][1-9|a-m|q|s-z]', fileID):
+        if model_id == 'a':  # Atmosphere output
+            file_id = self._file_id[:2]
+            if re.search('[mp][1-9|a-m|q|s-z]', file_id):
                 ext = '.pp'
-            elif re.search('v[1-5|a-j|lmsvy]', fileID):
+            elif re.search('v[1-5|a-j|lmsvy]', file_id):
                 ext = '.pp'
-            elif re.search('n[1-9|a-m|s-z]', fileID):
+            elif re.search('n[1-9|a-m|s-z]', file_id):
                 ext = '.nc.file'
-            elif re.search('b[a-j|mxy]', fileID):
+            elif re.search('b[a-j|mxy]', file_id):
                 ext = '.file'
-            elif re.search('d[amsy]', fileID):
+            elif re.search('d[amsy]', file_id):
                 ext = '.file'
-            elif re.search('r[a-m|qstuvwxz]', fileID):
+            elif re.search('r[a-m|qstuvwxz]', file_id):
                 ext = '.file'
 
-        elif modelID in 'io':  # NEMO/CICE means and restart dumps
-            if re.search('\d[msy]', fileID):
+        elif model_id in 'io':  # NEMO/CICE means and restart dumps
+            # ultimately file_id needs to be reassigned as a 2char variable
+            file_id = re.split('[._]', self._file_id)
+            if re.match(r'\d+[hdmsy]', file_id[0]):
                 ext = '.nc.file'
-                fileID = 'n' + fileID[-1]
-            elif re.search('\d{2}|re|ic', fileID):
+                file_id = 'n' + file_id[0][-1]
+            elif 'restart' in file_id:
                 ext = '.file'
-                fileID = 'da'  # These are restart dumps - reassign ID
+                file_id = 'da'  # These are restart dumps - reassign ID
+            else:
+                msg = 'moo.py - ocean/sea-ice file type not recognised: '
+                utils.log_msg(msg + self._rqst_name, 5)
 
         else:
             msg = 'moo.py - Model id "{}" in filename  not recognised.'.\
-                format(modelID)
+                format(model_id)
             msg += '\n -> Please contact crum@metoffice.gov.uk ' \
                 'if your requirements are not being met by this script.'
             utils.log_msg(msg, 5)
 
-        self._fl_pp = True if ext == '.pp' else False
-        return modelID + fileID + ext
+        self.fl_pp = True if ext == '.pp' else False
+        return model_id + file_id + ext
 
     def put_data(self):
         """ Archive the data using moose """
@@ -159,7 +164,7 @@ class _Moose(object):
         crn = os.path.join(self._sourcedir, crn)
 
         moo_cmd = os.path.join(self._moopath, 'moo') + ' put -f -vv '
-        if self._fl_pp and not crn.endswith('.pp'):
+        if self.fl_pp and not crn.endswith('.pp'):
             crn_pp = os.path.basename(crn) + '.pp'
             filepath = os.path.join(self.dataset, self._ens_id,
                                     collection_name, crn_pp)
@@ -202,7 +207,7 @@ class _Moose(object):
             99: 'System Error: The archiving file does not exist '
                 '(ReturnCode=99)',
             230: 'System Error: Archiving command failed - Failed to find VM '
-            '- Check network access to archive',
+                 '- Check network access to archive',
         }
 
         if ret_code == 0:
@@ -211,7 +216,7 @@ class _Moose(object):
             level = 1
         elif ret_code == 11:
             utils.log_msg(put_rtncode[11])
-            msg = '{} not added to the {} collection since it contains no fields'.\
+            msg = '{} not added to the {} collection - it contains no fields'.\
                 format(crn, collection_name)
             level = 3
         elif ret_code in put_rtncode:
@@ -274,7 +279,7 @@ class MooseArch(object):
     ensembleid = ''
     moopath = ''
     mooproject = ''
-    
+
 NAMELISTS = {'moose_arch': MooseArch}
 
 if __name__ == '__main__':

@@ -49,7 +49,7 @@ class PostprocTests(unittest.TestCase):
         self.modules['cice'].INSTANCE = ('nl_cice', self.modules['cice'])
 
     def tearDown(self):
-        for fname in ['atmospp.nl', 'nemocicepp.nl']:        
+        for fname in ['atmospp.nl', 'nemocicepp.nl']:
             try:
                 os.remove(fname)
             except OSError:

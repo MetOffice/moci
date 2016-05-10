@@ -48,18 +48,18 @@ class NemoPostProc(mt.ModelTemplate):
         them.  This is a consequence of the @property nature of the method
         '''
         return {
-            mt.RR: lambda y, m, s, f: '^{}o_{}_?\d{{8}}_restart(\.nc)?$'.
-            format(self.prefix, f),
-            mt.MM: lambda y, m, s, f: '^{}o_10d_\d{{8}}_{}{}\d{{2}}_{}\.nc$'.
-            format(self.prefix, y, m, f),
+            mt.RR: lambda y, m, s, f: r'^{}o_{}_?\d{{8}}_restart(\.nc)?$'.
+                   format(self.prefix, f),
+            mt.MM: lambda y, m, s, f: r'^{}o_{}_\d{{8}}_{}{}\d{{2}}_{}\.nc$'.
+                   format(self.prefix, self.month_base, y, m, f),
             mt.SS: lambda y, m, s, f:
-                '^{}o_1m_({}{}|{}{}|{}{})01_\d{{8}}_{}\.nc$'.format(
-                self.prefix,
-                y if not isinstance(s[3], int) else str(int(y) - s[3]),
-                s[0], y, s[1], y, s[2], f
-                ),
-            mt.AA: lambda y, m, s, f: '^{}o_1s_\d{{8}}_{}\d{{2}}30_{}\.nc$'.
-            format(self.prefix, y, f),
+                   r'^{}o_1m_({}{}|{}{}|{}{})01_\d{{8}}_{}\.nc$'.format(
+                       self.prefix,
+                       str(int(y) - s[3]) if isinstance(s[3], int) else y,
+                       s[0], y, s[1], y, s[2], f
+                       ),
+            mt.AA: lambda y, m, s, f: r'^{}o_1s_\d{{8}}_{}\d{{2}}30_{}\.nc$'.
+                   format(self.prefix, y, f),
         }
 
     @property
@@ -74,15 +74,12 @@ class NemoPostProc(mt.ModelTemplate):
         '''
         return {
             mt.RR: None,
-            mt.MM: lambda s, f: '^{}o_10d_\d{{6}}21_\d{{6}}30_{}\.nc$'.format(
-                self.prefix, f
-                ),
-            mt.SS: lambda s, f: '^{}o_1m_\d{{4}}{}01_\d{{8}}_{}\.nc$'.format(
-                self.prefix, s[2], f
-                ),
-            mt.AA: lambda s, f: '^{}o_1s_\d{{4}}0901_\d{{8}}_{}\.nc$'.format(
-                self.prefix, f
-                ),
+            mt.MM: lambda s, f: r'^{}o_{}_\d{{8}}_\d{{6}}30_{}\.nc$'.
+                   format(self.prefix, self.month_base, f),
+            mt.SS: lambda s, f: r'^{}o_1m_\d{{4}}{}01_\d{{8}}_{}\.nc$'.
+                   format(self.prefix, s[2], f),
+            mt.AA: lambda s, f: r'^{}o_1s_\d{{4}}0901_\d{{8}}_{}\.nc$'.
+                   format(self.prefix, f),
         }
 
     @property
@@ -96,17 +93,17 @@ class NemoPostProc(mt.ModelTemplate):
         them.  This is a consequence of the @property nature of the method
         '''
         return {
-            mt.MM: lambda y, m, s, f: '{}o_1m_{}{}01_{}{}30_{}.nc'.format(
-                self.prefix, y, m, y, m, f
-                ),
-            mt.SS: lambda y, m, s, f: '{}o_1s_{}{}01_{}{}30_{}.nc'.format(
-                self.prefix,
-                y if not isinstance(s[3], int) else str(int(y) - s[3]),
-                s[0], y, s[2], f
-                ),
-            mt.AA: lambda y, m, s, f: '{}o_1y_{}1201_{}1130_{}.nc'.format(
-                self.prefix, y if '*' in y else (int(y)-1), y, f
-                ),
+            mt.XX: lambda y, m, s, f:
+                   r'^{}o_{}_\d{{8,10}}_\d{{8,10}}_{}(\.nc)?$'.
+                   format(self.prefix, y if y else r'\d+[hdmsy]', f),
+            mt.MM: lambda y, m, s, f: r'{}o_1m_{}{}01_{}{}30_{}.nc'.
+                   format(self.prefix, y, m, y, m, f),
+            mt.SS: lambda y, m, s, f: r'{}o_1s_{}{}01_{}{}30_{}.nc'.
+                   format(self.prefix,
+                          str(int(y) - s[3]) if isinstance(s[3], int) else y,
+                          s[0], y, s[2], f),
+            mt.AA: lambda y, m, s, f: r'{}o_1y_{}1201_{}1130_{}.nc'.
+                   format(self.prefix, y if '*' in y else (int(y)-1), y, f),
         }
 
     @property
@@ -134,20 +131,24 @@ class NemoPostProc(mt.ModelTemplate):
     def rebuild_restarts(self):
         '''Rebuild partial restart files'''
         for rst in self.rsttypes:
-            # Strip '$' from end of pattern
-            pattern = self.set_stencil[mt.RR](None, None, None, rst)[:-1]
+            pattern = self.set_stencil[mt.RR](None, None, None, rst).\
+                rstrip('$').lstrip('^')
             self.rebuild_fileset(self.share, pattern)
 
     def rebuild_means(self):
         '''Rebuild partial means files'''
+        rebuildmeans = self.additional_means + ['10d']
         for field in self.fields:
-            self.rebuild_fileset(self.share, field, rebuildall=True)
+            for mean in set(rebuildmeans):
+                pattern = self.mean_stencil[mt.XX](mean, None, None, field).\
+                    rstrip('$').lstrip('^')
+                self.rebuild_fileset(self.share, pattern, rebuildall=True)
 
     def rebuild_fileset(self, datadir, filetype, suffix='_0000.nc',
                         rebuildall=False):
         '''Rebuild partial files for given filetype'''
         bldfiles = utils.get_subset(datadir,
-                                    '^.*{}.*{}$'.format(filetype, suffix))
+                                    r'^.*{}.*{}$'.format(filetype, suffix))
         buff = self.buffer_rebuild('rst') if \
             'restart' in filetype else self.buffer_rebuild('mean')
         rebuild_required = len(bldfiles) > buff
@@ -155,7 +156,7 @@ class NemoPostProc(mt.ModelTemplate):
             bldfile = bldfiles.pop(0)
             corename = bldfile.split(suffix)[0]
             bldset = utils.get_subset(datadir,
-                                      '^{}_\d{{4}}\.nc$'.format(corename))
+                                      r'^{}_\d{{4}}\.nc$'.format(corename))
 
             year = month = day = None
             for part in corename.split('_'):
@@ -183,7 +184,7 @@ class NemoPostProc(mt.ModelTemplate):
                     self.check_fileformat(filename, (year, month, day),
                                           filetype)
 
-                if not self.suite.finalcycle:
+                if not self.suite.finalcycle or 'restart' not in corename:
                     utils.log_msg('Deleting component files for: ' + corename,
                                   level=1)
                     utils.remove_files(bldset, self.share)
@@ -195,8 +196,8 @@ class NemoPostProc(mt.ModelTemplate):
 
     def global_attr_to_zonal(self, datadir, fileset):
         '''
-        XIOS_v1.x has a bug which results in incorrect representation of mean data
-        in some NEMO fields.
+        XIOS_v1.x has a bug which results in incorrect representation of
+        mean data in some NEMO fields.
         Fix netcdf meta data in given file[s] so that they represent
         zonal mean data and not global data.
         '''
@@ -326,25 +327,43 @@ class NemoPostProc(mt.ModelTemplate):
 
     def check_fileformat(self, inputfile, date, filetype):
         '''
-        Output file format changed at vn3.5.
-        This function renames rebuilt files with the original format
+        Output file format for means files changed at vn3.5.
+        This function renames rebuilt means files with the original format
+        prior to their use in creating other means.
         '''
-        if 'restart' in filetype:
-            field = ''
-            period = mt.RR
-            template = '{}o_{}{}{}_restart.nc'.format(self.prefix, date[0],
-                                                      date[1], date[2])
-        else:
-            field = filetype
-            period = mt.MM
-            template = '{0}o_10d_{1}{2}{3}_{1}{2}{4:0>2d}_{5}.nc'.\
-                format(self.prefix, date[0], date[1], date[2],
-                       int(date[2])+9, field)
+        mean_period = None
+        for base in mt.MONTH_BASE:
+            if '_{}_'.format(base) in inputfile:
+                mean_period = base
+                period = re.match(r'^(?P<num>\d+)(?P<per>[a-zA-Z]+)$',
+                                  mean_period)
+                if period.group('per').lower() == 'h':
+                    msg = 'NEMO check_fileformat: hourly means not implemented'
+                    utils.log_msg(msg, level=3)
+                    return
+                try:
+                    mean_day2 = int(date[2]) + int(period.group('num')) - 1
+                except ValueError:
+                    msg = 'NEMO check_fileformat: Date format is incorrect:'
+                    utils.log_msg(msg + filetype, level=5)
+                break
 
-            args = ('\d{4}', '\d{2}', None, field)
-            if not re.match(self.set_stencil[period](*args),
-                            os.path.basename(inputfile)):
-                os.rename(inputfile, os.path.join(self.share, template))
+        if not mean_period:
+            return
+
+        try:
+            field = [f for f in self.fields if re.search(f, filetype)][0]
+        except IndexError:
+            msg = 'NEMO check_fileformat: Cannot obtain field from filename:'
+            utils.log_msg(msg + filetype, level=5)
+
+        args = (r'\d{4}', r'\d{2}', None, field)
+        if not re.match(self.set_stencil[mt.MM](*args),
+                        os.path.basename(inputfile)):
+            template = r'{0}o_{1}_{2}{3}{4}_{2}{3}{5:0>2d}_{6}.nc'.\
+                format(self.prefix, mean_period, date[0], date[1], date[2],
+                       mean_day2, field)
+            os.rename(inputfile, os.path.join(self.share, template))
 
 
 INSTANCE = ('nemocicepp.nl', NemoPostProc)

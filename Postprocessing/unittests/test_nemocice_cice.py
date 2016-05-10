@@ -31,6 +31,8 @@ class StencilTests(unittest.TestCase):
         self.files = [
             'RUNIDi.restart.1981-12-01-00000',
             'RUNIDi.restart.1981-12-01-00000.nc',
+            'RUNIDi.6h.1985-11-11-13.nc',
+            'RUNIDi.5d.1985-11-06.nc',
             'RUNIDi.10d.1985-11-11.nc',
             'RUNIDi.1m.1985-11.nc',
             'RUNIDi.1s.1985-11.nc',
@@ -48,7 +50,7 @@ class StencilTests(unittest.TestCase):
 
     def tearDown(self):
         try:
-            os.remove('cicecicepp.nl')
+            os.remove('nemocicepp.nl')
         except OSError:
             pass
 
@@ -119,6 +121,22 @@ class StencilTests(unittest.TestCase):
         annual_set = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(annual_set,
                          [fname for fname in self.files if '.1s.' in fname])
+
+    def test_mean_stencil_hourly(self):
+        '''Test the regular expressions of the mean_stencil method - hourly'''
+        func.logtest('Assert hourly pattern matching of mean_stencil:')
+        patt = re.compile(self.meanstencil['General']('6h', None, None, ''))
+        sixhr_set = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(sixhr_set,
+                         [fname for fname in self.files if '.6h.' in fname])
+
+    def test_mean_stencil_daily(self):
+        '''Test the regular expressions of the mean_stencil method - daily'''
+        func.logtest('Assert daily pattern matching of mean_stencil:')
+        patt = re.compile(self.meanstencil['General']('10d', None, None, ''))
+        tenday_set = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(tenday_set,
+                         [fname for fname in self.files if '.10d.' in fname])
 
     def test_mean_stencil_monthly(self):
         '''Test the regular expressions of the mean_stencil method - monthly'''

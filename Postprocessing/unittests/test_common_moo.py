@@ -119,11 +119,13 @@ class MooseTests(unittest.TestCase):
             'PROJECT':             ''
         }
         if 'iceberg' in self.id():
-            cmd['CURRENT_RQST_NAME'] = \
-                'RUNIDo_icebergs_YYYYMMDD_restart.nc'
+            cmd['CURRENT_RQST_NAME'] = 'RUNIDo_icebergs_YYYYMMDD_restart.nc'
         elif 'ocean' in self.id():
-            cmd['CURRENT_RQST_NAME'] = \
-                'RUNIDo_19951130_restart.nc'
+            cmd['CURRENT_RQST_NAME'] = 'RUNIDo_YYYYMMDD_restart.nc'
+        elif 'seaice' in self.id():
+            cmd['CURRENT_RQST_NAME'] = 'RUNIDi.restart.YYYY-MM-DD-00000.nc'
+        elif 'oi_fail' in self.id():
+            cmd['CURRENT_RQST_NAME'] = 'RUNIDo.YYYY-MM-DD-00000.nc'
         os.environ['PREFIX'] = 'PATH/'
         self.inst = moo._Moose(cmd)
 
@@ -135,8 +137,8 @@ class MooseTests(unittest.TestCase):
         '''Test creation of a Moose archiving object'''
         func.logtest('test creation of a Moose archiving object:')
         mock_subproc.return_value = (0, 'true')
-        self.assertEqual(self.inst._modelID, 'a')
-        self.assertEqual(self.inst._fileID, 'da')
+        self.assertEqual(self.inst._model_id, 'a')
+        self.assertEqual(self.inst._file_id, 'daTestFile')
         self.assertTrue(self.inst.chkset())
 
     @mock.patch('utils.exec_subproc')
@@ -184,39 +186,62 @@ class MooseTests(unittest.TestCase):
         func.logtest('test formation of collection name with atmos dump:')
         collection = self.inst._collection()
         self.assertEqual(collection, 'ada.file')
-        self.assertFalse(self.inst._fl_pp)
+        self.assertFalse(self.inst.fl_pp)
 
     def test_collection_atmos_pp(self):
         '''Test formation of collection name - atmosphere mean'''
         func.logtest('test formation of collection name with atmos mean:')
-        self.inst._modelID = 'a'
-        self.inst._fileID = 'pm'
+        self.inst._model_id = 'a'
+        self.inst._file_id = 'pmYYYYMMDD'
         collection = self.inst._collection()
         self.assertEqual(collection, 'apm.pp')
-        self.assertTrue(self.inst._fl_pp)
+        self.assertTrue(self.inst.fl_pp)
 
     def test_collection_ocean_restart(self):
         '''Test formation of collection name - NEMO restart'''
         func.logtest('test formation of collection name with NEMO restart:')
         collection = self.inst._collection()
         self.assertEqual(collection, 'oda.file')
-        self.assertFalse(self.inst._fl_pp)
+        self.assertFalse(self.inst.fl_pp)
 
     def test_collection_iceberg_restart(self):
         '''Test formation of collection name - iceberg restart'''
         func.logtest('test formation of collection name with iceberg restart:')
         collection = self.inst._collection()
         self.assertEqual(collection, 'oda.file')
-        self.assertFalse(self.inst._fl_pp)
+        self.assertFalse(self.inst.fl_pp)
 
-    def test_collection_ice_mean(self):
-        '''Test formation of collection name - CICE mean'''
-        func.logtest('test formation of collection name with CICE mean:')
-        self.inst._modelID = 'i'
-        self.inst._fileID = '1s'
+    def test_collection_seaice_restart(self):
+        '''Test formation of collection name - CICE restart'''
+        func.logtest('test formation of collection name with CICE restart:')
+        collection = self.inst._collection()
+        self.assertEqual(collection, 'ida.file')
+        self.assertFalse(self.inst.fl_pp)
+
+    def test_collection_oi_fail(self):
+        '''Test formation of collection name - invalid ocean/ice file type'''
+        func.logtest('test formation of collection name with invalid type:')
+        with self.assertRaises(SystemExit): 
+            _ = self.inst._collection()
+        self.assertIn('file type not recognised', func.capture('err'))
+
+    def test_collection_ocn_hourly_file(self):
+        '''Test formation of collection name - NEMO 12 hourly file'''
+        func.logtest('test formation of collection name: NEMO 12 hourly file:')
+        self.inst._model_id = 'o'
+        self.inst._file_id = '12h'
+        collection = self.inst._collection()
+        self.assertEqual(collection, 'onh.nc.file')
+        self.assertFalse(self.inst.fl_pp)
+
+    def test_collection_ice_seasonal_mean(self):
+        '''Test formation of collection name - CICE seasonal mean'''
+        func.logtest('test formation of collection name: CICE seasonal mean:')
+        self.inst._model_id = 'i'
+        self.inst._file_id = '1s'
         collection = self.inst._collection()
         self.assertEqual(collection, 'ins.nc.file')
-        self.assertFalse(self.inst._fl_pp)
+        self.assertFalse(self.inst.fl_pp)
 
     @mock.patch('utils.exec_subproc')
     @mock.patch('os.path.exists')
@@ -236,8 +261,8 @@ class MooseTests(unittest.TestCase):
         '''Test put_data function with fieldsfile'''
         func.logtest('test put_data function with fieldsfile:')
         self.inst._rqst_name = 'RUNIDa.pmTestfile'
-        self.inst._modelID = 'a'
-        self.inst._fileID = 'pm'
+        self.inst._model_id = 'a'
+        self.inst._file_id = 'pm'
         mock_subproc.return_value = (0, '')
         with mock.patch('os.path.exists', return_value=True):
             self.inst.put_data()
@@ -252,7 +277,7 @@ class MooseTests(unittest.TestCase):
         '''Test put_data function with fieldsfile'''
         func.logtest('test put_data function with fieldsfile:')
         self.inst._rqst_name = 'RUNIDa.pmTestfile.pp'
-        self.inst._fl_pp = True
+        self.inst.fl_pp = True
         mock_subproc.return_value = (0, '')
         with mock.patch('moo._Moose._collection', return_value='apm.pp'):
             with mock.patch('os.path.exists', return_value=True):

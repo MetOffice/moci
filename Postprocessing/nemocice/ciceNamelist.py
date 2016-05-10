@@ -35,7 +35,9 @@ class CiceNamelist:
     means_cmd = \
         '/projects/ocean/hadgem3/nco/nco-3.9.5_clean/bin/ncra --64bit -O'
     create_means = False
+    base_component = '10d'
     archive_means = False
+    means_to_archive = None
     archive_set = os.environ['CYLC_SUITE_NAME']
     debug = False
     compress_means = 'nccopy'

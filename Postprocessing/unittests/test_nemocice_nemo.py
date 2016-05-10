@@ -32,6 +32,9 @@ class StencilTests(unittest.TestCase):
         self.files = [
             'RUNIDo_19951130_restart.nc',
             'RUNIDo_icebergs_19951130_restart.nc',
+            'RUNIDo_6h_1995090101_1995091006_FIELD.nc',
+            'RUNIDo_2d_19950905_19950906_FIELD.nc',
+            'RUNIDo_2d_19950929_19950930_FIELD.nc',
             'RUNIDo_10d_19950901_19950910_FIELD.nc',
             'RUNIDo_10d_19950921_19950930_FIELD.nc',
             'RUNIDo_1m_19951101_19951130_FIELD.nc',
@@ -72,14 +75,24 @@ class StencilTests(unittest.TestCase):
         self.assertEqual(ice_rst,
                          [fname for fname in self.files if 'iceberg' in fname])
 
-    def test_set_stencil_monthly(self):
-        '''Test the regex of the set_stencil method - monthly'''
-        func.logtest('Assert monthly pattern matching of set_stencil:')
+    def test_set_stencil_monthly_10days(self):
+        '''Test the regex of the set_stencil method - monthly (10days)'''
+        func.logtest('Assert monthly (10d) pattern matching of set_stencil:')
         args = (self.date[0], self.date[1], None, 'FIELD')
         patt = re.compile(self.setstencil['Monthly'](*args))
         month_set = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(month_set,
                          [fname for fname in self.files if '10d_' in fname])
+
+    def test_set_stencil_monthly_2days(self):
+        '''Test the regex of the set_stencil method - monthly (2days)'''
+        func.logtest('Assert monthly (10d) pattern matching of set_stencil:')
+        args = (self.date[0], self.date[1], None, 'FIELD')
+        self.nemo.nl.base_component = '2d'
+        patt = re.compile(self.setstencil['Monthly'](*args))
+        month_set = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(month_set,
+                         [fname for fname in self.files if '2d_' in fname])
 
     def test_set_stencil_seasonal(self):
         '''Test the regex of the set_stencil method - seasonal'''
@@ -131,6 +144,24 @@ class StencilTests(unittest.TestCase):
         annual_set = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(annual_set,
                          [fname for fname in self.files if '1s_' in fname])
+
+    def test_mean_stencil_hourly(self):
+        '''Test the regular expressions of the mean_stencil method - hourly'''
+        func.logtest('Assert hourly pattern matching of mean_stencil:')
+        patt = re.compile(self.meanstencil['General']('6h', None,
+                                                      None, 'FIELD'))
+        sixhr_set = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(sixhr_set,
+                         [fname for fname in self.files if '_6h_' in fname])
+
+    def test_mean_stencil_daily(self):
+        '''Test the regular expressions of the mean_stencil method - daily'''
+        func.logtest('Assert daily pattern matching of mean_stencil:')
+        patt = re.compile(self.meanstencil['General']('10d', None,
+                                                      None, 'FIELD'))
+        tenday_set = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(tenday_set,
+                         [fname for fname in self.files if '_10d_' in fname])
 
     def test_mean_stencil_monthly(self):
         '''Test the regular expressions of the mean_stencil method - monthly'''
@@ -199,7 +230,7 @@ class RebuildTests(unittest.TestCase):
                 mynemo.rebuild_restarts()
         mock_fs.assert_called_with(
             os.environ['PWD'],
-            '^{}o_{}_?\d{{8}}_restart(\.nc)?'.format(os.environ['RUNID'], '')
+            r'{}o_{}_?\d{{8}}_restart(\.nc)?'.format(os.environ['RUNID'], '')
             )
 
     def test_call_rebuild_iceberg_rsts(self):
@@ -210,7 +241,7 @@ class RebuildTests(unittest.TestCase):
             self.nemo.rebuild_restarts()
         mock_fs.assert_called_with(
             os.environ['PWD'],
-            '^{}o_{}_?\d{{8}}_restart(\.nc)?'.format(os.environ['RUNID'],
+            r'{}o_{}_?\d{{8}}_restart(\.nc)?'.format(os.environ['RUNID'],
                                                      self.nemo.rsttypes[-1])
             )
 
@@ -218,9 +249,11 @@ class RebuildTests(unittest.TestCase):
         '''Test call to rebuild_means method'''
         func.logtest('Assert call to rebuild_fileset from rebuild_means:')
         self.nemo.suite.prefix = os.environ['RUNID']
+        pattern = r'{}o_{}_\d{{8,10}}_\d{{8,10}}_{}(\.nc)?'.format(
+            os.environ['RUNID'], '10d', self.nemo.fields[-1])
         with mock.patch('nemo.NemoPostProc.rebuild_fileset') as mock_fs:
             self.nemo.rebuild_means()
-        mock_fs.assert_called_with(os.environ['PWD'], self.nemo.fields[-1],
+        mock_fs.assert_called_with(os.environ['PWD'], pattern,
                                    rebuildall=True)
 
     def test_namlist_properties(self):
@@ -339,17 +372,32 @@ class RebuildTests(unittest.TestCase):
 
     @mock.patch('nemo.NemoPostProc.rebuild_namelist')
     @mock.patch('utils.get_subset')
-    def test_rebuild_final_cycle(self, mock_subset, mock_nl):
-        '''Test final cycle behaviour'''
+    def test_rebuild_rst_final_cycle(self, mock_subset, mock_nl):
+        '''Test final cycle behaviour - deleting components of restarts'''
         func.logtest('Assert component files not deleted on final cycle:')
-        mock_subset.return_value = ['file_19980530_yyyymmdd_0000.nc',
-                                    'file_19980630_yyyymmdd_0000.nc']
+        mock_subset.side_effect = \
+            [['file_restart_0000.nc'],
+             ['file_restart_0000.nc', 'file_restart_0001.nc']]
+        mock_nl.return_value = 0
+        self.nemo.buffer_rebuild = mock.Mock()
+        self.nemo.buffer_rebuild.return_value = 0
+        self.nemo.suite.finalcycle = True
+        self.nemo.rebuild_fileset(os.environ['PWD'], 'yyyymmdd_restart',
+                                  rebuildall=True)
+        mock_nl.assert_called_with(os.environ['PWD'], 'file_restart', 2, omp=1)
+        self.assertNotIn('deleting component files', func.capture().lower())
+
+    @mock.patch('nemo.NemoPostProc.rebuild_namelist')
+    @mock.patch('utils.get_subset')
+    def test_rebuild_means_final_cycle(self, mock_subset, mock_nl):
+        '''Test final cycle behaviour - deleting components of means'''
+        func.logtest('Assert component files not deleted on final cycle:')
+        mock_subset.return_value = ['file_mean1_0000.nc', 'file_mean2_0000.nc']
         mock_nl.return_value = 0
         self.nemo.suite.finalcycle = True
-        self.nemo.rebuild_fileset(os.environ['PWD'], 'field', rebuildall=True)
-        mock_nl.assert_called_with(os.environ['PWD'], 'file_19980530_yyyymmdd',
-                                   1, omp=1)
-        self.assertNotIn('deleting component files', func.capture().lower())
+        self.nemo.rebuild_fileset(os.environ['PWD'], 'mean', rebuildall=True)
+        mock_nl.assert_called_with(os.environ['PWD'], 'file_mean1', 1, omp=1)
+        self.assertIn('deleting component files', func.capture().lower())
 
     @mock.patch('utils.exec_subproc')
     @mock.patch('os.path.isfile')
@@ -454,6 +502,58 @@ class RebuildTests(unittest.TestCase):
         self.assertIn('Failed to rebuild file', func.capture('err'))
         self.assertIn('err output', func.capture('err'))
 
+    def test_check_fileformat_10dmean(self):
+        '''Test check_fileformat functionality - 10d means'''
+        func.logtest('Assert check_fileformat method with 10d means:')
+        self.nemo.suite.prefix = 'RUNID'
+        date = ('YYYY', 'MM', '01')
+        template = r'RUNIDo_10d_YYYYMM01_YYYYMM10_grid_V.nc'
+        with mock.patch('os.rename') as mock_mv:
+            self.nemo.check_fileformat('RUNIDo_10d_DATE.nc',
+                                       date, 'type_grid_V')
+            mock_mv.assert_called_with(
+                'RUNIDo_10d_DATE.nc',
+                os.path.join(os.environ['PWD'], template)
+                )
+
+    def test_check_fileformat_2dmean(self):
+        '''Test check_fileformat functionality - 2d means'''
+        func.logtest('Assert check_fileformat method with 2d means:')
+        self.nemo.suite.prefix = 'RUNID'
+        date = ('YYYY', 'MM', '05')
+        template = r'RUNIDo_2d_YYYYMM05_YYYYMM06_grid_V.nc'
+        with mock.patch('os.rename') as mock_mv:
+            self.nemo.check_fileformat('RUNIDo_2d_DATE.nc',
+                                       date, 'type_grid_V')
+            mock_mv.assert_called_with(
+                'RUNIDo_2d_DATE.nc',
+                os.path.join(os.environ['PWD'], template)
+                )
+
+    def test_check_format_10d_nochange(self):
+        '''Test check_fileformat functionality - no change'''
+        func.logtest('Assert check_fileformat method with no change:')
+        self.nemo.suite.prefix = 'RUNID'
+        with mock.patch('os.rename') as mock_mv:
+            self.nemo.check_fileformat('RUNIDo_10d_11112201_11112210_grid_V.nc',
+                                       ('1111', '22', '01'), 'type_grid_V')
+            self.assertEqual(mock_mv.mock_calls, [])
+
+    def test_check_format_10d_badfield(self):
+        '''Test check_fileformat functionality - unknown field'''
+        func.logtest('Assert check_fileformat method with unknown field:')
+        with mock.patch('os.rename'):
+            with self.assertRaises(SystemExit):
+                self.nemo.check_fileformat('RUNIDo_10d_field.nc',
+                                           ('Y', 'M', 'D'), 'type_any')
+
+    def test_check_fileformat_otherfile(self):
+        '''Test check_fileformat functionality - any file but 10d mean'''
+        func.logtest('Assert check_fileformat method with any file but 10d:')
+        with mock.patch('nemo.NemoPostProc.set_stencil') as mock_set:
+            self.nemo.check_fileformat('InFile', ('Y', 'M', 'D'), 'type_any')
+            self.assertEqual(mock_set.mock_calls, [])
+
 
 class MeansProcessingTests(unittest.TestCase):
     '''Unit tests relating to the processing of means files'''
@@ -534,10 +634,11 @@ class MeansProcessingTests(unittest.TestCase):
             mock_exec.return_value = (1, '')
             with self.assertRaises(SystemExit):
                 self.nemo.global_attr_to_zonal('TestDir', 'File1')
+            self.assertEqual(mock_exec.mock_calls, [])
+
         self.assertIn('attribute(s) DOMAIN_size_global not found',
                       func.capture('err'))
         self.assertIn('DOMAIN_size_global', func.capture('err'))
-        mock_exec.assert_not_called()
 
 
 def main():
