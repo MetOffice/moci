@@ -18,19 +18,22 @@ import mock
 from collections import OrderedDict
 import sys
 
-import runtimeEnvironment
-import testing_functions as func
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'common'))
+
+import runtime_environment
+runtime_environment.setup_env()
+import testing_functions as func
+
 import suite
 
 
 class SuiteTests(unittest.TestCase):
     '''Unit tests for the SuiteEnvironment class'''
     def setUp(self):
+        runtime_environment.setup_env()
         if 'pre_cylc6' in self.id():
             os.environ['CYLC_TASK_CYCLE_TIME'] = '1980090100'
-        else:
-            os.environ['CYLC_TASK_CYCLE_POINT'] = '19800901T0000Z'
+            del os.environ['CYLC_TASK_CYCLE_POINT']
         self.inputnl = OrderedDict([
             ('&suitegen', None),
             ('umtask_name="atmos"', 'umtask'),
@@ -53,7 +56,7 @@ class SuiteTests(unittest.TestCase):
                 os.remove(fname)
             except OSError:
                 pass
-        for var in ['CYLC_TASK_CYCLE_POINT', 'CYLC_TASK_CYCLE_TIME',
+        for var in ['CYLC_TASK_CYCLE_TIME',
                     'ARCHIVE_FINAL']:
             try:
                 del os.environ[var]
@@ -96,8 +99,9 @@ class SuiteTests(unittest.TestCase):
     def test_cyclestring(self):
         '''Test calculation of property "cyclestring in a Cylc6 environment"'''
         func.logtest('Assert cycletime as string array property:')
+        # Cycle time (from runtime_environment) = 2000,1,21,0,0,0
         self.assertTupleEqual(self.mysuite.cyclestring,
-                              ('1980', '09', '01', '00', '00'))
+                              ('2000', '01', '21', '00', '00'))
 
     def test_pre_cylc6_cyclestring(self):
         '''Test calculation of property "cyclestring; pre-Cylc6 environment"'''
@@ -108,7 +112,8 @@ class SuiteTests(unittest.TestCase):
     def test_cycledt(self):
         '''Test access to property "cycledt"'''
         func.logtest('Assert cycletime as integer array property:')
-        self.assertListEqual(self.mysuite.cycledt, [1980, 9, 1, 0, 0])
+        # Cycle time (from runtime_environment) = 2000,1,21,0,0,0
+        self.assertListEqual(self.mysuite.cycledt, [2000, 1, 21, 0, 0])
 
     def test_bad_cycletime(self):
         '''Test failure mode with incorrect format for
@@ -159,16 +164,50 @@ class SuiteTests(unittest.TestCase):
     def test_log(self):
         '''Test creation of and access to property "logfile"'''
         func.logtest('Create a log file:')
-        logfile = os.path.join(os.environ['PWD'], 'job-archive.log')
+        logfile = os.environ['PWD'] + '/job-archive.log'
         self.assertEqual(self.mysuite.logfile, logfile)
+
+    def test_monthlength_360d(self):
+        '''Test return of month length in days - 360d calendar'''
+        func.logtest('Test the monthlength method - 360d calendar:')
+        for month in range(1, 12):
+            length = self.mysuite.monthlength(month)
+            self.assertEqual(length, 30)
+
+    def test_monthlength_365d(self):
+        '''Test return of month length in days - 365d calendar'''
+        func.logtest('Test the monthlength method - 365d calendar:')
+        self.mysuite.envars.CYLC_CYCLING_MODE = '365day'
+        self.assertEqual(self.mysuite.monthlength('01'), 31)
+        self.assertEqual(self.mysuite.monthlength('02'), 28)
+        self.assertEqual(self.mysuite.monthlength('03'), 31)
+        self.assertEqual(self.mysuite.monthlength('04'), 30)
+
+    def test_monthlength_gregorian(self):
+        '''Test return of month length in days - Gregorian calendar'''
+        func.logtest('Test the monthlength method - Gregorian calendar:')
+        self.mysuite.envars.CYLC_CYCLING_MODE = 'gregorian'
+        # Cycle time (from runtime_environment) = 2000,1,21,0,0,0
+        self.assertEqual(self.mysuite.cycledt[0] % 4, 0)
+        self.assertEqual(self.mysuite.cycledt[0] % 100, 0)
+        self.assertEqual(self.mysuite.monthlength('01'), 31)
+        self.assertEqual(self.mysuite.monthlength('02'), 29)
+        self.assertEqual(self.mysuite.monthlength('03'), 31)
+        self.assertEqual(self.mysuite.monthlength('04'), 30)
+
+    def test_monthlength_badcalendar(self):
+        '''Test return of month length in days - unknown calendar'''
+        func.logtest('Test the monthlength method - unknown calendar:')
+        self.mysuite.envars.CYLC_CYCLING_MODE = 'dummy'
+        with self.assertRaises(SystemExit):
+            self.mysuite.monthlength('01')
 
 
 class ArchiveTests(unittest.TestCase):
     '''Unit tests for the model-independent archiving method'''
     def setUp(self):
-        os.environ['CYLC_TASK_LOG_ROOT'] = os.environ['PWD'] + '/job'
+        runtime_environment.setup_env()
         self.logfile = os.environ['CYLC_TASK_LOG_ROOT'] + '-archive.log'
-        os.environ['CYLC_TASK_CYCLE_POINT'] = '19800901T0000Z'
         self.mysuite = suite.SuiteEnvironment('somePath/directory', 'input.nl')
 
     def tearDown(self):
@@ -242,8 +281,7 @@ class ArchiveTests(unittest.TestCase):
 class PreProcessTests(unittest.TestCase):
     '''Unit tests for the model-independent pre-processing methods'''
     def setUp(self):
-        os.environ['CYLC_TASK_LOG_ROOT'] = os.environ['PWD'] + '/job'
-        os.environ['CYLC_TASK_CYCLE_POINT'] = '19800901T0000Z'
+        runtime_environment.setup_env()
         self.mysuite = suite.SuiteEnvironment('somePath/directory', 'input.nl')
 
     def tearDown(self):

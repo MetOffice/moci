@@ -48,18 +48,24 @@ class NemoPostProc(mt.ModelTemplate):
         them.  This is a consequence of the @property nature of the method
         '''
         return {
-            mt.RR: lambda y, m, s, f: r'^{}o_{}_?\d{{8}}_restart(\.nc)?$'.
-                   format(self.prefix, f),
-            mt.MM: lambda y, m, s, f: r'^{}o_{}_\d{{8}}_{}{}\d{{2}}_{}\.nc$'.
-                   format(self.prefix, self.month_base, y, m, f),
+            mt.RR: lambda y, m, s, f:
+                   r'^{P}o_{F}_?\d{{8}}_restart(\.nc)?$'.
+                   format(P=self.prefix, F=f),
+            mt.MM: lambda y, m, s, f:
+                   r'^{P}o_{B}_\d{{8}}_{Y}{M}\d{{2}}_{F}\.nc$'.
+                   format(P=self.prefix, B=self.month_base, Y=y, M=m, F=f),
             mt.SS: lambda y, m, s, f:
-                   r'^{}o_1m_({}{}|{}{}|{}{})01_\d{{8}}_{}\.nc$'.format(
-                       self.prefix,
-                       str(int(y) - s[3]) if isinstance(s[3], int) else y,
-                       s[0], y, s[1], y, s[2], f
-                       ),
-            mt.AA: lambda y, m, s, f: r'^{}o_1s_\d{{8}}_{}\d{{2}}30_{}\.nc$'.
-                   format(self.prefix, y, f),
+                   r'^{P}o_1m_({Y1}{M1}|{Y2}{M2}|{Y2}{M3})01_\d{{8}}_{F}\.nc$'.
+                   format(P=self.prefix,
+                          Y1=str(int(y) - s[3]) if isinstance(s[3], int) else y,
+                          Y2=y,
+                          M1=s[0],
+                          M2=s[1],
+                          M3=s[2],
+                          F=f),
+            mt.AA: lambda y, m, s, f:
+                   r'^{P}o_1s_\d{{8}}_{Y}\d{{2}}(28|29|30|31)_{F}\.nc$'.
+                   format(P=self.prefix, Y=y, F=f),
         }
 
     @property
@@ -74,12 +80,13 @@ class NemoPostProc(mt.ModelTemplate):
         '''
         return {
             mt.RR: None,
-            mt.MM: lambda s, f: r'^{}o_{}_\d{{8}}_\d{{6}}30_{}\.nc$'.
-                   format(self.prefix, self.month_base, f),
-            mt.SS: lambda s, f: r'^{}o_1m_\d{{4}}{}01_\d{{8}}_{}\.nc$'.
-                   format(self.prefix, s[2], f),
-            mt.AA: lambda s, f: r'^{}o_1s_\d{{4}}0901_\d{{8}}_{}\.nc$'.
-                   format(self.prefix, f),
+            mt.MM: lambda s, f:
+                   r'^{P}o_{B}_\d{{8}}_\d{{6}}(28|29|30|31)_{F}\.nc$'.
+                   format(P=self.prefix, B=self.month_base, F=f),
+            mt.SS: lambda s, f: r'^{P}o_1m_\d{{4}}{M1}01_\d{{8}}_{F}\.nc$'.
+                   format(P=self.prefix, M1=s[2], F=f),
+            mt.AA: lambda s, f: r'^{P}o_1s_\d{{4}}0901_\d{{8}}_{F}\.nc$'.
+                   format(P=self.prefix, F=f),
         }
 
     @property
@@ -94,16 +101,25 @@ class NemoPostProc(mt.ModelTemplate):
         '''
         return {
             mt.XX: lambda y, m, s, f:
-                   r'^{}o_{}_\d{{8,10}}_\d{{8,10}}_{}(\.nc)?$'.
-                   format(self.prefix, y if y else r'\d+[hdmsy]', f),
-            mt.MM: lambda y, m, s, f: r'{}o_1m_{}{}01_{}{}30_{}.nc'.
-                   format(self.prefix, y, m, y, m, f),
-            mt.SS: lambda y, m, s, f: r'{}o_1s_{}{}01_{}{}30_{}.nc'.
-                   format(self.prefix,
-                          str(int(y) - s[3]) if isinstance(s[3], int) else y,
-                          s[0], y, s[2], f),
-            mt.AA: lambda y, m, s, f: r'{}o_1y_{}1201_{}1130_{}.nc'.
-                   format(self.prefix, y if '*' in y else (int(y)-1), y, f),
+                   r'^{P}o_{B}_\d{{8,10}}_\d{{8,10}}_{F}(\.nc)?$'.
+                   format(P=self.prefix, B=y if y else r'\d+[hdmsy]', F=f),
+            mt.MM: lambda y, m, s, f: r'{P}o_1m_{Y}{M}01_{Y}{M}{L}_{F}.nc'.
+                   format(P=self.prefix, Y=y, M=m,
+                          L=self.suite.monthlength(m), F=f),
+            mt.SS: lambda y, m, s, f: r'{P}o_1s_{Y1}{M1}01_{Y2}{M2}{L}_{F}.nc'.
+                   format(P=self.prefix,
+                          Y1=str(int(y) - s[3]) if isinstance(s[3], int) \
+                              else y,
+                          Y2=y,
+                          M1=s[0],
+                          M2=s[2],
+                          L=self.suite.monthlength(s[2]),
+                          F=f),
+            mt.AA: lambda y, m, s, f: r'{P}o_1y_{Y1}1201_{Y2}1130_{F}.nc'.
+                   format(P=self.prefix,
+                          Y1=y if '*' in y else (int(y)-1),
+                          Y2=y,
+                          F=f),
         }
 
     @property

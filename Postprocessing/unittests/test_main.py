@@ -18,12 +18,15 @@ import os
 import sys
 from collections import OrderedDict
 
-import runtimeEnvironment
-import testing_functions as func
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir))
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'common'))
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'atmos'))
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'nemocice'))
+
+import runtime_environment
+runtime_environment.setup_env()
+import testing_functions as func
+
 import main_pp
 
 

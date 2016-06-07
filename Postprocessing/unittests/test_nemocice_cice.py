@@ -18,10 +18,13 @@ import os
 import sys
 import re
 
-import runtimeEnvironment
-import testing_functions as func
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'common'))
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'cicecice'))
+
+import runtime_environment
+runtime_environment.setup_env()
+import testing_functions as func
+
 import cice
 
 

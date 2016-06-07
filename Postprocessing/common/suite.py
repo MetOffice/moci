@@ -58,6 +58,7 @@ class SuiteEnvironment(object):
         self.envars = utils.loadEnv('CYLC_TASK_LOG_ROOT')
 
         self.envars = utils.loadEnv('CYLC_TASK_CYCLE_POINT',
+                                    'CYLC_CYCLING_MODE',
                                     append=self.envars)
         if hasattr(self.envars, 'CYLC_TASK_CYCLE_POINT'):
             self.cylc6 = True
@@ -145,6 +146,24 @@ class SuiteEnvironment(object):
     def logfile(self):
         '''Archiving log will be sent to the suite log directory'''
         return self.envars.CYLC_TASK_LOG_ROOT + '-archive.log'
+
+    def monthlength(self, month):
+        '''Returns length of given month in days - calendar dependent'''
+        days_per_month = {
+            '360day': [None,] + [30,]*12,
+            '365day': [None, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
+            'gregorian': [None, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+            }
+
+        date = self.cycledt
+        if date[0] % 4 == 0 and (date[0] % 100 != 0 or date[0] % 400 == 0):
+            days_per_month['gregorian'][2] = 29
+
+        try:
+            return days_per_month[self.envars.CYLC_CYCLING_MODE][int(month)]
+        except KeyError:
+            msg = 'Calendar not recognised: ' + self.envars.CYLC_CYCLING_MODE
+            utils.log_msg('SuiteEnvironment: ' + msg, level=5)
 
     def __archive_command(self, filename):
         '''

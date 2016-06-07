@@ -18,12 +18,16 @@ import os
 import sys
 import re
 
-import runtimeEnvironment
-import testing_functions as func
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'common'))
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'nemocice'))
+
+import runtime_environment
+runtime_environment.setup_env()
+import testing_functions as func
+
 import nemo
 import nemoNamelist
+import suite
 
 
 class StencilTests(unittest.TestCase):
@@ -50,6 +54,8 @@ class StencilTests(unittest.TestCase):
         self.setstencil = self.nemo.set_stencil
         self.endstencil = self.nemo.end_stencil
         self.meanstencil = self.nemo.mean_stencil
+        dummysuite = suite.SuiteEnvironment(os.getcwd())
+        self.nemo.suite.monthlength = dummysuite.monthlength
 
     def tearDown(self):
         try:
@@ -168,18 +174,91 @@ class StencilTests(unittest.TestCase):
         func.logtest('Assert monthly pattern matching of mean_stencil:')
         args = (self.date[0], '11', None, 'FIELD')
         patt = re.compile(self.meanstencil['Monthly'](*args))
-        annual_set = [fname for fname in self.files if patt.search(fname)]
-        self.assertEqual(annual_set,
+        month_set = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(month_set,
                          [fname for fname in self.files if '1m_' in fname])
+
+
+    def test_mean_stencil_monthly_365d(self):
+        '''Test the regexes of the mean_stencil method - monthly (365d)'''
+        func.logtest('Assert monthly patt matching of mean_stencil (365d):')
+        dummysuite = suite.SuiteEnvironment(os.getcwd())
+        dummysuite.envars.CYLC_CYCLING_MODE = '365day'
+        self.nemo.suite.monthlength = dummysuite.monthlength
+        cal_files = [
+            'RUNIDo_1m_20000201_20000228_FIELD.nc',
+            'RUNIDo_1m_20000201_20000229_FIELD.nc',
+            'RUNIDo_1s_19991201_20000228_FIELD.nc',
+            'RUNIDo_1s_19991201_20000229_FIELD.nc',
+            ]
+        args = ('2000', '02', None, 'FIELD')
+        patt = re.compile(self.meanstencil['Monthly'](*args))
+        month_set = [fname for fname in cal_files if patt.search(fname)]
+        self.assertEqual(month_set,
+                         ['RUNIDo_1m_20000201_20000228_FIELD.nc'])
+
+    def test_mean_stencil_monthly_greg(self):
+        '''Test the regexes of the mean_stencil method - monthly (GregCal)'''
+        func.logtest('Assert monthly patt matching of mean_stencil (Greg):')
+        dummysuite = suite.SuiteEnvironment(os.getcwd())
+        dummysuite.envars.CYLC_CYCLING_MODE = 'gregorian'
+        self.nemo.suite.monthlength = dummysuite.monthlength
+        cal_files = [
+            'RUNIDo_1m_20000201_20000228_FIELD.nc',
+            'RUNIDo_1m_20000201_20000229_FIELD.nc',
+            'RUNIDo_1s_19991201_20000228_FIELD.nc',
+            'RUNIDo_1s_19991201_20000229_FIELD.nc',
+            ]
+        args = ('2000', '02', None, 'FIELD')
+        patt = re.compile(self.meanstencil['Monthly'](*args))
+        month_set = [fname for fname in cal_files if patt.search(fname)]
+        self.assertEqual(month_set,
+                         ['RUNIDo_1m_20000201_20000229_FIELD.nc'])
 
     def test_mean_stencil_seasonal(self):
         '''Test the regexes of the mean_stencil method - seasonal'''
         func.logtest('Assert seasonal pattern matching of mean_stencil:')
         args = (self.date[0], self.date[1], self.ssn, 'FIELD')
         patt = re.compile(self.meanstencil['Seasonal'](*args))
-        annual_set = [fname for fname in self.files if patt.search(fname)]
-        self.assertEqual(annual_set,
+        ssn_set = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(ssn_set,
                          [fname for fname in self.files if '1s_' in fname])
+
+    def test_mean_stencil_seasonal_365d(self):
+        '''Test the regexes of the mean_stencil method - seasonal (365d)'''
+        func.logtest('Assert seasonal patt matching of mean_stencil (365d):')
+        dummysuite = suite.SuiteEnvironment(os.getcwd())
+        dummysuite.envars.CYLC_CYCLING_MODE = '365day'
+        self.nemo.suite.monthlength = dummysuite.monthlength
+        cal_files = [
+            'RUNIDo_1m_20000201_20000228_FIELD.nc',
+            'RUNIDo_1m_20000201_20000229_FIELD.nc',
+            'RUNIDo_1s_19991201_20000228_FIELD.nc',
+            'RUNIDo_1s_19991201_20000229_FIELD.nc',
+            ]
+        args = ('2000', '02', ('12', '01', '02', 1), 'FIELD')
+        patt = re.compile(self.meanstencil['Seasonal'](*args))
+        ssn_set = [fname for fname in cal_files if patt.search(fname)]
+        self.assertEqual(ssn_set,
+                         ['RUNIDo_1s_19991201_20000228_FIELD.nc'])
+
+    def test_mean_stencil_seasonal_greg(self):
+        '''Test the regexes of the mean_stencil method - seasonal (GregCal)'''
+        func.logtest('Assert seasonal patt matching of mean_stencil (Greg):')
+        dummysuite = suite.SuiteEnvironment(os.getcwd())
+        dummysuite.envars.CYLC_CYCLING_MODE = 'gregorian'
+        self.nemo.suite.monthlength = dummysuite.monthlength
+        cal_files = [
+            'RUNIDo_1m_20000201_20000228_FIELD.nc',
+            'RUNIDo_1m_20000201_20000229_FIELD.nc',
+            'RUNIDo_1s_19991201_20000228_FIELD.nc',
+            'RUNIDo_1s_19991201_20000229_FIELD.nc',
+            ]
+        args = ('2000', '02', ('12', '01', '02', 1), 'FIELD')
+        patt = re.compile(self.meanstencil['Seasonal'](*args))
+        ssn_set = [fname for fname in cal_files if patt.search(fname)]
+        self.assertEqual(ssn_set,
+                         ['RUNIDo_1s_19991201_20000229_FIELD.nc'])
 
     def test_mean_stencil_annual(self):
         '''Test the regular expressions of the mean_stencil method - annual'''

@@ -40,17 +40,20 @@ class CicePostProc(mt.ModelTemplate):
         '''
         return {
             mt.RR: lambda y, m, s, f:
-                   r'^{}i\.restart{}\.\d{{4}}-[-\d]*(\.nc)?$'.
-                   format(self.prefix, f),
-            mt.MM: lambda y, m, s, f: r'^{}i\.{}\.{}-{}-\d{{2}}\.nc$'.
-                   format(self.prefix, self.month_base, y, m),
-            mt.SS: lambda y, m, s, f: r'^{}i\.1m\.({}-{}|{}-{}|{}-{})\.nc$'.
-                   format(self.prefix,
-                          y if not isinstance(s[3], int) else
-                          (int(y) - s[3]),
-                          s[0], y, s[1], y, s[2]),
-            mt.AA: lambda y, m, s, f: r'^{}i\.1s\.{}-\d{{2}}\.nc$'.
-                   format(self.prefix, y),
+                   r'^{P}i\.restart{F}\.\d{{4}}-[-\d]*(\.nc)?$'.
+                   format(P=self.prefix, F=f),
+            mt.MM: lambda y, m, s, f: r'^{P}i\.{B}\.{Y}-{M}-\d{{2}}\.nc$'.
+                   format(P=self.prefix, B=self.month_base, Y=y, M=m),
+            mt.SS: lambda y, m, s, f:
+                   r'^{P}i\.1m\.({Y1}-{M1}|{Y2}-{M2}|{Y2}-{M3})\.nc$'.
+                   format(P=self.prefix,
+                          Y1=int(y) - s[3] if isinstance(s[3], int) else y,
+                          Y2=y,
+                          M1=s[0],
+                          M2=s[1],
+                          M3=s[2]),
+            mt.AA: lambda y, m, s, f: r'^{P}i\.1s\.{Y}-\d{{2}}\.nc$'.
+                   format(P=self.prefix, Y=y),
         }
 
     @property
@@ -65,12 +68,13 @@ class CicePostProc(mt.ModelTemplate):
         '''
         return {
             mt.RR: None,
-            mt.MM: lambda s, f: r'^{}i\.{}\.\d{{4}}-\d{{2}}-30\.nc$'.
-                   format(self.prefix, self.month_base),
-            mt.SS: lambda s, f: r'^{}i\.1m\.\d{{4}}-{}\.nc$'.
-                   format(self.prefix, s[2]),
-            mt.AA: lambda s, f: r'^{}i\.1s\.\d{{4}}-11\.nc$'.
-                   format(self.prefix),
+            mt.MM: lambda s, f:
+                   r'^{P}i\.{B}\.\d{{4}}-\d{{2}}-(28|29|30|31)\.nc$'.
+                   format(P=self.prefix, B=self.month_base),
+            mt.SS: lambda s, f: r'^{P}i\.1m\.\d{{4}}-{M}\.nc$'.
+                   format(P=self.prefix, M=s[2]),
+            mt.AA: lambda s, f: r'^{P}i\.1s\.\d{{4}}-11\.nc$'.
+                   format(P=self.prefix),
         }
 
     @property
@@ -85,14 +89,14 @@ class CicePostProc(mt.ModelTemplate):
         '''
         return {
             mt.XX: lambda y, m, s, f:
-                   r'^{}i\.{}\.\d{{4}}-\d{{2}}(-\d{{2}})?(-\d{{2}})?\.nc$'.
-                   format(self.prefix, y if y else r'\d+[hdmsy]'),
-            mt.MM: lambda y, m, s, f: r'{}i.1m.{}-{}.nc'.
-                   format(self.prefix, y, m),
-            mt.SS: lambda y, m, s, f: r'{}i.1s.{}-{}.nc'.
-                   format(self.prefix, y, s[2]),
-            mt.AA: lambda y, m, s, f: r'{}i.1y.{}-11.nc'.
-                   format(self.prefix, y),
+                   r'^{P}i\.{B}\.\d{{4}}-\d{{2}}(-\d{{2}})?(-\d{{2}})?\.nc$'.
+                   format(P=self.prefix, B=y if y else r'\d+[hdmsy]'),
+            mt.MM: lambda y, m, s, f: r'{P}i.1m.{Y}-{M}.nc'.
+                   format(P=self.prefix, Y=y, M=m),
+            mt.SS: lambda y, m, s, f: r'{P}i.1s.{Y}-{M}.nc'.
+                   format(P=self.prefix, Y=y, M=s[2]),
+            mt.AA: lambda y, m, s, f: r'{P}i.1y.{Y}-11.nc'.
+                   format(P=self.prefix, Y=y),
         }
 
     @property
