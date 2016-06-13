@@ -252,10 +252,11 @@ class ModelTemplate(control.runPostProc):
 
     @staticmethod
     @abc.abstractmethod
-    def get_date(filename):
+    def get_date(filename, startdate=True):
         '''
-        Returns a tuple representing the date extracted from a filename
-        Overriding method in the calling model is required
+        Returns a tuple representing the date extracted from a filename.
+        Overriding method in the calling model is required.
+        By default the date returned is the first (start) date in the filename.
         '''
         msg = 'Model specific get_date method not implemented.\n\t'
         msg += 'return (year, month, day)'

@@ -38,9 +38,9 @@ class StencilTests(unittest.TestCase):
             'RUNIDi.5d.1985-11-06.nc',
             'RUNIDi.10d.1985-11-11.nc',
             'RUNIDi.1m.1985-11.nc',
-            'RUNIDi.1s.1985-11.nc',
-            'RUNIDi.1y.1984-11.nc',
-            'RUNIDi.1y.1985-11.nc'
+            'RUNIDi.1s.1985-09_1985-11.nc',
+            'RUNIDi.1y.1983-12_1984-11.nc',
+            'RUNIDi.1y.1984-12_1985-11.nc'
             ]
         self.cice = cice.CicePostProc()
         self.cice.suite = mock.Mock()
@@ -177,3 +177,63 @@ class StencilTests(unittest.TestCase):
         annual_set = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(annual_set,
                          [fname for fname in self.files if '.1y.' in fname])
+
+
+class UtilityMethodTests(unittest.TestCase):
+    '''Unit tests relating to the CICE utility methods'''
+    def setUp(self):
+        self.cice = cice.CicePostProc()
+
+    def tearDown(self):
+        try:
+            os.remove('nemocicepp.nl')
+        except OSError:
+            pass
+
+    def test_get_date_yyyymmdd(self):
+        '''Test get_date method - YYYY-MM-DD format'''
+        func.logtest('Assert functionality of get_date method (YYYY-MM-DD):')
+        files = [
+            'RUNIDi.restart.1982-11-01-00000',
+            'RUNIDi.restart.1982-11-01-00000.nc',
+            'RUNIDi.10d.1982-11-01.nc',
+            'RUNIDi.1m.1982-11-01.nc',
+            ]
+        for fname in files:
+            date = self.cice.get_date(fname)
+            self.assertEqual(date, ('1982', '11', '01'))
+
+    def test_get_date_yyyymm(self):
+        '''Test get_date method - YYYY-MM format'''
+        func.logtest('Assert functionality of get_date method (YYYY-MM):')
+        files = {
+            'RUNIDi.1m.1982-11.nc': ('1982', '11', None),
+            'RUNIDi.1s.1982-11.nc': ('1982', '11', None),
+            'RUNIDi.1s.1982-09_1982-11.nc': ('1982', '09', None),
+            'RUNIDi.1y.1982-11.nc': ('1982', '11', None),
+            'RUNIDi.1y.1981-12_1982-11.nc': ('1981', '12', None),
+            }
+        for fname in files:
+            date = self.cice.get_date(fname)
+            self.assertEqual(date, files[fname])
+
+    def test_get_date_enddate(self):
+        '''Test get_date method - end date requested'''
+        func.logtest('Assert functionality of get_date method (YYYY-MM):')
+        files = [
+            'RUNIDi.restart.1982-11-01-00000.nc',
+            'RUNIDi.10d.1982-11-01.nc',
+            'RUNIDi.1m.1982-11.nc',
+            'RUNIDi.1s.1982-09_1982-11.nc',
+            'RUNIDi.1y.1981-12_1982-11.nc',
+            ]
+        for fname in files:
+            date = self.cice.get_date(fname, startdate=False)
+            self.assertEqual(date[:2], ('1982', '11'))
+
+    def test_get_date_failure(self):
+        '''Test get_date method - catch failure'''
+        func.logtest('Assert error trapping in get_date method:')
+        date = self.cice.get_date('RUNIDi_1m_YYYY-MM-DD.nc')
+        self.assertEqual(date, (None,)*3)
+        self.assertIn('[WARN]  Unable to get date', func.capture('err'))

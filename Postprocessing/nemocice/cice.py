@@ -52,7 +52,8 @@ class CicePostProc(mt.ModelTemplate):
                           M1=s[0],
                           M2=s[1],
                           M3=s[2]),
-            mt.AA: lambda y, m, s, f: r'^{P}i\.1s\.{Y}-\d{{2}}\.nc$'.
+            mt.AA: lambda y, m, s, f:
+                   r'^{P}i\.1s\.\d{{4}}-\d{{2}}_{Y}-\d{{2}}\.nc$'.
                    format(P=self.prefix, Y=y),
         }
 
@@ -73,7 +74,7 @@ class CicePostProc(mt.ModelTemplate):
                    format(P=self.prefix, B=self.month_base),
             mt.SS: lambda s, f: r'^{P}i\.1m\.\d{{4}}-{M}\.nc$'.
                    format(P=self.prefix, M=s[2]),
-            mt.AA: lambda s, f: r'^{P}i\.1s\.\d{{4}}-11\.nc$'.
+            mt.AA: lambda s, f: r'^{P}i\.1s\.\d{{4}}-\d{{2}}_\d{{4}}-11\.nc$'.
                    format(P=self.prefix),
         }
 
@@ -93,10 +94,17 @@ class CicePostProc(mt.ModelTemplate):
                    format(P=self.prefix, B=y if y else r'\d+[hdmsy]'),
             mt.MM: lambda y, m, s, f: r'{P}i.1m.{Y}-{M}.nc'.
                    format(P=self.prefix, Y=y, M=m),
-            mt.SS: lambda y, m, s, f: r'{P}i.1s.{Y}-{M}.nc'.
-                   format(P=self.prefix, Y=y, M=s[2]),
-            mt.AA: lambda y, m, s, f: r'{P}i.1y.{Y}-11.nc'.
-                   format(P=self.prefix, Y=y),
+            mt.SS: lambda y, m, s, f: r'{P}i.1s.{Y1}-{M1}_{Y2}-{M2}.nc'.
+                   format(P=self.prefix,
+                          Y1=int(y) - s[3] if isinstance(s[3], int) else y,
+                          Y2=y,
+                          M1=s[0],
+                          M2=s[2]),
+            mt.AA: lambda y, m, s, f: r'{P}i.1y.{Y1}-12_{Y2}-11.nc'.
+                   format(P=self.prefix,
+                          Y1=y if '*' in y else (int(y)-1),
+                          Y2=y),
+
         }
 
     @property
@@ -104,11 +112,20 @@ class CicePostProc(mt.ModelTemplate):
         return ('', r'.age')
 
     @staticmethod
-    def get_date(fname):
-        for string in fname.split('.'):
-            if re.match(r'^[\d-]*$', string):
-                return string[:4], string[5:7], string[8:10]
-        utils.log_msg('Unable to get date for file:\n\t' + fname, 3)
+    def get_date(fname, startdate=True):
+        '''
+        Returns the date extracted from the filename provided.
+        By default, the start date for the data is returned
+        '''
+        datestrings = re.findall(r'\d{4}-\d{2}-\d{2}|\d{4}-\d{2}', fname)
+        if len(datestrings) == 0:
+            utils.log_msg('Unable to get date for file:\n\t' + fname, level=3)
+            return (None,)*3
+
+        date = datestrings[0 if startdate else -1].split('-')
+        day = date[2] if len(date) == 3 else None
+
+        return date[0], date[1], day
 
 
 INSTANCE = ('nemocicepp.nl', CicePostProc)
