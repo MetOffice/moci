@@ -186,8 +186,8 @@ class StencilTests(unittest.TestCase):
         patt = re.compile(self.meanstencil['Monthly'](*args))
         month_set = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(month_set,
-                         [fname for fname in self.files if '1m_' in fname])
-
+                         [fname for fname in self.files if \
+                              '1m_' in fname and 'FIELD.nc' in fname])
 
     def test_mean_stencil_monthly_365d(self):
         '''Test the regexes of the mean_stencil method - monthly (365d)'''
@@ -346,8 +346,9 @@ class RebuildTests(unittest.TestCase):
     def test_call_rebuild_means(self):
         '''Test call to rebuild_means method'''
         func.logtest('Assert call to rebuild_fileset from rebuild_means:')
-        pattern = r'{}o_{}_\d{{8,10}}_\d{{8,10}}_{}(\.nc)?'.format(
-            'RUNID', '10d', self.nemo.fields[-1])
+        pattern = \
+            r'RUNIDo_10d(_\d{{8,10}}){{2}}_{}'.format(self.nemo.fields[-1]) + \
+            r'(([_\-]\d{6,10}){2})?(_\d{4})?(\.nc)?'
         with mock.patch('nemo.NemoPostProc.rebuild_fileset') as mock_fs:
             self.nemo.rebuild_means()
             mock_fs.assert_called_with(os.environ['PWD'], pattern,
@@ -385,9 +386,8 @@ class RebuildTests(unittest.TestCase):
     def test_rebuild_periodic_only(self, mock_subset):
         '''Test rebuild function for periodic files not found'''
         func.logtest('Assert only periodic files are rebuilt:')
-        mock_subset.return_value = ['file1_19990101', 'file2_19990101']
-        with mock.patch('nemo.NemoPostProc.check_fileformat'):
-            self.nemo.rebuild_fileset(os.environ['PWD'], 'field')
+        mock_subset.return_value = ['file1_19990101_', 'file2_19990101_']
+        self.nemo.rebuild_fileset(os.environ['PWD'], 'field')
         self.assertIn('only rebuilding periodic', func.capture().lower())
         self.assertIn('deleting component files', func.capture().lower())
 
@@ -622,55 +622,6 @@ class RebuildTests(unittest.TestCase):
         self.assertIn('Failed to rebuild file', func.capture('err'))
         self.assertIn('err output', func.capture('err'))
 
-    def test_check_fileformat_10dmean(self):
-        '''Test check_fileformat functionality - 10d means'''
-        func.logtest('Assert check_fileformat method with 10d means:')
-        date = ('YYYY', 'MM', '01')
-        template = r'RUNIDo_10d_YYYYMM01_YYYYMM10_grid_V.nc'
-        with mock.patch('os.rename') as mock_mv:
-            self.nemo.check_fileformat('RUNIDo_10d_DATE.nc',
-                                       date, 'type_grid_V')
-            mock_mv.assert_called_with(
-                'RUNIDo_10d_DATE.nc',
-                os.path.join(os.environ['PWD'], template)
-                )
-
-    def test_check_fileformat_2dmean(self):
-        '''Test check_fileformat functionality - 2d means'''
-        func.logtest('Assert check_fileformat method with 2d means:')
-        date = ('YYYY', 'MM', '05')
-        template = r'RUNIDo_2d_YYYYMM05_YYYYMM06_grid_V.nc'
-        with mock.patch('os.rename') as mock_mv:
-            self.nemo.check_fileformat('RUNIDo_2d_DATE.nc',
-                                       date, 'type_grid_V')
-            mock_mv.assert_called_with(
-                'RUNIDo_2d_DATE.nc',
-                os.path.join(os.environ['PWD'], template)
-                )
-
-    def test_check_format_10d_nochange(self):
-        '''Test check_fileformat functionality - no change'''
-        func.logtest('Assert check_fileformat method with no change:')
-        with mock.patch('os.rename') as mock_mv:
-            self.nemo.check_fileformat('RUNIDo_10d_11112201_11112210_grid_V.nc',
-                                       ('1111', '22', '01'), 'type_grid_V')
-            self.assertEqual(mock_mv.mock_calls, [])
-
-    def test_check_format_10d_badfield(self):
-        '''Test check_fileformat functionality - unknown field'''
-        func.logtest('Assert check_fileformat method with unknown field:')
-        with mock.patch('os.rename'):
-            with self.assertRaises(SystemExit):
-                self.nemo.check_fileformat('RUNIDo_10d_field.nc',
-                                           ('Y', 'M', 'D'), 'type_any')
-
-    def test_check_fileformat_otherfile(self):
-        '''Test check_fileformat functionality - any file but 10d mean'''
-        func.logtest('Assert check_fileformat method with any file but 10d:')
-        with mock.patch('nemo.NemoPostProc.set_stencil') as mock_set:
-            self.nemo.check_fileformat('InFile', ('Y', 'M', 'D'), 'type_any')
-            self.assertEqual(mock_set.mock_calls, [])
-
 
 class MeansProcessingTests(unittest.TestCase):
     '''Unit tests relating to the processing of means files'''
@@ -755,8 +706,7 @@ class MeansProcessingTests(unittest.TestCase):
 
         self.assertIn('attribute(s) DOMAIN_size_global not found',
                       func.capture('err'))
-        self.assertIn('DOMAIN_size_global', func.capture('err'))
-
+        self.assertEqual(len(mock_exec.mock_calls), 0)
 
 class AdditionalArchiveTests(unittest.TestCase):
     '''Unit tests relating to the archiving additional file'''
@@ -839,7 +789,10 @@ class AdditionalArchiveTests(unittest.TestCase):
         self.nemo.nl.restart_directory = 'THERE'
         with mock.patch('utils.get_subset'):
             self.nemo.archive_general()
-        mock_mv.assert_called_once_with(r'trajectory_icebergs_\d{6}_\d{4}.nc')
+        mock_mv.assert_called_once_with(
+            source=None,
+            pattern=r'trajectory_icebergs_\d{6}_\d{4}.nc'
+            )
 
     @mock.patch('utils.remove_files')
     def test_arch_iberg_traj_archpass(self, mock_rm):
@@ -864,7 +817,171 @@ class AdditionalArchiveTests(unittest.TestCase):
         with self.assertRaises(AssertionError):
             mock_rm.assert_called_with(mock.ANY)
 
+class UtilityMethodTests(unittest.TestCase):
+    '''Unit tests relating to the NEMO utility methods'''
+    def setUp(self):
+        self.nemo = nemo.NemoPostProc()
+        self.nemo.suite = mock.Mock()
+        self.nemo.suite.monthlength.return_value = 30
+        self.nemo.suite.prefix = 'RUNID'
 
+    def tearDown(self):
+        try:
+            os.remove('nemocicepp.nl')
+        except OSError:
+            pass
+
+    def test_get_date(self):
+        '''Test get_date method'''
+        func.logtest('Assert functionality of get_date method:')
+        files = [
+            'RUNIDo_19820201_restart.nc',
+            'RUNIDo_12h_19820101_19821230_FIELD_1982020100-1982020112_0000.nc',
+            'RUNIDo_10d_19820101_19821230_FIELD_19820201-19820210_0000.nc',
+            'RUNIDo_1m_19820101_19821230_FIELD_19820201-19820230_0000.nc',
+            'RUNIDo_1m_19820101_19821230_FIELD_19820201-19820230.nc',
+            'RUNIDo_1m_19820101_19821230_FIELD_19820201-19820230',
+            'RUNIDo_1m_19820101_19821230_FIELD_198202-198202_0000.nc',
+            'RUNIDo_1m_19820101_19821230_FIELD_198202-198202.nc',
+            'RUNIDo_1m_19820201_19820230_FIELD_0000.nc',
+            'RUNIDo_1m_19820201_19820230_FIELD.nc',
+            'RUNIDo_1m_19820201_19820230_FIELD',
+            ]
+        for fname in files:
+            date = self.nemo.get_date(fname)
+            self.assertEqual(date, ('1982', '02', '01', '00'))
+
+    def test_get_date_failure(self):
+        '''Test get_date method - catch failure'''
+        func.logtest('Assert error trapping in get_date method:')
+        date = self.nemo.get_date('RUNIDo_1m_YYYYMMDD_FIELD.nc')
+        self.assertEqual(date, (None,)*3)
+        self.assertIn('[WARN]  Unable to get date', func.capture('err'))
+
+    def test_get_date_enddate(self):
+        '''Test get_date method - startdate=False'''
+        func.logtest('Assert functionality of get_date method - enddate:')
+        files = [
+            'RUNIDo_19820230_restart.nc',
+            'RUNIDo_12h_19820101_19821230_FIELD_1982023012-1982023000_0000.nc',
+            'RUNIDo_10d_19820101_19821230_FIELD_19820221-19820230_0000.nc',
+            'RUNIDo_1m_19820101_19821230_FIELD_19820201-19820230_0000.nc',
+            'RUNIDo_1m_19820101_19821230_FIELD_19820201-19820230.nc',
+            'RUNIDo_1m_19820101_19821230_FIELD_198202-198202_0000.nc',
+            'RUNIDo_1m_19820101_19821230_FIELD_198202-198202.nc',
+            'RUNIDo_1m_19820201_19820230_FIELD_0000.nc',
+            'RUNIDo_1m_19820201_19820230_FIELD.nc',
+            ]
+        for fname in files:
+            date = self.nemo.get_date(fname, startdate=False)
+            self.assertEqual(date, ('1982', '02', '30', '00'))
+
+    def test_get_date_enddate_greg(self):
+        '''Test get_date method - startdate=False'''
+        func.logtest('Assert functionality of get_date method - enddate:')
+        self.nemo.suite.monthlength.return_value = 28
+        fname = 'RUNIDo_1m_19820101_19821230_FIELD_198202-198202.nc'
+        date = self.nemo.get_date(fname, startdate=False)
+        self.assertEqual(date, ('1982', '02', '28', '00'))
+
+    @mock.patch('os.rename')
+    def test_enforce_datestamp(self, mock_rename):
+        '''Test enforce_mean_datestamp method'''
+        func.logtest('Assert functionality of enforce_mean_datestamp:')
+        fname = 'RUNIDo_10d_00000000_11111111_grid_V_22222222-33333333_9999.nc'
+        self.nemo.enforce_mean_datestamp(fname)
+        mock_rename.assert_called_with(
+            os.path.join(self.nemo.share, fname),
+            os.path.join(self.nemo.share,
+                         'RUNIDo_10d_22222222_33333333_grid_V_9999.nc'))
+        self.assertEqual(len(mock_rename.mock_calls), 1)
+
+    @mock.patch('os.rename')
+    def test_enforce_datestamp_long(self, mock_rename):
+        '''Test enforce_mean_datestamp method - long date'''
+        func.logtest('Assert functionality of enforce_mean_datestamp:')
+        fname = 'RUNIDo_12h_0000000000_1111111111_grid_V' \
+            '_2222222222-3333333333_9999.nc'
+        self.nemo.enforce_mean_datestamp(fname)
+        mock_rename.assert_called_with(
+            os.path.join(self.nemo.share, fname),
+            os.path.join(self.nemo.share,
+                         'RUNIDo_12h_2222222222_3333333333_grid_V_9999.nc'))
+        self.assertEqual(len(mock_rename.mock_calls), 1)
+
+    @mock.patch('os.rename')
+    def test_enforce_datestamp_no_rbld(self, mock_rename):
+        '''Test enforce_mean_datestamp method - no rebuild required'''
+        func.logtest('Assert enforce_mean_datestamp handles no rebuild:')
+        fname = 'RUNIDo_10d_00000000_11111111_grid_V_22222222-33333333.nc'
+        self.nemo.enforce_mean_datestamp(fname)
+        mock_rename.assert_called_with(
+            os.path.join(self.nemo.share, fname),
+            os.path.join(self.nemo.share,
+                         'RUNIDo_10d_22222222_33333333_grid_V.nc'))
+        self.assertEqual(len(mock_rename.mock_calls), 1)
+
+    @mock.patch('os.rename')
+    def test_enforce_datestamp_nochange(self, mock_rename):
+        '''Test enforce_mean_datestamp method - no change'''
+        func.logtest('Assert functionality of enforce_mean_datestamp:')
+        fname = 'RUNIDo_10d_00000000_11111111_grid_V_9999.nc'
+        self.nemo.enforce_mean_datestamp(fname)
+        self.assertEqual(len(mock_rename.mock_calls), 0)
+
+    def test_enforce_datestamp_nofield(self):
+        '''Test enforce_mean_datestamp method - unknown field'''
+        func.logtest('Assert enforce_mean_datestamp handles unknown field :')
+        fname = 'RUNIDo_genericfile_999999.nc'
+        with self.assertRaises(SystemExit):
+            self.nemo.enforce_mean_datestamp(fname)
+        self.assertIn('unable to extract datestring', func.capture('err'))
+
+    @mock.patch('nemo.NemoPostProc.enforce_mean_datestamp')
+    @mock.patch('modeltemplate.ModelTemplate.move_to_share')
+    def test_move_to_share(self, mock_mt, mock_stamp):
+        '''Test NEMO Specific move_to_share functionality'''
+        func.logtest('Assert additional move_to_share processing in NEMO:')
+        mock_mt.return_value = ['FILE1', 'FILE2']
+        self.nemo.move_to_share()
+        mock_mt.assert_called_with(source=None, pattern=None)
+        self.assertEqual(len(mock_mt.mock_calls), 1)
+        for move in mock_mt.return_value:
+            self.assertIn(mock.call(move), mock_stamp.mock_calls)
+
+    @mock.patch('nemo.NemoPostProc.enforce_mean_datestamp')
+    @mock.patch('modeltemplate.ModelTemplate.move_to_share')
+    def test_move_to_share_check(self, mock_mt, mock_stamp):
+        '''Test NEMO Specific move_to_share functionality - check SHARE'''
+        func.logtest('Assert move_to_share called twice for no return:')
+        mock_mt.return_value = []
+        self.nemo.move_to_share()
+        mock_mt.assert_called_with(source=os.environ['PWD'])
+        self.assertEqual(len(mock_mt.mock_calls), 2)
+        self.assertEqual(len(mock_stamp.mock_calls), 0)
+
+    @mock.patch('nemo.NemoPostProc.rebuild_means')
+    @mock.patch('modeltemplate.ModelTemplate.move_to_share')
+    def test_move_to_share_rebuild(self, mock_mt, mock_rbld):
+        '''Test move_to_share functionality - share==work'''
+        func.logtest('Assert rebuild behaviour of move_to_share method:')
+        self.nemo.nl.means_directory = 'ShareDir'
+        with mock.patch('nemo.NemoPostProc.enforce_mean_datestamp'):
+            self.nemo.move_to_share()
+        mock_rbld.assert_called_once_with()
+        mock_mt.assert_called_once_with(pattern=None, source=None)
+
+    @mock.patch('nemo.NemoPostProc.rebuild_means')
+    @mock.patch('nemo.NemoPostProc.enforce_mean_datestamp')
+    @mock.patch('modeltemplate.ModelTemplate.move_to_share')
+    def test_move_to_share_pattern(self, mock_mt, mock_stamp, mock_rbld):
+        '''Test move_to_share functionality - with pattern'''
+        func.logtest('Assert pattern behaviour of move_to_share method:')
+        mock_mt.return_value = []
+        self.nemo.move_to_share(pattern=r'abcde')
+        self.assertEqual(mock_stamp.mock_calls, [])
+        self.assertEqual(mock_rbld.mock_calls, [])
+        mock_mt.assert_called_once_with(pattern='abcde', source=None)
 
 
 def main():

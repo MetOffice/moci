@@ -111,8 +111,7 @@ class CicePostProc(mt.ModelTemplate):
     def rsttypes(self):
         return ('', r'.age')
 
-    @staticmethod
-    def get_date(fname, startdate=True):
+    def get_date(self, fname, startdate=True):
         '''
         Returns the date extracted from the filename provided.
         By default, the start date for the data is returned

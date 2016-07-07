@@ -108,7 +108,8 @@ class NemoPostProc(mt.ModelTemplate):
         '''
         return {
             mt.XX: lambda y, m, s, f:
-                   r'^{P}o_{B}_\d{{8,10}}_\d{{8,10}}_{F}(\.nc)?$'.
+                   r'^{P}o_{B}(_\d{{8,10}}){{2}}_{F}'
+                   r'(([_\-]\d{{6,10}}){{2}})?(_\d{{4}})?(\.nc)?$'.
                    format(P=self.prefix, B=y if y else r'\d+[hdmsy]', F=f),
             mt.MM: lambda y, m, s, f: r'{P}o_1m_{Y}{M}01_{Y}{M}{L}_{F}.nc'.
                    format(P=self.prefix, Y=y, M=m,
@@ -158,12 +159,82 @@ class NemoPostProc(mt.ModelTemplate):
         buffer_rebuild = getattr(self.nl, 'buffer_rebuild_' + filetype)
         return buffer_rebuild if buffer_rebuild else 0
 
-    @staticmethod
-    def get_date(fname):
-        for string in fname.split('_'):
-            if string.isdigit():
-                return string[:4], string[4:6], string[6:8]
-        utils.log_msg('Unable to get date for file:\n\t' + fname, level=3)
+    def get_date(self, fname, startdate=True):
+        '''
+        Returns the date extracted from the filename provided.
+        By default, the start date for the data is returned
+        '''
+        datestrings = re.findall(r'\d{6,10}', fname)
+        day = '01'
+        if len(datestrings) == 0:
+            utils.log_msg('Unable to get date for file:\n\t' + fname, level=3)
+            return (None,)*3
+        elif len(datestrings) == 1:
+            date_id = 0
+        else:
+            if startdate:
+                date_id = -2
+            else:
+                date_id = -1
+                day = str(self.suite.monthlength(datestrings[date_id][4:6]))
+
+        date = datestrings[date_id]
+        day = day if len(date) < 8 else date[6:8]
+        hour = '00' if len(date) < 10 else date[8:10]
+        return date[:4], date[4:6], day, hour
+
+    def move_to_share(self, source=None, pattern=None):
+        '''
+        Override move_to_share() to include modifying the means filename format
+        '''
+        workfiles = super(NemoPostProc, self).move_to_share(source=source,
+                                                            pattern=pattern)
+        if not pattern:
+            # Standard means - potentially need to check SHARE for unprocessed
+            # files left as a result of failure in previous instance of the app
+            if not workfiles:
+                workfiles = super(NemoPostProc, self).\
+                    move_to_share(source=self.share)
+            for fname in workfiles:
+                self.enforce_mean_datestamp(fname)
+
+            # Rebuild means files as required
+            self.rebuild_means()
+
+    def enforce_mean_datestamp(self, filename):
+        '''
+        Enforce the filename naming convention:
+           RUNIDo_[STARTDATE]_[ENDDATE]_[FIELD].nc
+        Files are assumed to be in the SHARE directory
+        '''
+        splitname = re.split('[._]', filename)
+        startdate = ''.join(self.get_date(filename))
+        enddate = ''.join(self.get_date(filename, startdate=False))
+        meanperiod = splitname[1]
+        if 'h' not in meanperiod:
+            startdate = startdate[:8]
+            enddate = enddate[:8]
+
+        field = [f for f in self.fields if f in filename]
+        if len(field) == 1:
+            field = field[0]
+            num = ''
+            if re.match(r'^\d{4}$', splitname[-2]):
+                num = '_' + splitname[-2]
+            newfname = r'{P}o_{L}_{D1}_{D2}_{F}{N}.nc'.\
+                format(P=self.prefix, L=meanperiod,
+                       D1=startdate, D2=enddate,
+                       F=field, N=num)
+            if filename.strip() != newfname:
+                utils.log_msg('enforce_mean_datestamp: Renamed {} as {}'.
+                              format(filename, newfname), level=2)
+                os.rename(os.path.join(self.share, filename),
+                          os.path.join(self.share, newfname))
+        else:
+            # No recognised field in the filename - Exit with error
+            msg = 'enforce_mean_datestamp - unable to extract ' \
+                'datestring from filename: {}'.format(filename)
+            utils.log_msg(msg, level=5)
 
     def rebuild_restarts(self):
         '''Rebuild partial restart files'''
@@ -195,16 +266,10 @@ class NemoPostProc(mt.ModelTemplate):
             bldset = utils.get_subset(datadir,
                                       r'^{}_\d{{4}}\.nc$'.format(corename))
 
-            year = month = day = None
-            for part in corename.split('_'):
-                # Retrieve the data start-date from the filename
-                if re.search(r'^\d{8}$', part):
-                    year, month, day = self.get_date(part)
-                    break
-
             if filetype == 'diaptr':
                 self.global_attr_to_zonal(datadir, bldset)
 
+            month, day = self.get_date(corename)[1:3]
             if rebuildall or self.timestamps(month, day, process='rebuild'):
                 utils.log_msg('Rebuilding: ' + corename, level=1)
                 icode = self.rebuild_namelist(datadir, corename,
@@ -216,11 +281,6 @@ class NemoPostProc(mt.ModelTemplate):
                 icode = 0
 
             if icode == 0:
-                filename = os.path.join(datadir, corename + '.nc')
-                if os.path.isfile(filename):
-                    self.check_fileformat(filename, (year, month, day),
-                                          filetype)
-
                 if not self.suite.finalcycle or 'restart' not in corename:
                     utils.log_msg('Deleting component files for: ' + corename,
                                   level=1)
@@ -362,53 +422,12 @@ class NemoPostProc(mt.ModelTemplate):
 
         return icode
 
-    def check_fileformat(self, inputfile, date, filetype):
-        '''
-        Output file format for means files changed at vn3.5.
-        This function renames rebuilt means files with the original format
-        prior to their use in creating other means.
-        '''
-        mean_period = None
-        for base in mt.MONTH_BASE:
-            if '_{}_'.format(base) in inputfile:
-                mean_period = base
-                period = re.match(r'^(?P<num>\d+)(?P<per>[a-zA-Z]+)$',
-                                  mean_period)
-                if period.group('per').lower() == 'h':
-                    msg = 'NEMO check_fileformat: hourly means not implemented'
-                    utils.log_msg(msg, level=3)
-                    return
-                try:
-                    mean_day2 = int(date[2]) + int(period.group('num')) - 1
-                except ValueError:
-                    msg = 'NEMO check_fileformat: Date format is incorrect:'
-                    utils.log_msg(msg + filetype, level=5)
-                break
-
-        if not mean_period:
-            return
-
-        try:
-            field = [f for f in self.fields if re.search(f, filetype)][0]
-        except IndexError:
-            msg = 'NEMO check_fileformat: Cannot obtain field from filename:'
-            utils.log_msg(msg + filetype, level=5)
-
-        args = (r'\d{4}', r'\d{2}', None, field)
-        if not re.match(self.set_stencil[mt.MM](*args),
-                        os.path.basename(inputfile)):
-            template = r'{0}o_{1}_{2}{3}{4}_{2}{3}{5:0>2d}_{6}.nc'.\
-                format(self.prefix, mean_period, date[0], date[1], date[2],
-                       mean_day2, field)
-            os.rename(inputfile, os.path.join(self.share, template))
-
     def archive_iceberg_trajectory(self):
         '''Rebuild and archive iceberg trajectory (diagnostic) files'''
         fn_stub = r'trajectory_icebergs_\d{6}'
 	# Move to share if necessary
         if self.work != self.share:
-            pattern = fn_stub + r'_\d{4}.nc'
-            self.move_to_share(pattern)
+            self.move_to_share(pattern=fn_stub + r'_\d{4}.nc')
 
         # Rebuild each unique set of files we find in share
         suffix = '_0000.nc'

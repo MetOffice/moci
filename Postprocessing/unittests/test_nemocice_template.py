@@ -391,7 +391,7 @@ class ArchiveTests(unittest.TestCase):
                         new_callable=mock.PropertyMock, return_value=[]):
             with mock.patch('utils.remove_files') as mock_rm:
                 self.model.archive_means()
-                mock_rm.assert_not_called()
+                self.assertEqual(len(mock_rm.mock_calls), 0)
 
     def test_no_means_to_archive(self):
         '''Test report with no means to archive'''
@@ -569,31 +569,21 @@ class MethodsTests(unittest.TestCase):
         pass
 
     @mock.patch('utils.move_files')
-    @mock.patch('utils.get_subset')
+    @mock.patch('utils.get_subset', return_value=['WkFile1'])
     def test_no_move_to_share(self, mock_set, mock_mv):
         '''Test move_to_share functionality - share==work'''
         func.logtest('Assert null behaviour of move_to_share method:')
         self.model.nl.means_directory = 'ShareDir'
+        self.model.meantemplate = mock.Mock()
         self.model.move_to_share()
-        mock_mv.assert_not_called()
-        mock_set.assert_not_called()
-
-    def test_move_to_share_rebuild(self):
-        '''Test move_to_share functionality - share==work'''
-        func.logtest('Assert null behaviour of move_to_share method:')
-        self.model.nl.means_directory = 'ShareDir'
-        with mock.patch('modeltemplate.ModelTemplate.rebuild_means') as \
-                mock_rbld:
-            self.model.move_to_share()
-            mock_rbld.assert_called_once()
+        self.assertEqual(len(mock_mv.mock_calls), 0)
+        self.assertEqual(len(mock_set.mock_calls), 1)
 
     @mock.patch('utils.move_files')
-    @mock.patch('utils.get_subset')
+    @mock.patch('utils.get_subset', return_value=['WkFile1', 'WkFile2'])
     def test_move_to_share(self, mock_set, mock_mv):
         '''Test move_to_share functionality'''
         func.logtest('Assert behaviour of move_to_share method:')
-
-        mock_set.return_value = ['WkFile1', 'WkFile2']
         with mock.patch('modeltemplate.ModelTemplate.mean_stencil',
                         new_callable=mock.PropertyMock,
                         return_value={'General': lambda y, m, s, f:
@@ -602,6 +592,7 @@ class MethodsTests(unittest.TestCase):
         mock_mv.assert_called_with(['WkFile1', 'WkFile2'], 'ShareDir',
                                    originpath='WorkDir')
         mock_set.assert_called_with('WorkDir', r'None_None')
+        self.assertEqual(len(mock_set.mock_calls), 1)
 
     @mock.patch('utils.move_files')
     @mock.patch('utils.get_subset')
@@ -614,8 +605,9 @@ class MethodsTests(unittest.TestCase):
                         return_value={'General': lambda y, m, s, f:
                                                  r'{}_{}'.format(y, m)}):
             self.model.move_to_share()
-        mock_mv.assert_not_called()
+        self.assertEqual(len(mock_mv.mock_calls), 0)
         mock_set.assert_called_with('WorkDir', r'None_None')
+        self.assertEqual(len(mock_set.mock_calls), 1)
 
     @mock.patch('utils.move_files')
     @mock.patch('utils.get_subset')
@@ -624,7 +616,7 @@ class MethodsTests(unittest.TestCase):
         func.logtest('Assert behaviour of move_to_share method:')
         mock_set.return_value = []
         self.model.move_to_share(pattern=r'[abc]+')
-        mock_mv.assert_not_called()
+        self.assertEqual(len(mock_mv.mock_calls), 0)
         mock_set.assert_called_with('WorkDir', r'[abc]+')
 
     def test_loop_inputs(self):

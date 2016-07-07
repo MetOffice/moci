@@ -171,25 +171,22 @@ class ModelTemplate(control.runPostProc):
             # Not all models require rebuilding
             pass
 
-    def move_to_share(self, pattern=None):
-        '''
-        Move unprocessed means files to SHARE.
-        Finally, rebuild component files if necessary
-        '''
-        if self.work != self.share:
-            if pattern:
-                workfiles = utils.get_subset(self.work, pattern)
-            else:
-                # Default pattern - all means files
-                inputs = RegexArgs(period=XX, date=(None,)*3)
-                workfiles = utils.get_subset(self.work,
-                                             self.meantemplate(inputs))
-            if workfiles:
-                utils.log_msg('Moving files to SHARE directory')
-                utils.move_files(workfiles, self.share, originpath=self.work)
-
-        # Rebuild means files as required
-        self.rebuild_means()
+    def move_to_share(self, source=None, pattern=None):
+        ''' Move unprocessed means files to SHARE '''
+        source = source if source else self.work
+        if pattern:
+            workfiles = utils.get_subset(source, pattern)
+        else:
+            # Default pattern - all means files
+            workfiles = []
+            for field in self.fields:
+                inputs = RegexArgs(field=field, period=XX, date=(None,)*3)
+                workfiles += utils.get_subset(self.work,
+                                              self.meantemplate(inputs))
+        if workfiles and source != self.share:
+            utils.log_msg('Moving files to SHARE directory')
+            utils.move_files(workfiles, self.share, originpath=source)
+        return workfiles
 
     def timestamps(self, month, day, process='archive'):
         '''
@@ -250,16 +247,15 @@ class ModelTemplate(control.runPostProc):
         utils.log_msg(msg, 4)
         raise NotImplementedError
 
-    @staticmethod
     @abc.abstractmethod
-    def get_date(filename, startdate=True):
+    def get_date(self, filename, startdate=True):
         '''
         Returns a tuple representing the date extracted from a filename.
         Overriding method in the calling model is required.
         By default the date returned is the first (start) date in the filename.
         '''
         msg = 'Model specific get_date method not implemented.\n\t'
-        msg += 'return (year, month, day)'
+        msg += 'return (year, month, day, [hour])'
         utils.log_msg(msg, 4)
         raise NotImplementedError
 
@@ -346,13 +342,6 @@ class ModelTemplate(control.runPostProc):
         '''
         pass
 
-    def rebuild_means(self):
-        '''
-        Method for rebuilding means files - if required it is overridden
-        in the calling model
-        '''
-        pass
-
     # *** MEANING *** #########################################################
     @property
     def means_cmd(self):
@@ -394,7 +383,7 @@ class ModelTemplate(control.runPostProc):
             # Loop over set of means which it should be possible to create
             # from files available.
             for setend in self.periodend(inputs):
-                inputs.date = self.get_date(setend)
+                inputs.date = self.get_date(setend)[:3]
                 describe = self.describe_mean(inputs)
                 meanset = self.periodset(inputs)
                 lenset = {
@@ -508,7 +497,7 @@ class ModelTemplate(control.runPostProc):
         to_archive = []
         for inputs in self.loop_inputs(self.fields, archive=True):
             for setend in self.periodend(inputs, archive=True):
-                inputs.date = self.get_date(setend) if setend else (None,)*3
+                inputs.date = self.get_date(setend)[:3] if setend else (None,)*3
                 for mean in self.periodset(inputs, archive=True):
                     to_archive.append(mean)
 
@@ -552,7 +541,7 @@ class ModelTemplate(control.runPostProc):
             to_archive = []
             while len(rstfiles) > self.buffer_archive:
                 rst = rstfiles.pop(0)
-                _, month, day = self.get_date(rst)
+                month, day = self.get_date(rst)[1:3]
                 if self.timestamps(month, day):
                     to_archive.append(rst)
                 else:
