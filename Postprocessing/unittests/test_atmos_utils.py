@@ -75,7 +75,7 @@ class HeaderTests(unittest.TestCase):
         self.logfile = open('logfile', 'w')
 
     def tearDown(self):
-        for fname in ['logfile', 'atmospp.nl']:
+        for fname in ['logfile'] + runtime_environment.runtime_files:
             try:
                 os.remove(fname)
             except OSError:

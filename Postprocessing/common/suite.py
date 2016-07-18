@@ -295,7 +295,13 @@ class SuitePostProc(object):
     nccopy_path = ''
     ncdump_path = ''
 
-NAMELISTS = {'suitegen': SuitePostProc}
+
+class TimerInfo(object):
+    '''Default namelist for timer'''
+    ltimer = False
+
+
+NAMELISTS = {'suitegen': SuitePostProc, 'monitoring': TimerInfo}
 
 
 if __name__ == '__main__':

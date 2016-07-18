@@ -141,10 +141,11 @@ class MeansTests(unittest.TestCase):
         self.model.fix_mean_time = mock.Mock()
 
     def tearDown(self):
-        try:
-            os.remove('nemocicepp.nl')
-        except OSError:
-            pass
+        for fname in runtime_environment.runtime_files:
+            try:
+                os.remove('fname')
+            except OSError:
+                pass
 
     @mock.patch('os.path')
     @mock.patch('utils.exec_subproc')

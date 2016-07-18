@@ -67,3 +67,24 @@ class pp11_t37(rose.upgrade.MacroUpgrade):
                                   "archive_as_fieldsfiles",], None)
         
         return config, self.reports
+
+
+class pp11_t80(rose.upgrade.MacroUpgrade):
+
+    """Upgrade macro for ticket #80 by harryshepherd."""
+    BEFORE_TAG = "pp11_t37"
+    AFTER_TAG = "pp11_t80"
+
+    def upgrade(self, config, meta_config=None):
+        """Upgrade a Postproc app configuration."""
+        # Input your macro commands here
+        self.add_setting(config,
+                         ["file:monitorpp.nl", "source"],
+                         "namelist:monitoring")
+        self.add_setting(config,
+                         ["namelist:monitoring", "ltimer"],
+                         "false")
+        
+        return config, self.reports
+
+

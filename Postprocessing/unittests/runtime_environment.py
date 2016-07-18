@@ -15,6 +15,9 @@
 
 import os
 
+runtime_files = ['atmospp.nl', 'input.nl', 'monitorpp.nl',
+                 'nemocicepp.nl']
+
 def setup_env():
     '''Set up the runtime environment required to run the postproc unittests'''
 

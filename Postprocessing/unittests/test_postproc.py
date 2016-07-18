@@ -31,6 +31,7 @@ def main():
         'suitegen': 'test_common_suitegen.py',
         'nlist':    'test_common_nlist.py',
         'utils':    'test_common_utils.py',
+        'timer':    'test_common_timer.py',
         'moo':      'test_common_moo.py',
         'netcdf':   'test_common_netcdf_utils.py',
         'atmos':    'test_atmos_*.py',

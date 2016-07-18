@@ -52,10 +52,11 @@ class StencilTests(unittest.TestCase):
         self.meanstencil = self.cice.mean_stencil
 
     def tearDown(self):
-        try:
-            os.remove('nemocicepp.nl')
-        except OSError:
-            pass
+        for fname in runtime_environment.runtime_files:
+            try:
+                os.remove('fname')
+            except OSError:
+                pass
 
     def test_set_stencil_restarts(self):
         '''Test the regular expressions of the set_stencil method - restarts'''

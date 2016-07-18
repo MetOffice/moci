@@ -51,7 +51,7 @@ class SuiteTests(unittest.TestCase):
         self.mysuite = suite.SuiteEnvironment(self.mypath, self.myfile)
 
     def tearDown(self):
-        for fname in ['atmospp.nl', self.myfile]:
+        for fname in [self.myfile] + runtime_environment.runtime_files:
             try:
                 os.remove(fname)
             except OSError:
@@ -211,7 +211,7 @@ class ArchiveTests(unittest.TestCase):
         self.mysuite = suite.SuiteEnvironment('somePath/directory', 'input.nl')
 
     def tearDown(self):
-        for fname in ['input.nl', self.logfile]:
+        for fname in [self.logfile] + runtime_environment.runtime_files:
             if os.path.exists(fname):
                 os.remove(fname)
 

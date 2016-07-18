@@ -40,8 +40,9 @@ class ArchiveDeleteTests(unittest.TestCase):
                        'RUNIDa.pc1111jan', 'RUNIDa.pd1111jan']
 
     def tearDown(self):
-        for fname in ['logfile', 'atmospp.nl', self.dfiles[0],
-                      self.ffiles[0], self.ffiles[0] + '.pp']:
+        files = ['logfile', self.dfiles[0], self.ffiles[0],
+                 self.ffiles[0] + '.pp']
+        for fname in runtime_environment.runtime_files + files:
             try:
                 os.remove(fname)
             except OSError:

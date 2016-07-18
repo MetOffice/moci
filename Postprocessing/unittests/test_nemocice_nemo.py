@@ -59,10 +59,11 @@ class StencilTests(unittest.TestCase):
         self.nemo.suite.monthlength = dummysuite.monthlength
 
     def tearDown(self):
-        try:
-            os.remove('nemocicepp.nl')
-        except OSError:
-            pass
+        for fname in runtime_environment.runtime_files:
+            try:
+                os.remove('fname')
+            except OSError:
+                pass
 
     def test_set_stencil_restarts(self):
         '''Test the regular expressions of the set_stencil method - restarts'''
@@ -302,7 +303,7 @@ class RebuildTests(unittest.TestCase):
         self.buffer_mean = self.nemo.buffer_rebuild('mean')
 
     def tearDown(self):
-        for fname in ('nemocicepp.nl', 'nam_rebuild'):
+        for fname in ['nam_rebuild'] + runtime_environment.runtime_files:
             try:
                 os.remove(fname)
             except OSError:
@@ -638,10 +639,11 @@ class MeansProcessingTests(unittest.TestCase):
 '''
 
     def tearDown(self):
-        try:
-            os.remove('nemocicepp.nl')
-        except OSError:
-            pass
+        for fname in runtime_environment.runtime_files:
+            try:
+                os.remove('fname')
+            except OSError:
+                pass
 
     def test_global_attr_to_zonal(self):
         '''Test method to transform global attributes to zonal ones'''
@@ -720,7 +722,7 @@ class AdditionalArchiveTests(unittest.TestCase):
         self.nemo.nl.means_directory = 'HERE'
 
     def tearDown(self):
-        for fname in ('nemocicepp.nl', 'nam_rebuild'):
+        for fname in ['nam_rebuild'] + runtime_environment.runtime_files:
             try:
                 os.remove(fname)
             except OSError:

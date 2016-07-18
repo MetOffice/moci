@@ -29,10 +29,12 @@ import os
 import sys
 import importlib
 
+import timer
 import utils
 
 def main():
     '''Main function for PostProcessing App'''
+    timer.initialise_timer()
     # models dictionary:
     #    Key = Name of top-level module for model - used as argument to
     #          main_pp.py
@@ -74,6 +76,7 @@ def main():
                     getattr(model, meth)()
             exit_check[name] = model.suite.archiveOK
 
+    timer.finalise_timer()
     if not all(exit_check.values()):
         fails = [m for m, v in exit_check.items() if not v]
         msg = 'main_pp.py - PostProc complete. Exiting with errors in '
