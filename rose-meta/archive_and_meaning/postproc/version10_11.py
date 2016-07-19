@@ -157,7 +157,7 @@ class pp10_t44(rose.upgrade.MacroUpgrade):
     def upgrade(self, config, meta_config=None):
         """Upgrade a Postproc app configuration."""
         # Move Moose namelist variables to new &moose_arch namelist
-        for var in ['archive_set', 'dataclass', 'moopath', 'mooproject']:
+        for var in ['archive_set', 'dataclass', 'moopath', 'mooproject', 'ensembleid']:
               val = self.get_setting_value(config, ["namelist:suitegen", var])
               if not val == None:
                     self.add_setting(config, ["namelist:moose_arch", var], val)
