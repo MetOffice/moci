@@ -48,76 +48,76 @@ hg3esa.da19821201_00
 hg3esa.da19830101_00"
 
 apm="
-hg3esa.pm1981oct
-hg3esa.pm1981nov
-hg3esa.pm1981dec
-hg3esa.pm1982jan
-hg3esa.pm1982feb
-hg3esa.pm1982mar
-hg3esa.pm1982apr
-hg3esa.pm1982may
-hg3esa.pm1982jun
-hg3esa.pm1982jul
-hg3esa.pm1982aug
-hg3esa.pm1982sep
-hg3esa.pm1982oct
-hg3esa.pm1982nov
-hg3esa.pm1982dec"
+hg3esa.pm1981oct.pp
+hg3esa.pm1981nov.pp
+hg3esa.pm1981dec.pp
+hg3esa.pm1982jan.pp
+hg3esa.pm1982feb.pp
+hg3esa.pm1982mar.pp
+hg3esa.pm1982apr.pp
+hg3esa.pm1982may.pp
+hg3esa.pm1982jun.pp
+hg3esa.pm1982jul.pp
+hg3esa.pm1982aug.pp
+hg3esa.pm1982sep.pp
+hg3esa.pm1982oct.pp
+hg3esa.pm1982nov.pp
+hg3esa.pm1982dec.pp"
 
 aps="
-hg3esa.ps1981son
-hg3esa.ps1982djf
-hg3esa.ps1982mam
-hg3esa.ps1982jja
-hg3esa.ps1982son"
+hg3esa.ps1981son.pp
+hg3esa.ps1982djf.pp
+hg3esa.ps1982mam.pp
+hg3esa.ps1982jja.pp
+hg3esa.ps1982son.pp"
 
-apy="hg3esa.py19821201"
+apy="hg3esa.py19821201.pp"
 
 aph="
-hg3esa.ph19811001
-hg3esa.ph19811011
-hg3esa.ph19811021
-hg3esa.ph19811101
-hg3esa.ph19811111
-hg3esa.ph19811121
-hg3esa.ph19811201
-hg3esa.ph19811211
-hg3esa.ph19811221
-hg3esa.ph19820101
-hg3esa.ph19820111
-hg3esa.ph19820121
-hg3esa.ph19820201
-hg3esa.ph19820211
-hg3esa.ph19820221
-hg3esa.ph19820301
-hg3esa.ph19820311
-hg3esa.ph19820321
-hg3esa.ph19820401
-hg3esa.ph19820411
-hg3esa.ph19820421
-hg3esa.ph19820501
-hg3esa.ph19820511
-hg3esa.ph19820521
-hg3esa.ph19820601
-hg3esa.ph19820611
-hg3esa.ph19820621
-hg3esa.ph19820701
-hg3esa.ph19820711
-hg3esa.ph19820721
-hg3esa.ph19820801
-hg3esa.ph19820811
-hg3esa.ph19820821
-hg3esa.ph19820901
-hg3esa.ph19820911
-hg3esa.ph19820921
-hg3esa.ph19821001
-hg3esa.ph19821011
-hg3esa.ph19821021
-hg3esa.ph19821101
-hg3esa.ph19821111
-hg3esa.ph19821121
-hg3esa.ph19821201
-hg3esa.ph19821211"
+hg3esa.ph19811001.pp
+hg3esa.ph19811011.pp
+hg3esa.ph19811021.pp
+hg3esa.ph19811101.pp
+hg3esa.ph19811111.pp
+hg3esa.ph19811121.pp
+hg3esa.ph19811201.pp
+hg3esa.ph19811211.pp
+hg3esa.ph19811221.pp
+hg3esa.ph19820101.pp
+hg3esa.ph19820111.pp
+hg3esa.ph19820121.pp
+hg3esa.ph19820201.pp
+hg3esa.ph19820211.pp
+hg3esa.ph19820221.pp
+hg3esa.ph19820301.pp
+hg3esa.ph19820311.pp
+hg3esa.ph19820321.pp
+hg3esa.ph19820401.pp
+hg3esa.ph19820411.pp
+hg3esa.ph19820421.pp
+hg3esa.ph19820501.pp
+hg3esa.ph19820511.pp
+hg3esa.ph19820521.pp
+hg3esa.ph19820601.pp
+hg3esa.ph19820611.pp
+hg3esa.ph19820621.pp
+hg3esa.ph19820701.pp
+hg3esa.ph19820711.pp
+hg3esa.ph19820721.pp
+hg3esa.ph19820801.pp
+hg3esa.ph19820811.pp
+hg3esa.ph19820821.pp
+hg3esa.ph19820901.pp
+hg3esa.ph19820911.pp
+hg3esa.ph19820921.pp
+hg3esa.ph19821001.pp
+hg3esa.ph19821011.pp
+hg3esa.ph19821021.pp
+hg3esa.ph19821101.pp
+hg3esa.ph19821111.pp
+hg3esa.ph19821121.pp
+hg3esa.ph19821201.pp
+hg3esa.ph19821211.pp"
 
 apj="
 a.pj19811201
@@ -196,15 +196,15 @@ RC=0
 
 echo "[INFO] Checking Atmosphere output all present and correct..."
 for fn in $adumps $aph $apj $apm $apm $aps $apy; do
-    if [[ "$search" != *"$fn"* ]]; then 
+    if [[ "$search" != *"$fn WOULD BE ARCHIVED"* ]] && [[ "$search" != *"$fn ARCHIVE OK"* ]]; then 
         echo "[FAIL] File archive not logged: $fn"
         RC=$((RC + 1))
     fi
-    if [[ "$fails" == *"$fn"* ]]; then 
+    if [[ "$fails" == *"$fn ARCHIVE FAILED"* ]]; then 
         echo "[FAIL] File archive failed: $fn"
         RC=$((RC + 11))
     fi
-    if [[ "$ghost" == *"$fn"* ]]; then 
+    if [[ "$ghost" == *"$fn FILE NOT ARCHIVED"* ]]; then 
         echo "[FAIL] File not archived - does not exist: $fn"
         RC=$((RC + 111))
     fi
@@ -212,15 +212,15 @@ done
 
 echo "[INFO] Checking NEMO output all present and correct..."
 for fn in $odumps $opm $opm $ops $opy; do
-    if [[ "$search" != *"$fn"* ]]; then 
+    if [[ "$search" != *"$fn WOULD BE ARCHIVED"* ]] && [[ "$search" != *"$fn ARCHIVE OK"* ]]; then 
         echo "[FAIL] File archive not logged: $fn"
         RC=$((RC + 2))
     fi
-    if [[ "$fails" == *"$fn"* ]]; then 
+    if [[ "$fails" == *"$fn ARCHIVE FAILED"* ]]; then 
         echo "[FAIL] File archive failed: $fn"
         RC=$((RC + 22))
     fi
-    if [[ "$ghost" == *"$fn"* ]]; then 
+    if [[ "$ghost" == *"$fn FILE NOT ARCHIVED"* ]]; then 
         echo "[FAIL] File not archived - does not exist: $fn"
         RC=$((RC + 222))
     fi
@@ -228,15 +228,15 @@ done
 
 echo "[INFO] Checking CICE output all present and correct..."
 for fn in $idumps $ipm $ipm $ips $ipy; do
-    if [[ "$search" != *"$fn"* ]]; then 
+    if [[ "$search" != *"$fn WOULD BE ARCHIVED"* ]] && [[ "$search" != *"$fn ARCHIVE OK"* ]]; then 
         echo "[FAIL] File archive not logged: $fn"
         RC=$((RC + 3))
     fi
-    if [[ "$fails" == *"$fn"* ]]; then 
+    if [[ "$fails" == *"$fn ARCHIVE FAILED"* ]]; then 
         echo "[FAIL] File archive failed: $fn"
         RC=$((RC + 33))
     fi
-    if [[ "$ghost" == *"$fn"* ]]; then 
+    if [[ "$ghost" == *"$fn FILE NOT ARCHIVED"* ]]; then 
         echo "[FAIL] File not archived - does not exist: $fn"
         RC=$((RC + 333))
     fi

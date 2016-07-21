@@ -42,6 +42,8 @@ class NemoNamelist:
     archive_iceberg_trajectory = False
     means_cmd = '/projects/ocean/hadgem3/scripts/GC2.0/mean_nemo.exe'
     means_directory = os.environ['CYLC_TASK_WORK_DIR'] + '/../coupled'
+    process_all_fieldsfiles = True
+    means_fieldsfiles = None
     ncatted_cmd = '/projects/ocean/hadgem3/nco/nco-4.4.7/bin/ncatted'
     create_means = False
     base_component = '10d'

@@ -49,6 +49,9 @@ class Archiving:
     archive_pp = False
     arch_year_month = 1
     convert_pp = True
+    process_all_streams = True
+    process_streams = None
+    process_means = None
     convert_all_streams = True
     archive_as_fieldsfiles = None
 

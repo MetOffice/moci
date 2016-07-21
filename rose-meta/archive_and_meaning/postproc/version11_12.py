@@ -65,7 +65,6 @@ class pp11_t37(rose.upgrade.MacroUpgrade):
                                   "convert_all_streams",], "true")
         self.add_setting(config, ["namelist:archiving",
                                   "archive_as_fieldsfiles",], None)
-        
         return config, self.reports
 
 
@@ -88,3 +87,24 @@ class pp11_t80(rose.upgrade.MacroUpgrade):
         return config, self.reports
 
 
+class pp11_t98(rose.upgrade.MacroUpgrade):
+
+    """Upgrade macro for ticket #98 by EricaNeininger."""
+    BEFORE_TAG = "pp11_t80"
+    AFTER_TAG = "pp11_t98"
+
+    def upgrade(self, config, meta_config=None):
+        """New options to allow processing of selected streams."""
+        self.add_setting(config, ["namelist:archiving",
+                                  "process_all_streams",], "true")
+        self.add_setting(config, ["namelist:archiving",
+                                  "process_streams",], 'a-z1-9')
+        self.add_setting(config, ["namelist:archiving",
+                                  "process_means",], 'msy')
+        
+        self.add_setting(config, ["namelist:nemopostproc",
+                                  "process_all_fieldsfiles",], "true")
+        self.add_setting(config, ["namelist:nemopostproc",
+                                  "means_fieldsfiles",],
+                         "grid_U,grid_V,grid_W,grid_T")
+        return config, self.reports

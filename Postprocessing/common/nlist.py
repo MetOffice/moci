@@ -63,6 +63,8 @@ class ReadNamelist(object):
             return True
         elif 'false' in valstring.lower():
             return False
+        elif 'none' in valstring.lower():
+            return None
         else:
             valstring = valstring.strip('"').strip("'")
             try:

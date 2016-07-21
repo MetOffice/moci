@@ -83,6 +83,7 @@ class ModelTemplate(control.runPostProc):
     def __init__(self, input_nl='nemocicepp.nl'):
         name = self.__class__.__name__
         self.nl = getattr(nlist.loadNamelist(input_nl), name.lower())
+        self.fields = self._fields
         if self.runpp:
             msg = '{} SHARE: {}'.format(name.upper()[:-8], self.share)
             utils.log_msg(msg)
@@ -201,7 +202,7 @@ class ModelTemplate(control.runPostProc):
         return valid
 
     @property
-    def fields(self):
+    def _fields(self):
         '''Returns a tuple of means fields available'''
         return ('',)
 

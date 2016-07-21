@@ -25,6 +25,7 @@ runtime_environment.setup_env()
 import testing_functions as func
 
 import atmos
+import atmosNamelist
 import validation
 
 
@@ -166,6 +167,7 @@ class PropertyTests(unittest.TestCase):
     def setUp(self):
         self.atmos = atmos.AtmosPostProc()
         self.atmos.suite = mock.Mock()
+        self.atmos.nl.archiving = atmosNamelist.Archiving()
 
     def tearDown(self):
         for fname in ['atmospp.nl']:
@@ -192,6 +194,22 @@ class PropertyTests(unittest.TestCase):
         for value in [None, '']:
             self.atmos.nl.archiving.archive_as_fieldsfiles = value
             self.assertEqual(self.atmos._convpp_streams, 'a-z1-9')
+
+    def test_streams_property(self):
+        '''Test the return value of the streams property'''
+        func.logtest('Assert return value of the streams property:')
+        self.assertEqual(self.atmos.nl.archiving.process_streams, None)
+        self.assertEqual(self.atmos.streams, '1-9a-lp-rt-xz')
+        self.atmos.nl.archiving.process_streams = 'at-z'
+        self.assertEqual(self.atmos.streams, 'at-z')
+
+    def test_means_property(self):
+        '''Test the return value of the means property'''
+        func.logtest('Assert return value of the means property:')
+        self.assertEqual(self.atmos.nl.archiving.process_means, None)
+        self.assertEqual(self.atmos.means, 'msy')
+        self.atmos.nl.archiving.process_means = 'at-z'
+        self.assertEqual(self.atmos.means, 'at-z')
 
 
 def main():

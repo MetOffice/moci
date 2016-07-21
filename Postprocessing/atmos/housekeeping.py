@@ -29,18 +29,18 @@ import utils
 
 # Constants
 FILETYPE = OrderedDict([
-    ('dump_names',    ([], lambda p:
-                       re.compile(r'^{0}a\.da\d{{8}}'.format(p)))),
-    ('pp_inst_names', ([], lambda p:
-                       re.compile(r'^{0}a\.p[a-k\d]'.format(p)))),
-    ('pp_mean_names', ([], lambda p:
-                       re.compile(r'^{0}a\.p[lmpr-z12345]'.format(p)))),
+    ('dump_names', ([], lambda p, s:
+                    re.compile(r'^{0}a\.da\d{{8}}'.format(p)))),
+    ('pp_inst_names', ([], lambda p, s:
+                       re.compile(r'^{0}a\.p[{1}]'.format(p, s)))),
+    ('pp_mean_names', ([], lambda p, s:
+                       re.compile(r'^{0}a\.[pm][{1}]'.format(p, s)))),
     ])
 RTN = 0
 REGEX = 1
 
 
-def read_arch_logfile(logfile, prefix):
+def read_arch_logfile(logfile, prefix, inst, mean):
     '''
     Read the archiving script log file, and identify the lines corresponding
     to dumps, instantaneous pp files, and mean pp files, and separate
@@ -49,7 +49,9 @@ def read_arch_logfile(logfile, prefix):
         fname, tag = line.split(' ', 1)
         tag = 'FAILED' not in tag
         for ft in FILETYPE:
-            if FILETYPE[ft][REGEX](prefix).search(os.path.basename(fname)):
+            stream = inst if ft == 'pp_inst_names' else mean
+            if FILETYPE[ft][REGEX](prefix, stream).\
+                    search(os.path.basename(fname)):
                 FILETYPE[ft][RTN].append((fname, tag))
 
     return tuple(FILETYPE[ft][RTN] for ft in FILETYPE)
@@ -104,10 +106,12 @@ def delete_ppfiles(atmos, pp_inst_names, pp_mean_names, archived):
     else:  # Not archiving
         for ppfile in atmos.get_marked_files():
             pp_inst = atmos.nl.delete_sc.gpdel and \
-                re.search(FILETYPE['pp_inst_names'][REGEX](atmos.suite.prefix),
+                re.search(FILETYPE['pp_inst_names'][REGEX](atmos.suite.prefix,
+                                                           atmos.streams),
                           ppfile)
             pp_mean = atmos.nl.delete_sc.gcmdel and \
-                re.search(FILETYPE['pp_mean_names'][REGEX](atmos.suite.prefix),
+                re.search(FILETYPE['pp_mean_names'][REGEX](atmos.suite.prefix,
+                                                           atmos.means),
                           ppfile)
             if pp_inst or pp_mean:
                 to_delete.append(ppfile)

@@ -30,10 +30,17 @@ class NemoPostProc(mt.ModelTemplate):
     Methods and properties specific to the NEMO post processing application.
     '''
     @property
-    def fields(self):
-        '''Diagnostic fields - Filetype tag in filename'''
-        return ('grid_T', 'grid_U', 'grid_V', 'grid_W',
-                'ptrc_T', 'diad_T', 'diaptr', 'trnd3d',)
+    def _fields(self):
+        'Returns the fieldsfile types to be processed'
+        if self.nl.means_fieldsfiles:
+            if isinstance(self.nl.means_fieldsfiles, list):
+                fields = tuple(self.nl.means_fieldsfiles)
+            else:
+                fields = (self.nl.means_fieldsfiles,)
+        else:
+            fields = ('grid_T', 'grid_U', 'grid_V', 'grid_W',
+                      'ptrc_T', 'diad_T', 'diaptr', 'trnd3d',)
+        return fields
 
     @property
     def rsttypes(self):

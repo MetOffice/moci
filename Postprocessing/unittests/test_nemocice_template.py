@@ -346,15 +346,12 @@ class ArchiveTests(unittest.TestCase):
         files = ['12h_field1', 'xd_field2']
         for fname in files:
             open(fname, 'w').close()
-
+        self.model.fields = ('field1', 'field2')
         with mock.patch('modeltemplate.ModelTemplate.mean_stencil',
                         new_callable=mock.PropertyMock,
                         return_value={'General': lambda y, m, s, f:
                                                  r'{}_{}'.format(y, f)}):
-            with mock.patch('modeltemplate.ModelTemplate.fields',
-                            new_callable=mock.PropertyMock,
-                            return_value=('field1', 'field2')):
-                self.model.archive_means()
+            self.model.archive_means()
 
         self.model.archive_files.assert_called_with(['12h_field1'])
         self.assertFalse(os.path.exists('12h_field1'))

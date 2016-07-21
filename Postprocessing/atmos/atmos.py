@@ -104,6 +104,26 @@ class AtmosPostProc(control.runPostProc):
             return self._share
 
     @property
+    def streams(self):
+        '''
+        Returns a regular expression for the fieldsfile
+        instantaneous streams to process'''
+        if self.nl.archiving.process_streams:
+            streams = self.nl.archiving.process_streams
+        else:
+            streams = '1-9a-lp-rt-xz'
+        return streams
+
+    @property
+    def means(self):
+        'Returns a regular expression for the fieldsfile means to process'
+        if self.nl.archiving.process_means:
+            means = self.nl.archiving.process_means
+        else:
+            means = 'msy'
+        return means
+
+    @property
     def _convpp_streams(self):
         '''
         Calculate the regular expression required to find files
@@ -125,14 +145,18 @@ class AtmosPostProc(control.runPostProc):
             format(self.suite.prefix, *dumpdate)
 
     def get_marked_files(self):
+        '''Returns a list of fieldsfiles marked as available for archiving'''
         archfiles = []
         archdumps = []
         suffix = '.arch'
         # Multiple work directories required for Pre-CYLC-6.0 only
         for datadir in self.work:
-            archfiles += utils.get_subset(datadir, r'{}$'.format(suffix))
+            archfiles += utils.get_subset(datadir, r'^{}a\.[pm][{}].*{}$'.\
+                                              format(self.suite.prefix,
+                                                     self.streams + self.means,
+                                                     suffix))
             archdumps += utils.get_subset(
-                datadir, r'[a-z]{{5}}a.da.*{}$'.format(suffix))
+                datadir, r'^{}a\.da.*{}$'.format(self.suite.prefix, suffix))
 
         archpp = list(set(archfiles) - set(archdumps))
         return [pp[:-len(suffix)] for pp in archpp]
@@ -213,7 +237,9 @@ class AtmosPostProc(control.runPostProc):
         if archived:
             dump, pp_inst, pp_mean = \
                 housekeeping.read_arch_logfile(self.suite.logfile,
-                                               self.suite.prefix)
+                                               self.suite.prefix,
+                                               self.streams,
+                                               self.means)
 
         housekeeping.delete_dumps(self, dump, archived)
         housekeeping.delete_ppfiles(self, pp_inst, pp_mean, archived)

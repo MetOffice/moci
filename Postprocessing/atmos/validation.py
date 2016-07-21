@@ -41,8 +41,7 @@ def identify_filedate(fn):
     # The expression starting with the letter m is a STASH time processed
     # PP file, as opposed to one produced by the climate meaning system.
     patterns = [re.compile(r'\d?(\d{4})(\d{2})(\d{2})'),
-                re.compile(r'p[a-kms](\d{4})([a-z]{3})'),
-                re.compile(r'm[1-4a-jmst](\d{4})([a-z]{3})')]
+                re.compile(r'[pm][a-z1-9](\d{4})([a-z]{3})')]
 
     months = {'jan': 1, 'feb': 2,  'mar': 3,  'apr': 4,
               'may': 5, 'jun': 6,  'jul': 7,  'aug': 8,

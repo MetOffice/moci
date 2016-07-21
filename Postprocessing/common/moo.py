@@ -135,7 +135,7 @@ class _Moose(object):
 
         if model_id == 'a':  # Atmosphere output
             file_id = self._file_id[:2]
-            if re.search('[mp][1-9|a-m|q|s-z]', file_id):
+            if re.search('[mp][1-9|a-z]', file_id):
                 if self.convertpp:
                     ext = '.pp'
                 else:

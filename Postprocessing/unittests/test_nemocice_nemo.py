@@ -291,6 +291,51 @@ class StencilTests(unittest.TestCase):
                          [fname for fname in self.files if '1y_' in fname])
 
 
+class Propertytests(unittest.TestCase):
+    '''Tests relating to the NEMO properties'''
+
+    def setUp(self):
+        self.nemo = nemo.NemoPostProc()
+        self.nemo.suite = mock.Mock()
+        self.nemo.nl = nemoNamelist.NemoNamelist()
+
+    def tearDown(self):
+        try:
+            os.remove('nemocicepp.nl')
+        except OSError:
+            pass
+
+    def test_fields_property_default(self):
+        '''Test the return value of the fields property - default'''
+        func.logtest('Assert return value of the fields property:')
+        self.assertEqual(self.nemo.nl.means_fieldsfiles, None)
+        self.assertEqual(self.nemo._fields, ('grid_T', 'grid_U', 'grid_V',
+                                             'grid_W', 'ptrc_T', 'diad_T',
+                                             'diaptr', 'trnd3d',))
+        self.nemo.nl.means_fieldsfiles = 'grid_W'
+        self.assertEqual(self.nemo._fields, ('grid_W',))
+        self.nemo.nl.means_fieldsfiles = ['grid_U', 'grid_T']
+        self.assertEqual(self.nemo._fields, ('grid_U', 'grid_T'))
+
+    def test_fields_property_single(self):
+        '''Test the return value of the fields property - single'''
+        func.logtest('Assert return of the fields property - single supplied:')
+        self.assertEqual(self.nemo.nl.means_fieldsfiles, None)
+        self.assertEqual(self.nemo._fields, ('grid_T', 'grid_U', 'grid_V',
+                                             'grid_W', 'ptrc_T', 'diad_T',
+                                             'diaptr', 'trnd3d',))
+        self.nemo.nl.means_fieldsfiles = 'grid_W'
+        self.assertEqual(self.nemo._fields, ('grid_W',))
+        self.nemo.nl.means_fieldsfiles = ['grid_U', 'grid_T']
+        self.assertEqual(self.nemo._fields, ('grid_U', 'grid_T'))
+
+    def test_fields_property_list(self):
+        '''Test the return value of the fields property - list'''
+        func.logtest('Assert return of fields property - list supplied:')
+        self.nemo.nl.means_fieldsfiles = ['grid_U', 'grid_T']
+        self.assertEqual(self.nemo._fields, ('grid_U', 'grid_T'))
+
+
 class RebuildTests(unittest.TestCase):
     '''Unit tests relating to the rebuilding of restart and means files'''
     def setUp(self):
