@@ -461,7 +461,7 @@ class ModelTemplate(control.runPostProc):
             if MM in description:
                 # Spinup during the first model month if initialised
                 # after the first day of a month.
-                spinup = int(initialcycle[4:6]) + 1 == int(meandate[1]) and \
+                spinup = int(initialcycle[4:6]) == int(meandate[1]) and \
                     initialcycle[6:8] != '01'
             elif SS in description:
                 # Spinup during the first model season if initialised

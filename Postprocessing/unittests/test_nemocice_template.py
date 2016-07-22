@@ -226,7 +226,7 @@ class MeansTests(unittest.TestCase):
         '''Test create_means function in spinup mode'''
         func.logtest('Assert create_means functionality in spinup:')
         self.model.periodset.return_value = ['file1', 'file2', 'file3']
-        self.model.get_date.return_value = ('1995', '09', '01')
+        self.model.get_date.return_value = ('1995', '09', 'DD')
 
         self.model.create_means()
         self.assertIn('in spinup mode', func.capture())
@@ -237,43 +237,42 @@ class MeansTests(unittest.TestCase):
         func.logtest('Assert initial spinup period for annual means:')
 
         self.assertTrue(self.model.means_spinup(
-            'FIELD Annual mean for YYYY', ('1995', '12', '01')))
+            'FIELD Annual mean for YYYY', ('1995', '12', 'DD')))
         self.assertFalse(self.model.means_spinup(
-            'FIELD Annual mean for YYYY', ('1996', '12', '01')))
+            'FIELD Annual mean for YYYY', ('1996', '12', 'DD')))
 
     def test_seasonal_mean_spinup(self):
         '''Test Spinup period for seasonal means'''
         func.logtest('Assert initial spinup period for seasonal means:')
 
         self.assertTrue(self.model.means_spinup(
-            'FIELD Seasonal mean for SEASON YYYY', ('1995', '09', '01')))
+            'FIELD Seasonal mean for SEASON YYYY', ('1995', '09', 'DD')))
 
         self.model.suite.envars.CYLC_SUITE_INITIAL_CYCLE_POINT = \
             '19950601T0000Z'
         self.assertFalse(self.model.means_spinup(
-            'FIELD Seasonal mean for SEASON YYYY', ('1995', '09', '01')))
+            'FIELD Seasonal mean for SEASON YYYY', ('1995', '09', 'DD')))
         self.assertFalse(self.model.means_spinup(
-            'FIELD Seasonal mean for SEASON YYYY', ('1995', '12', '01')))
+            'FIELD Seasonal mean for SEASON YYYY', ('1995', '12', 'DD')))
 
     def test_monthly_mean_spinup(self):
         '''Test Spinup period for monthly means'''
         func.logtest('Assert initial spinup period for monthly means:')
-
         self.assertTrue(self.model.means_spinup(
-            'FIELD Monthly mean for MONTH YYYY', ('1995', '09', '01')))
+            'FIELD Monthly mean for MONTH YYYY', ('1995', '08', 'DD')))
         self.assertFalse(self.model.means_spinup(
-            'FIELD Monthly mean for MONTH YYYY', ('1995', '10', '01')))
+            'FIELD Monthly mean for MONTH YYYY', ('1995', '09', 'DD')))
 
         self.model.suite.envars.CYLC_SUITE_INITIAL_CYCLE_POINT = \
             '19950901T0000Z'
         self.assertFalse(self.model.means_spinup(
-            'FIELD Monthly mean for MONTH YYYY', ('1995', '10', '01')))
+            'FIELD Monthly mean for MONTH YYYY', ('1995', '09', 'DD')))
 
     def test_spinup_invalid(self):
         '''Test Spinup period for invalid means'''
         func.logtest('Assert initial spinup period for invalid means:')
         self.assertFalse(self.model.means_spinup(
-            'FIELD INVALID mean for YYYY', ('1995', '10', '01')))
+            'FIELD INVALID mean for YYYY', ('1995', '10', 'DD')))
         self.assertIn('[WARN]', func.capture('err'))
         self.assertIn('unknown meantype', func.capture('err'))
 
