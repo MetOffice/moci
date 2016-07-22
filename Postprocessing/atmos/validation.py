@@ -155,16 +155,18 @@ def make_dump_name(atmos):
         # Set a default that mimics existing behaviour
         month_for_yearly_archiving = 1
 
-    # cycledt is a tuple containing integer values (year,month,day) for
-    # the start of a cycle in a cycling model run.
+    # cycledt is a tuple containing integer values
+    # (year,month,day,hour,minute,second) for the start of a cycle in a
+    # cycling model run.
     dumptype = {
         'Yearly':   cycledt[1] == month_for_yearly_archiving and
-        cycledt[2] == 1,
-        'Seasonal': cycledt[1] in (12, 3, 6, 9) and cycledt[2] == 1,
+        cycledt[2] == 1 and cycledt[3] == 0,
+        'Seasonal': cycledt[1] in (12, 3, 6, 9) and cycledt[2] == 1 and
+        cycledt[3] == 0,
         'Monthly':  cycledt >= utils.add_period_to_date(
             basisdt,
             [0, atmos.nl.archiving.arch_dump_offset + 1])[:len(cycledt)] and \
-            cycledt[2] == 1
+            cycledt[2] == 1 and cycledt[3] == 0
     }
 
     dumps_to_archive = []

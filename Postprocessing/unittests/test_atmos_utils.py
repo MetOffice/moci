@@ -161,6 +161,17 @@ class DumpnameTests(unittest.TestCase):
         mock_adddate.assert_called_with([1980, 9, 1, 0, 0, 0], [0, 1])
 
     @mock.patch('utils.add_period_to_date')
+    def test_monthly_dumpname12h(self, mock_adddate):
+        '''Test to ensure no creation of a dumpname with 12h timestamp
+        when running 12h cycling'''
+        func.logtest('Assure no creation of dumpname with 12h timestep'
+                     ' when using monthly archiving')
+        mock_adddate.return_value = [1980, 10, 1, 12, 0, 0]
+        self.atmos.suite.cycledt = [1980, 10, 1, 12, 0, 0]
+        dumps = validation.make_dump_name(self.atmos)
+        self.assertEqual(dumps, [])
+
+    @mock.patch('utils.add_period_to_date')
     def test_monthly_offset_dumpname(self, mock_adddate):
         '''Test creation of a dumpname for monthly archive - offset'''
         func.logtest('Assert creation of dumpname for monthly archive')
@@ -217,6 +228,15 @@ class DumpnameTests(unittest.TestCase):
         dumps = validation.make_dump_name(self.atmos)
         self.assertEqual(dumps, ['CYCLEDUMP'])
 
+    def test_seasonal_dumpname12h(self):
+        '''Test to ensure no creation of a dumpname with 12h timestamp
+        when running 12h cycling'''
+        func.logtest('Assure no creation of dumpname with 12h timestep'
+                     ' when using seasonal archiving')
+        self.atmos.suite.cycledt = [1981, 12, 1, 12, 0, 0]
+        dumps = validation.make_dump_name(self.atmos)
+        self.assertEqual(dumps, [])
+
     def test_seasonal_dumpname_none(self):
         '''Test creation of no dumpnames for seasonal archive'''
         func.logtest('Assert creation of no dumpnames for seasonal archive')
@@ -231,6 +251,16 @@ class DumpnameTests(unittest.TestCase):
         self.atmos.nl.archiving.arch_year_month = 'January'
         dumps = validation.make_dump_name(self.atmos)
         self.assertEqual(dumps, ['CYCLEDUMP'])
+
+    def test_annual_jan_dumpname12h(self):
+        '''Test to ensure no creation of a dumpname with 12h timestamp
+        when running 12h cycling'''
+        func.logtest('Assure no creation of dumpname with 12h timestep'
+                     ' when using yearly archiving')
+        self.atmos.suite.cycledt = [1981, 1, 1, 12, 0, 0]
+        self.atmos.nl.archiving.arch_year_month = 'January'
+        dumps = validation.make_dump_name(self.atmos)
+        self.assertEqual(dumps, [])
 
     def test_annual_july_dumpname(self):
         '''Test creation of a dumpname for annual archive'''
