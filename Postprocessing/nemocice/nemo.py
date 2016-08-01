@@ -273,7 +273,7 @@ class NemoPostProc(mt.ModelTemplate):
             bldset = utils.get_subset(datadir,
                                       r'^{}_\d{{4}}\.nc$'.format(corename))
 
-            if filetype == 'diaptr':
+            if 'diaptr' in filetype:
                 self.global_attr_to_zonal(datadir, bldset)
 
             month, day = self.get_date(corename)[1:3]
@@ -319,11 +319,11 @@ class NemoPostProc(mt.ModelTemplate):
 
             for line in output.splitlines():
                 # Split lines on '=', then ',' to get y dimension
-                if 'DOMAIN_size_global' in line:
+                if ':DOMAIN_size_global' in line:
                     global_ny = re.split('=|,', line)[-1].strip(';').strip()
-                elif 'DOMAIN_position_first' in line:
+                elif ':DOMAIN_position_first' in line:
                     pos_first_y = re.split('=|,', line)[-1].strip(';').strip()
-                elif 'DOMAIN_position_last' in line:
+                elif ':DOMAIN_position_last' in line:
                     pos_last_y = re.split('=|,', line)[-1].strip(';').strip()
 
             notfound = [x for x in [global_ny, pos_first_y, pos_last_y] if

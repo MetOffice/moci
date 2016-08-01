@@ -68,7 +68,8 @@ class StencilTests(unittest.TestCase):
     def test_set_stencil_restarts(self):
         '''Test the regular expressions of the set_stencil method - restarts'''
         func.logtest('Assert restart pattern matching of set_stencil:')
-        patt = re.compile(self.setstencil['Restarts']('', None, None, ('', '')))
+        patt = re.compile(self.setstencil['Restarts']
+                          ('', None, None, ('', '')))
         nemo_rst = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(nemo_rst,
                          [fname for fname in self.files if 'restart' in fname
@@ -187,8 +188,8 @@ class StencilTests(unittest.TestCase):
         patt = re.compile(self.meanstencil['Monthly'](*args))
         month_set = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(month_set,
-                         [fname for fname in self.files if \
-                              '1m_' in fname and 'FIELD.nc' in fname])
+                         [fname for fname in self.files if
+                          '1m_' in fname and 'FIELD.nc' in fname])
 
     def test_mean_stencil_monthly_365d(self):
         '''Test the regexes of the mean_stencil method - monthly (365d)'''
@@ -374,8 +375,10 @@ class RebuildTests(unittest.TestCase):
                             new_callable=mock.PropertyMock,
                             return_value=(self.nemo.rsttypes[1],)):
                 self.nemo.rebuild_restarts()
-            mock_fs.assert_called_with(os.environ['PWD'],
-                                       r'RUNIDo_icebergs_?\d{8}_restart(\.nc)?')
+            mock_fs.assert_called_with(
+                os.environ['PWD'],
+                r'RUNIDo_icebergs_?\d{8}_restart(\.nc)?'
+                )
 
     def test_call_rebuild_tracer_rsts(self):
         '''Test call to rebuild_restarts method with tracer restart files'''
@@ -439,7 +442,8 @@ class RebuildTests(unittest.TestCase):
 
     @mock.patch('nemo.NemoPostProc.rebuild_namelist')
     @mock.patch('utils.get_subset')
-    def test_rebuild_all(self, mock_subset, mock_nl):
+    @mock.patch('nemo.NemoPostProc.global_attr_to_zonal')
+    def test_rebuild_all(self, mock_attr, mock_subset, mock_nl):
         '''Test rebuild all function'''
         func.logtest('Assert rebuild all function:')
         mock_subset.return_value = ['file_19980530_yyyymmdd_0000.nc',
@@ -448,6 +452,7 @@ class RebuildTests(unittest.TestCase):
         self.nemo.rebuild_fileset(os.environ['PWD'], 'field', rebuildall=True)
         mock_nl.assert_called_with(os.environ['PWD'], 'file_19980630_yyyymmdd',
                                    1, omp=1)
+        self.assertEqual(mock_attr.mock_calls, [])
 
     @mock.patch('nemo.NemoPostProc.rebuild_namelist')
     def test_rebuild_pattern(self, mock_nl):
@@ -565,6 +570,22 @@ class RebuildTests(unittest.TestCase):
         mock_nl.assert_called_with(os.environ['PWD'], 'file_mean1', 1, omp=1)
         self.assertIn('deleting component files', func.capture().lower())
 
+    @mock.patch('nemo.NemoPostProc.rebuild_namelist')
+    @mock.patch('utils.get_subset')
+    @mock.patch('nemo.NemoPostProc.global_attr_to_zonal')
+    def test_rebuild_diaptr_means(self, mock_attr, mock_subset, mock_nl):
+        '''Test rebuild all function - diaptr means'''
+        func.logtest('Assert rebuild all function - diaptr means:')
+        mock_subset.return_value = ['file_19980530_yyyymmdd_diaptr_0000.nc',
+                                    'file_19980630_yyyymmdd_diaptr_0000.nc']
+        self.nemo.rebuild_fileset('SourceDir', 'f_diaptr', rebuildall=True)
+        mock_nl.assert_called_once_with('SourceDir',
+                                        'file_19980530_yyyymmdd_diaptr',
+                                        1, omp=1)
+        mock_attr.assert_called_once_with(
+            'SourceDir', ['file_19980630_yyyymmdd_diaptr_0000.nc']
+            )
+
     @mock.patch('utils.exec_subproc')
     @mock.patch('os.path.isfile')
     def test_rebuild_namelist(self, mock_isfile, mock_exec):
@@ -676,11 +697,18 @@ class MeansProcessingTests(unittest.TestCase):
         self.nemo.suite = mock.Mock()
         self.defaults = nemoNamelist.NemoNamelist()
         self.ncdumpout = '''
-  DOMAIN_size_global = x, 1207;
-  dummy arg = some value;
-  DOMAIN_position_last = x, 151;
-  DOMAIN_position_first = x, 1;
-  dummy arg2 = some other value;
+  :DOMAIN_size_global = x, 1207;
+  :dummy arg = some value;
+  :DOMAIN_position_last = x, 151;
+  :DOMAIN_position_first = x, 1;
+  :dummy arg2 = some other value;
+  :history = "Wed Jul 20 18:06:21 2016: \
+/projects/ocean/hadgem3/nco/nco-4.4.7/bin/ncatted \
+-a DOMAIN_size_global,global,m,l,1,1021 \
+-a DOMAIN_position_first,global,m,l,1,1 \
+-a DOMAIN_position_last,global,m,l,1,43 \
+-a ibegin,global,m,l,1 /home/jwalto/cylc-run/u-ae710/share/data/\
+History_Data/NEMOhist/ae710o_10d_19780901_19780910_diaptr_0000.nc";
 '''
 
     def tearDown(self):
@@ -739,10 +767,10 @@ class MeansProcessingTests(unittest.TestCase):
         '''Test method global attributes to zonal ones - missing attributes'''
         func.logtest('Assert missing attributes with global_attr_to_zonal:')
         ncdumpout = '''
-  dummy arg = some value;
-  DOMAIN_position_last = x, 151;
-  DOMAIN_position_first = x, 1;
-  dummy arg2 = some other value;
+  :dummy arg = some value;
+  :DOMAIN_position_last = x, 151;
+  :DOMAIN_position_first = x, 1;
+  :dummy arg2 = some other value;
 '''
         self.nemo.suite.preprocess_file.return_value = ncdumpout
         with mock.patch('utils.exec_subproc') as mock_exec:
@@ -754,6 +782,7 @@ class MeansProcessingTests(unittest.TestCase):
         self.assertIn('attribute(s) DOMAIN_size_global not found',
                       func.capture('err'))
         self.assertEqual(len(mock_exec.mock_calls), 0)
+
 
 class AdditionalArchiveTests(unittest.TestCase):
     '''Unit tests relating to the archiving additional file'''
@@ -863,6 +892,7 @@ class AdditionalArchiveTests(unittest.TestCase):
         self.nemo.archive_files.assert_called_once_with(mock.ANY)
         with self.assertRaises(AssertionError):
             mock_rm.assert_called_with(mock.ANY)
+
 
 class UtilityMethodTests(unittest.TestCase):
     '''Unit tests relating to the NEMO utility methods'''
