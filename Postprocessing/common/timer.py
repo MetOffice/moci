@@ -21,9 +21,8 @@ DESCRIPTION
 import time
 import operator
 import re
-import utils
+import sys
 import inspect
-from nlist import loadNamelist
 
 
 def initialise_timer():
@@ -31,6 +30,9 @@ def initialise_timer():
     Initalise the timer, and set up an instance of the timer class. There is
     a dummy instance for the case where the timer is not active.
     '''
+    # This import must be inside the function to allow correct functioning of
+    # the unit tests
+    from nlist import loadNamelist
     namelist = loadNamelist('monitorpp.nl')
     try:
         if namelist.monitoring.ltimer:
@@ -40,6 +42,22 @@ def initialise_timer():
     except AttributeError:
         timer_instance = PostProcTimerNull()
     globals()['tim'] = timer_instance
+
+
+def set_nulltimer():
+    '''
+    Set method for the PostProcTimerNull to allow the decorated functions
+    and methods to work correctly with unit tests
+    '''
+    global tim
+    tim = PostProcTimerNull()
+
+
+def get_nulltimer():
+    '''
+    Get method for the tim global variable
+    '''
+    return tim
 
 
 def finalise_timer():
@@ -55,8 +73,8 @@ def start_custom(label):
     Start a custom timer at arbitary points within a function
     '''
     label = 'custom_{}'.format(label)
-    msg = 'Starting custom timer {}'.format(label)
-    utils.log_msg(msg, level=1)
+    msg = '[INFO] Starting custom timer {}\n'.format(label)
+    sys.stdout.write(msg)
     tim.start_timer(label)
 
 
@@ -65,8 +83,8 @@ def end_custom(label):
     End a custom timer at arbitary points within a function
     '''
     label = 'custom_{}'.format(label)
-    msg = 'Ending custom timer {}'.format(label)
-    utils.log_msg(msg, level=1)
+    msg = '[INFO] Ending custom timer {}\n'.format(label)
+    sys.stdout.write(msg)
     tim.end_timer(label)
 
 
@@ -108,7 +126,8 @@ class PostProcTimerNull(object):
 
     def __init__(self, msg='Timer is not running'):
 
-        utils.log_msg(msg, level=1)
+        msg = '[INFO] {}\n'.format(msg)
+        sys.stdout.write(msg)
 
     def start_timer(self, _):
         '''
@@ -179,9 +198,9 @@ class PostProcTimer(PostProcTimerNull):
         for key in self.timing_cache:
             if key not in problem_functions:
                 problem_functions.append(key)
-                msg = 'Function {} has started a timer but' \
-                    ' not ended it'.format(key)
-                utils.log_msg(msg, level=3)
+                msg = '[WARN] Function {} has started a timer but' \
+                    ' not ended it\n'.format(key)
+                sys.stderr.write(msg)
 
     def finalise(self):
         '''
@@ -209,6 +228,6 @@ class PostProcTimer(PostProcTimerNull):
                        self.timings[func[0]][0],
                        self.timings[func[0]][1],
                        self.timings[func[0]][2],
-                       self.timings[func[0]][1] / self.timings[func[0]][3],
+                       self.timings[func[0]][0] / self.timings[func[0]][3],
                        self.timings[func[0]][3])
-        utils.log_msg(summary, level=1)
+        sys.stdout.write(summary)

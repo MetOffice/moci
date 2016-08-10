@@ -22,6 +22,7 @@ import re
 import os
 
 import modeltemplate as mt
+import timer
 import utils
 
 
@@ -136,6 +137,7 @@ class CicePostProc(mt.ModelTemplate):
 
         return date[0], date[1], day
 
+    @timer.run_timer
     def archive_concat_daily_means(self):
         '''Concatenate daily mean data into a single file'''
         in_pat = r'^{P}i\.[0-9d_]*24h\.{{Y}}-{{M}}-{{D}}(-\d{{{{5}}}})?\.nc$'.\

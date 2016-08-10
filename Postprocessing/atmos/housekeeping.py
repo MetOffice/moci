@@ -25,6 +25,7 @@ import os
 
 from collections import OrderedDict
 
+import timer
 import utils
 
 # Constants
@@ -57,6 +58,7 @@ def read_arch_logfile(logfile, prefix, inst, mean):
     return tuple(FILETYPE[ftype][RTN] for ftype in FILETYPE)
 
 
+@timer.run_timer
 def delete_dumps(atmos, dump_names, archived):
     ''' Delete dumps files when no longer required'''
     to_delete = []
@@ -91,7 +93,8 @@ def delete_dumps(atmos, dump_names, archived):
         utils.log_msg(msg)
         utils.remove_files(to_delete, atmos.share)
 
-
+        
+@timer.run_timer
 def delete_ppfiles(atmos, pp_inst_names, pp_mean_names, archived):
     '''Delete pp files when finalised and archived as necessary'''
     to_delete = []
@@ -129,6 +132,7 @@ def delete_ppfiles(atmos, pp_inst_names, pp_mean_names, archived):
         utils.remove_files(del_dot_arch, atmos.work, ignoreNonExist=True)
 
 
+@timer.run_timer
 def convert_to_pp(fieldsfile, sharedir, umutils):
     '''
     Create the command to call UM utility ff2pp for file

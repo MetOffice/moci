@@ -21,6 +21,12 @@ sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'common'))
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'atmos'))
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'nemocice'))
 
+# Setup a null timer instance to ensure the decorated functions behave
+# correctly with the unit tests
+import runtime_environment
+runtime_environment.setup_env()
+import timer
+timer.set_nulltimer()
 
 def main():
     '''Run unit tests for postproc app'''

@@ -27,6 +27,7 @@ from collections import OrderedDict
 import control
 import nlist
 import suite
+import timer
 import utils
 import netcdf_utils
 
@@ -161,6 +162,7 @@ class ModelTemplate(control.RunPostProc):
             # Not all models require rebuilding
             pass
 
+    @timer.run_timer
     def move_to_share(self, source=None, pattern=None):
         ''' Move unprocessed means files to SHARE '''
         source = source if source else self.work
@@ -362,6 +364,7 @@ class ModelTemplate(control.RunPostProc):
         meandate = MEANS[inp.period](subperiod, inp.date[0])
         return '{} mean for {}'.format(meantype, meandate)
 
+    @timer.run_timer
     def create_means(self):
         '''
         Create monthly, seasonal, annual means.
@@ -477,6 +480,7 @@ class ModelTemplate(control.RunPostProc):
         '''
         return self.nl.buffer_archive if self.nl.buffer_archive else 0
 
+    @timer.run_timer
     def archive_means(self):
         '''
         Compile list of means files to archive.
@@ -516,6 +520,7 @@ class ModelTemplate(control.RunPostProc):
         else:
             utils.log_msg(' -> Nothing to archive')
 
+    @timer.run_timer
     def archive_restarts(self):
         '''
         Compile list of restart files to archive and subsequently deletes them.
@@ -551,6 +556,7 @@ class ModelTemplate(control.RunPostProc):
                                self.buffer_archive)
             utils.log_msg(msg)
 
+    @timer.run_timer
     def archive_general(self):
         '''Call archive methods for additional model file types'''
         for method, archive in self.archive_types:
@@ -561,6 +567,7 @@ class ModelTemplate(control.RunPostProc):
                     msg = 'Archive method not implemented: archive_' + method
                     utils.log_msg('archive_general: ' + msg, level=5)
 
+    @timer.run_timer
     def archive_files(self, filenames):
         '''
         Archive a one or more files.
@@ -583,6 +590,7 @@ class ModelTemplate(control.RunPostProc):
 
         return returnfiles
 
+    @timer.run_timer
     def compress_file(self, fname, utility):
         '''Create command to compress NetCDF file'''
         if utility == 'nccopy':

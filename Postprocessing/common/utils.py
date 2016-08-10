@@ -22,6 +22,7 @@ import sys
 import re
 import os
 import shutil
+import timer
 
 
 class Variables:
@@ -56,6 +57,7 @@ def loadEnv(*envars, **append):
     return container
 
 
+@timer.run_timer
 def exec_subproc(cmd, verbose=True, cwd=os.environ['PWD']):
     '''
     Execute given shell command.
@@ -138,6 +140,7 @@ def add_path(files, path):
     return map(lambda f: os.path.join(path, f), files)
 
 
+@timer.run_timer
 def remove_files(delfiles, path=None, ignoreNonExist=False):
     if path:
         path = check_directory(path)
@@ -154,6 +157,7 @@ def remove_files(delfiles, path=None, ignoreNonExist=False):
                 log_msg('remove_files: File does not exist: ' + fn, 3)
 
 
+@timer.run_timer
 def move_files(mvfiles, destination, originpath=None, fail_on_err=False):
     '''
     Move a single file or list of files to a given directory.

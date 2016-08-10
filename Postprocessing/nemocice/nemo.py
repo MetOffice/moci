@@ -21,6 +21,7 @@ DESCRIPTION
 import os
 import re
 
+import timer
 import utils
 import modeltemplate as mt
 
@@ -190,6 +191,7 @@ class NemoPostProc(mt.ModelTemplate):
         hour = '00' if len(date) < 10 else date[8:10]
         return date[:4], date[4:6], day, hour
 
+    @timer.run_timer
     def move_to_share(self, source=None, pattern=None):
         '''
         Override move_to_share() to include modifying the means filename format
@@ -243,6 +245,7 @@ class NemoPostProc(mt.ModelTemplate):
                 'datestring from filename: {}'.format(filename)
             utils.log_msg(msg, level=5)
 
+    @timer.run_timer
     def rebuild_restarts(self):
         '''Rebuild partial restart files'''
         for rst in self.rsttypes:
@@ -250,6 +253,7 @@ class NemoPostProc(mt.ModelTemplate):
                 rstrip('$').lstrip('^')
             self.rebuild_fileset(self.share, pattern)
 
+    @timer.run_timer
     def rebuild_means(self):
         '''Rebuild partial means files'''
         rebuildmeans = self.additional_means + ['10d']
@@ -259,6 +263,7 @@ class NemoPostProc(mt.ModelTemplate):
                     rstrip('$').lstrip('^')
                 self.rebuild_fileset(self.share, pattern, rebuildall=True)
 
+    @timer.run_timer
     def rebuild_fileset(self, datadir, filetype, suffix='_0000.nc',
                         rebuildall=False):
         '''Rebuild partial files for given filetype'''
@@ -298,6 +303,7 @@ class NemoPostProc(mt.ModelTemplate):
                 '({} retained).'.format(len(bldfiles), filetype, buff)
             utils.log_msg(msg, level=1)
 
+    @timer.run_timer
     def global_attr_to_zonal(self, datadir, fileset):
         '''
         XIOS_v1.x has a bug which results in incorrect representation of
@@ -355,6 +361,7 @@ class NemoPostProc(mt.ModelTemplate):
                 level = 5
             utils.log_msg(msg, level=level)
 
+    @timer.run_timer
     def rebuild_namelist(self, datadir, filebase, ndom,
                          omp=16, chunk=None, dims=None):
         '''Create the namelist file required by the rebuild_nemo executable'''
@@ -395,6 +402,7 @@ class NemoPostProc(mt.ModelTemplate):
             icode = 910
         return icode
 
+    @timer.run_timer
     def rebuild_icebergs(self, datadir, filebase, ndom):
         '''
         Additional postp-processing is required to complete the rebuilding of
@@ -429,6 +437,7 @@ class NemoPostProc(mt.ModelTemplate):
 
         return icode
 
+    @timer.run_timer
     def archive_iceberg_trajectory(self):
         '''Rebuild and archive iceberg trajectory (diagnostic) files'''
         fn_stub = r'trajectory_icebergs_\d{6}'

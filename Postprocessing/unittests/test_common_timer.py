@@ -119,7 +119,7 @@ class TimerMethodsTests(unittest.TestCase):
     '''Unit tests for the timer module methods'''
     def setUp(self):
         if 'initialise' not in self.id():
-            with mock.patch('timer.loadNamelist') as mock_nl:
+            with mock.patch('nlist.loadNamelist') as mock_nl:
                 mock_nl.return_value.monitoring.ltimer = True
                 timer.initialise_timer()
 
@@ -136,7 +136,7 @@ class TimerMethodsTests(unittest.TestCase):
         timer.initialise_timer()
         self.assertIsInstance(timer.tim, timer.PostProcTimerNull)
 
-    @mock.patch('timer.loadNamelist')
+    @mock.patch('nlist.loadNamelist')
     def test_initialise_timer(self, mock_nl):
         '''test initialise_timer method'''
         func.logtest('Assert functionality of initialise_timer method:')

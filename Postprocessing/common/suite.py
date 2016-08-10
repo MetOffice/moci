@@ -30,6 +30,7 @@ ENVIRONMENT VARIABLES
 import re
 import os
 
+import timer
 import utils
 
 
@@ -166,6 +167,7 @@ class SuiteEnvironment(object):
 
         return rcode
 
+    @timer.run_timer
     def archive_file(self, archfile, logfile=None, preproc=False, debug=False):
         '''Archive file and write to logfile'''
         if debug:
@@ -198,6 +200,7 @@ class SuiteEnvironment(object):
 
         return arch_rcode
 
+    @timer.run_timer
     def preprocess_file(self, cmd, filename, **kwargs):
         '''
         Invoke the appropriate pre-processing method prior to archiving
@@ -210,6 +213,7 @@ class SuiteEnvironment(object):
 
         return icode
 
+    @timer.run_timer
     def preproc_nccopy(self, filename, compression=0, chunking=None):
         '''
         Compression of standard NetCDF file output prior to archive
@@ -243,6 +247,7 @@ class SuiteEnvironment(object):
 
         return ret_code
 
+    @timer.run_timer
     def preproc_ncdump(self, fname, **kwargs):
         '''
         Invoke NetCDF utility ncdump for reading file data
@@ -269,6 +274,7 @@ class SuiteEnvironment(object):
 
         return output
 
+    @timer.run_timer
     def preproc_ncrcat(self, infiles, **kwargs):
         '''
         Invoke NetCDF utility ncrcat for concatenating records

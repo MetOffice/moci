@@ -36,6 +36,7 @@ import nlist
 import validation
 import housekeeping
 import suite
+import timer
 
 
 class AtmosPostProc(control.RunPostProc):
@@ -137,6 +138,7 @@ class AtmosPostProc(control.RunPostProc):
         return '{0}a.da{1:0>4d}{2:0>2d}{3:0>2d}_{4:0>2d}'.\
             format(self.suite.prefix, *dumpdate)
 
+    @timer.run_timer
     def get_marked_files(self):
         '''Returns a list of fieldsfiles marked as available for archiving'''
         archfiles = []
@@ -153,6 +155,7 @@ class AtmosPostProc(control.RunPostProc):
         archpp = list(set(archfiles) - set(archdumps))
         return [pp[:-len(suffix)] for pp in archpp]
 
+    @timer.run_timer
     def do_archive(self):
         '''
         Function to collate the files to archive and pass them to the
@@ -219,6 +222,7 @@ class AtmosPostProc(control.RunPostProc):
 
         log_file.close()
 
+    @timer.run_timer
     def do_delete(self):
         '''Delete superseded or archived dumps and pp output'''
         archived = self.nl.archiving.archive_switch

@@ -22,6 +22,7 @@ DESCRIPTION
 import os
 import re
 
+import timer
 import utils
 
 
@@ -69,6 +70,7 @@ def identify_filedate(fn):
         utils.log_msg(msg, level=5)
 
 
+@timer.run_timer
 def verify_header(atmospp, fname, logfile, logdir):
     '''
     Returns True/False dependent on whether the (year, month, day) of the
@@ -98,6 +100,7 @@ def verify_header(atmospp, fname, logfile, logdir):
     return validfile
 
 
+@timer.run_timer
 def genlist(ppfile, header, pumfpath):
     # This command will only work with pumf versions 9.1->
     # As such there is an assertion on the pumf to ensure it points
@@ -131,6 +134,7 @@ def genlist(ppfile, header, pumfpath):
         utils.remove_files(header)
 
 
+@timer.run_timer
 def make_dump_name(atmos):
     '''
     What is the name of the restart dump to be archived? Will return a list

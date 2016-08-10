@@ -35,7 +35,9 @@ import os
 import re
 
 import utils
+import timer
 
+@timer.run_timer
 def archive_to_moose(filename, sourcedir, nlist, convertpp):
     '''Assemble the dictionary of variables required to archive'''
     cmd = {
