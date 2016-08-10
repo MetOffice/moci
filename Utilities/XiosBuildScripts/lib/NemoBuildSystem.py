@@ -314,7 +314,7 @@ class NemoCrayXC40BuildSystem(NemoBuildSystem):
             arch_str1 += '''
 %OASIS_INC
 %OASIS_LIBDIR
-OASIS_LIB'''
+%OASIS_LIB'''
 
         arch_str1 += '''
 %CPP                 cpp
