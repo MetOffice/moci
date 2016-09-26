@@ -370,7 +370,7 @@ class NemoPostProc(mt.ModelTemplate):
             txt += "\ndims='{}','{}'".format(*dims)
         if chunk:
             txt += "\nnchunksize={}".format(chunk)
-        txt += '\n/'
+        txt += '\n/\n'
         open(namelistfile, 'w').write(txt)
 
         os.environ['OMP_NUM_THREADS'] = str(omp)
