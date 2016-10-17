@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2016 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -24,7 +24,7 @@ import re
 import timer
 import utils
 import modeltemplate as mt
-
+import netcdf_filenames
 
 class NemoPostProc(mt.ModelTemplate):
     '''
@@ -33,15 +33,15 @@ class NemoPostProc(mt.ModelTemplate):
     @property
     def _fields(self):
         'Returns the fieldsfile types to be processed'
-        if self.nl.means_fieldsfiles:
-            if isinstance(self.nl.means_fieldsfiles, list):
-                fields = tuple(self.nl.means_fieldsfiles)
-            else:
-                fields = (self.nl.means_fieldsfiles,)
+        if self.naml.means_fieldsfiles:
+            fields = self.naml.means_fieldsfiles
+            if not isinstance(fields, list):
+                fields = [fields]
         else:
-            fields = ('grid_T', 'grid_U', 'grid_V', 'grid_W',
-                      'ptrc_T', 'diad_T', 'diaptr', 'trnd3d',)
-        return fields
+            fields = []
+            for val in self.model_components.values():
+                fields += val
+        return tuple(sorted(fields))
 
     @property
     def rsttypes(self):
@@ -53,6 +53,20 @@ class NemoPostProc(mt.ModelTemplate):
         return (('', ''), ('icebergs', ''), ('', '_trc'))
 
     @property
+    def model_components(self):
+        '''Name of model component, to be used as a prefix to archived files '''
+        return {
+            'nemo': ['grid_T', 'grid_U', 'grid_V',
+                     'grid_W', 'diaptr', 'trnd3d'],
+            'medusa': ['ptrc_T', 'diad_T']
+            }
+
+    @property
+    def model_realm(self):
+        ''' Return the standard realm ID character for the model: o=ocean '''
+        return 'o'
+
+    @property
     def set_stencil(self):
         '''
         Returns a dictionary of regular expressions to match files belonging
@@ -62,95 +76,50 @@ class NemoPostProc(mt.ModelTemplate):
         access any indivdual regular expression regardless of the need to use
         them.  This is a consequence of the @property nature of the method
         '''
-        return {
-            mt.RR: lambda y, m, s, f:
-                   r'^{P}o_{F1}_?\d{{8}}_restart{F2}(\.nc)?$'.
-                   format(P=self.prefix, F1=f[0], F2=f[1]),
-            mt.MM: lambda y, m, s, f:
-                   r'^{P}o_{B}_\d{{8}}_{Y}{M}\d{{2}}_{F}\.nc$'.
-                   format(P=self.prefix, B=self.month_base, Y=y, M=m, F=f),
-            mt.SS: lambda y, m, s, f:
-                   r'^{P}o_1m_({Y1}{M1}|{Y2}{M2}|{Y2}{M3})01_\d{{8}}_{F}\.nc$'.
-                   format(P=self.prefix,
-                          Y1=str(int(y) - s[3]) if isinstance(s[3], int) else y,
-                          Y2=y,
-                          M1=s[0],
-                          M2=s[1],
-                          M3=s[2],
-                          F=f),
-            mt.AA: lambda y, m, s, f:
-                   r'^{P}o_1s_\d{{8}}_{Y}\d{{2}}(28|29|30|31)_{F}\.nc$'.
-                   format(P=self.prefix, Y=y, F=f),
-        }
-
-    @property
-    def end_stencil(self):
-        '''
-        Returns a dictionary of regular expressions to match files belonging
-        to each period (keyword) end
-
-        The same 2 arguments (season and field) are required to access any
-        indivdual regular expression regardless of the need to use them.
-        This is a consequence of the @property nature of the method
-        '''
-        return {
-            mt.RR: None,
-            mt.MM: lambda s, f:
-                   r'^{P}o_{B}_\d{{8}}_\d{{6}}(28|29|30|31)_{F}\.nc$'.
-                   format(P=self.prefix, B=self.month_base, F=f),
-            mt.SS: lambda s, f: r'^{P}o_1m_\d{{4}}{M1}01_\d{{8}}_{F}\.nc$'.
-                   format(P=self.prefix, M1=s[2], F=f),
-            mt.AA: lambda s, f: r'^{P}o_1s_\d{{4}}0901_\d{{8}}_{F}\.nc$'.
-                   format(P=self.prefix, F=f),
-        }
+        set_stencil = super(NemoPostProc, self).set_stencil
+        set_stencil[mt.RR] = lambda rsttype: \
+            r'^{P}o_{T1}_?\d{{8}}_restart{T2}(\.nc)?$'.\
+            format(P=self.prefix, T1=rsttype[0], T2=rsttype[1])
+        return set_stencil
 
     @property
     def mean_stencil(self):
         '''
         Returns a dictionary of regular expressions to match files belonging
         to each period (keyword) mean
-
-        The same 4 arguments (year, month, season and field) are required to
-        access any indivdual regular expression regardless of the need to use
-        them.  This is a consequence of the @property nature of the method
         '''
-        return {
-            mt.XX: lambda y, m, s, f:
-                   r'^{P}o_{B}(_\d{{8,10}}){{2}}_{F}'
-                   r'(([_\-]\d{{6,10}}){{2}})?(_\d{{4}})?(\.nc)?$'.
-                   format(P=self.prefix, B=y if y else r'\d+[hdmsy]', F=f),
-            mt.MM: lambda y, m, s, f: r'{P}o_1m_{Y}{M}01_{Y}{M}{L}_{F}.nc'.
-                   format(P=self.prefix, Y=y, M=m,
-                          L=self.suite.monthlength(m), F=f),
-            mt.SS: lambda y, m, s, f: r'{P}o_1s_{Y1}{M1}01_{Y2}{M2}{L}_{F}.nc'.
-                   format(P=self.prefix,
-                          Y1=str(int(y) - s[3]) if isinstance(s[3], int) else y,
-                          Y2=y,
-                          M1=s[0],
-                          M2=s[2],
-                          L=self.suite.monthlength(s[2]),
-                          F=f),
-            mt.AA: lambda y, m, s, f: r'{P}o_1y_{Y1}1201_{Y2}1130_{F}.nc'.
-                   format(P=self.prefix,
-                          Y1=y if '*' in y else (int(y)-1),
-                          Y2=y,
-                          F=f),
-        }
+        mean_stencil = super(NemoPostProc, self).mean_stencil
+        mean_stencil[mt.XX] = lambda field, base=None: \
+            r'^{P}o_{B}(_\d{{8,10}}){{2}}_{F}(([_\-]\d{{6,10}}){{2}})?' \
+            r'(_\d{{4}})?(\.nc)?$'.format(P=self.prefix,
+                                          B=base if base else r'\d+[hdmsy]',
+                                          F=field)
+        return mean_stencil
+
+    @property
+    def rebuild_suffix(self):
+        '''
+        Returns dictionary with two keys, profiding the suffix for components
+        to rebuild:
+            REGEX - REGular EXpression representing all PEs
+            ZERO  - String representing PE0
+        '''
+        return {'REGEX': r'_\d{4}\.nc', 'ZERO': '_0000.nc'}
 
     @property
     def rebuild_iceberg_cmd(self):
         '''Returns the namelist value path for the icb_combrest.py script'''
-        return self.nl.exec_rebuild_icebergs
+        return self.naml.exec_rebuild_icebergs
 
     @property
     def rebuild_iberg_traj_cmd(self):
         '''Returns the namelist value path for the icb_pp.py script'''
-        return self.nl.exec_rebuild_iceberg_trajectory
+        return self.naml.exec_rebuild_iceberg_trajectory
 
     @property
     def ncatted_cmd(self):
         '''Command: Exec + Args upto but not including filename(s)'''
-        return self.nl.ncatted_cmd
+        return self.naml.ncatted_cmd
 
     @property
     def archive_types(self):
@@ -159,134 +128,74 @@ class NemoPostProc(mt.ModelTemplate):
         other than restarts and means.
         Returns a list of tuples: (method_name, bool)
         '''
-        return [('iceberg_trajectory', self.nl.archive_iceberg_trajectory)]
+        return [('iceberg_trajectory', self.naml.archive_iceberg_trajectory)]
 
     def buffer_rebuild(self, filetype):
         '''Returns the rebuild buffer for the given filetype'''
-        buffer_rebuild = getattr(self.nl, 'buffer_rebuild_' + filetype)
+        buffer_rebuild = getattr(self.naml, 'buffer_rebuild_' + filetype)
         return buffer_rebuild if buffer_rebuild else 0
 
-    def get_date(self, fname, startdate=True):
-        '''
-        Returns the date extracted from the filename provided.
-        By default, the start date for the data is returned
-        '''
-        datestrings = re.findall(r'\d{6,10}', fname)
-        day = '01'
-        if len(datestrings) == 0:
-            utils.log_msg('Unable to get date for file:\n\t' + fname,
-                          level='WARN')
-            return (None,)*3
-        elif len(datestrings) == 1:
-            date_id = 0
-        else:
-            if startdate:
-                date_id = -2
-            else:
-                date_id = -1
-                day = str(self.suite.monthlength(datestrings[date_id][4:6]))
-
-        date = datestrings[date_id]
-        day = day if len(date) < 8 else date[6:8]
-        hour = '00' if len(date) < 10 else date[8:10]
-        return date[:4], date[4:6], day, hour
-
     @timer.run_timer
-    def move_to_share(self, source=None, pattern=None):
+    def move_to_share(self, pattern=None):
         '''
         Override move_to_share() to include modifying the means filename format
         '''
-        workfiles = super(NemoPostProc, self).move_to_share(source=source,
-                                                            pattern=pattern)
+        super(NemoPostProc, self).move_to_share(pattern=pattern)
         if not pattern:
-            # Standard means - potentially need to check SHARE for unprocessed
-            # files left as a result of failure in previous instance of the app
-            if not workfiles:
-                workfiles = super(NemoPostProc, self).\
-                    move_to_share(source=self.share)
-            for fname in workfiles:
-                self.enforce_mean_datestamp(fname)
-
-            # Rebuild means files as required
+            # Standard means - rebuild as required
             self.rebuild_means()
-
-    def enforce_mean_datestamp(self, filename):
-        '''
-        Enforce the filename naming convention:
-           RUNIDo_[STARTDATE]_[ENDDATE]_[FIELD].nc
-        Files are assumed to be in the SHARE directory
-        '''
-        splitname = re.split('[._]', filename)
-        startdate = ''.join(self.get_date(filename))
-        enddate = ''.join(self.get_date(filename, startdate=False))
-        meanperiod = splitname[1]
-        if 'h' not in meanperiod:
-            startdate = startdate[:8]
-            enddate = enddate[:8]
-
-        field = [f for f in self.fields if f in filename]
-        if len(field) == 1:
-            field = field[0]
-            num = ''
-            if re.match(r'^\d{4}$', splitname[-2]):
-                num = '_' + splitname[-2]
-            newfname = r'{P}o_{L}_{D1}_{D2}_{F}{N}.nc'.\
-                format(P=self.prefix, L=meanperiod,
-                       D1=startdate, D2=enddate,
-                       F=field, N=num)
-            if filename.strip() != newfname:
-                utils.log_msg('enforce_mean_datestamp: Renamed {} as {}'.
-                              format(filename, newfname), level='OK')
-                os.rename(os.path.join(self.share, filename),
-                          os.path.join(self.share, newfname))
-        else:
-            # No recognised field in the filename - Exit with error
-            msg = 'enforce_mean_datestamp - unable to extract ' \
-                'datestring from filename: {}'.format(filename)
-            utils.log_msg(msg, level='ERROR')
 
     @timer.run_timer
     def rebuild_restarts(self):
         '''Rebuild partial restart files'''
         for rst in self.rsttypes:
-            pattern = self.set_stencil[mt.RR](None, None, None, rst).\
-                rstrip('$').lstrip('^')
+            pattern = self.set_stencil[mt.RR](rst).rstrip('$').lstrip('^')
             self.rebuild_fileset(self.share, pattern)
 
     @timer.run_timer
     def rebuild_means(self):
         '''Rebuild partial means files'''
+        rebuildmeans = self.additional_means + [self.month_base]
+        ncfname = netcdf_filenames.NCFilename('[a-z]*', self.suite.prefix,
+                                              self.model_realm)
         for field in self.fields:
-            pattern = self.mean_stencil[mt.XX](None, None, None, field).\
-                rstrip('$').lstrip('^')
-            self.rebuild_fileset(self.share, pattern, rebuildall=True)
+            ncfname.custom = '_' + field
+            for mean in set(rebuildmeans):
+                ncfname.base = mean
+                pattern = self.mean_stencil['All'](ncfname).rstrip('.nc')
+                self.rebuild_fileset(self.share, pattern, rebuildall=True)
 
     @timer.run_timer
-    def rebuild_fileset(self, datadir, filetype, suffix='_0000.nc',
-                        rebuildall=False):
+    def rebuild_fileset(self, datadir, filetype, rebuildall=False):
         '''Rebuild partial files for given filetype'''
-        bldfiles = utils.get_subset(datadir,
-                                    r'^.*{}{}$'.format(filetype, suffix))
+        bldfiles = utils.get_subset(
+            datadir,
+            r'^.*{}{}$'.format(filetype, self.rebuild_suffix['ZERO'])
+            )
         buff = self.buffer_rebuild('rst') if \
             'restart' in filetype else self.buffer_rebuild('mean')
         rebuild_required = len(bldfiles) > buff
         while len(bldfiles) > buff:
             bldfile = bldfiles.pop(0)
-            corename = bldfile.split(suffix)[0]
-            bldset = utils.get_subset(datadir,
-                                      r'^{}_\d{{4}}\.nc$'.format(corename))
+            corename = bldfile.split(self.rebuild_suffix['ZERO'])[0]
+            bldset = utils.get_subset(
+                datadir,
+                r'^{}{}$'.format(corename, self.rebuild_suffix['REGEX'])
+                )
 
             if 'diaptr' in filetype:
                 self.global_attr_to_zonal(datadir, bldset)
 
-            month, day = self.get_date(corename)[1:3]
-            if rebuildall or self.timestamps(month, day, process='rebuild'):
+            coredate = self.get_date(corename)
+            if self.timestamps(coredate[1],
+                               '01' if len(coredate) < 3 else coredate[2],
+                               process='rebuild') or rebuildall:
                 utils.log_msg('Rebuilding: ' + corename, level='INFO')
                 icode = self.rebuild_namelist(datadir, corename,
                                               len(bldset), omp=1)
             else:
                 msg = 'Only rebuilding periodic files: ' + \
-                    str(self.nl.rebuild_timestamps)
+                    str(self.naml.rebuild_timestamps)
                 utils.log_msg(msg, level='INFO')
                 icode = 0
 
@@ -437,14 +346,16 @@ class NemoPostProc(mt.ModelTemplate):
         fn_stub = r'trajectory_icebergs_\d{6}'
         # Move to share if necessary
         if self.work != self.share:
-            self.move_to_share(pattern=fn_stub + r'_\d{4}.nc')
+            self.move_to_share(pattern=fn_stub + self.rebuild_suffix['REGEX'])
 
         # Rebuild each unique set of files we find in share
-        suffix = '_0000.nc'
-        for fname in utils.get_subset(self.share, fn_stub + suffix):
-            corename = fname.split(suffix)[0]
-            bldset = utils.get_subset(self.share,
-                                      r'^{}_\d{{4}}.nc$'.format(corename))
+        for fname in utils.get_subset(self.share,
+                                      fn_stub + self.rebuild_suffix['ZERO']):
+            corename = fname.split(self.rebuild_suffix['ZERO'])[0]
+            bldset = utils.get_subset(
+                self.share,
+                r'^{}{}$'.format(corename, self.rebuild_suffix['REGEX'])
+                )
             outputfile = os.path.join(self.share,
                                       '{}o_{}.nc'.format(self.prefix,
                                                          corename))

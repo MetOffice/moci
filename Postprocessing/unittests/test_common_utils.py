@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2016 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -251,6 +251,26 @@ class DateCheckTests(unittest.TestCase):
         func.logtest('Testing bad date input:')
         with self.assertRaises(SystemExit):
             _ = utils.add_period_to_date(['a']*5, self.delta)
+
+    def test_string_delta(self):
+        '''Test time delta in string format'''
+        func.logtest('Assert calculation of delta from input string:')
+        self.assertListEqual(utils.add_period_to_date([0]*5, '6HRS'),
+                             [0, 0, 0, 6, 0])
+        self.assertListEqual(utils.add_period_to_date([0]*5, 'day'),
+                             [0, 0, 1, 0, 0])
+        self.assertListEqual(utils.add_period_to_date([0]*5, '2mths'),
+                             [0, 2, 0, 0, 0])
+        self.assertListEqual(utils.add_period_to_date([0]*5, 'Season'),
+                             [0, 3, 0, 0, 0])
+        self.assertListEqual(utils.add_period_to_date([0]*5, '1y'),
+                             [1, 0, 0, 0, 0])
+
+    def test_bad_string_delta(self):
+        '''Test date input with bad string delta input'''
+        func.logtest('Testing bad string delta input:')
+        with self.assertRaises(SystemExit):
+            _ = utils.add_period_to_date(['a']*5, 'xxxx')
 
 
 class PathTests(unittest.TestCase):

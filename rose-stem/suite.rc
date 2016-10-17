@@ -468,7 +468,7 @@ rm -rf {{dir1}}
 
    [[pp_unittests]]
         inherit = None, LINUX
-	script = 'python2.7 $CYLC_SUITE_SHARE_DIR/fcm_make_pp/build/bin/test_postproc.py'
+	script = '$CYLC_SUITE_SHARE_DIR/fcm_make_pp/build/bin/test_postproc'
     
     [[housekeeping_pp]]
         inherit=None, LINUX, HOUSEKEEPING 

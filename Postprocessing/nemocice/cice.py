@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2016 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -24,6 +24,7 @@ import os
 import modeltemplate as mt
 import timer
 import utils
+import netcdf_filenames
 
 
 class CicePostProc(mt.ModelTemplate):
@@ -40,77 +41,45 @@ class CicePostProc(mt.ModelTemplate):
         access any indivdual regular expression regardless of the need to use
         them.  This is a consequence of the @property nature of the method
         '''
-        return {
-            mt.RR: lambda y, m, s, f:
-                   r'^{P}i\.restart{F}\.\d{{4}}-[-\d]*(\.nc)?$'.
-                   format(P=self.prefix, F=f),
-            mt.MM: lambda y, m, s, f: r'^{P}i\.{B}\.{Y}-{M}-\d{{2}}\.nc$'.
-                   format(P=self.prefix, B=self.month_base, Y=y, M=m),
-            mt.SS: lambda y, m, s, f:
-                   r'^{P}i\.1m\.({Y1}-{M1}|{Y2}-{M2}|{Y2}-{M3})\.nc$'.
-                   format(P=self.prefix,
-                          Y1=int(y) - s[3] if isinstance(s[3], int) else y,
-                          Y2=y,
-                          M1=s[0],
-                          M2=s[1],
-                          M3=s[2]),
-            mt.AA: lambda y, m, s, f:
-                   r'^{P}i\.1s\.\d{{4}}-\d{{2}}_{Y}-\d{{2}}\.nc$'.
-                   format(P=self.prefix, Y=y),
-        }
-
-    @property
-    def end_stencil(self):
-        '''
-        Returns a dictionary of regular expressions to match files belonging
-        to each period (keyword) end
-
-        The same 2 arguments (season and field) are required to access any
-        indivdual regular expression regardless of the need to use them.
-        This is a consequence of the @property nature of the method
-        '''
-        return {
-            mt.RR: None,
-            mt.MM: lambda s, f:
-                   r'^{P}i\.{B}\.\d{{4}}-\d{{2}}-(28|29|30|31)\.nc$'.
-                   format(P=self.prefix, B=self.month_base),
-            mt.SS: lambda s, f: r'^{P}i\.1m\.\d{{4}}-{M}\.nc$'.
-                   format(P=self.prefix, M=s[2]),
-            mt.AA: lambda s, f: r'^{P}i\.1s\.\d{{4}}-\d{{2}}_\d{{4}}-11\.nc$'.
-                   format(P=self.prefix),
-        }
+        set_stencil = super(CicePostProc, self).set_stencil
+        set_stencil[mt.RR] = lambda rsttype: \
+            r'^{P}i\.restart{T}\.\d{{4}}-[-\d]*(\.nc)?$'.\
+            format(P=self.prefix, T=rsttype)
+        return set_stencil
 
     @property
     def mean_stencil(self):
         '''
         Returns a dictionary of regular expressions to match files belonging
-        to each period (keyword) mean
+        to each period (keyword) mean.
 
-        The same 4 arguments (year, month, season and field) are required to
-        access any indivdual regular expression regardless of the need to use
-        them.  This is a consequence of the @property nature of the method
+        XX stencil for '1m' with no base is defined separately because the
+        Gregorian calendar model produces daily component files in addition to
+        a complete monthly file.
+        These are are not required for creating higher means.
         '''
-        return {
-            mt.XX: lambda y, m, s, f:
-                   r'^{P}i\.{B}\.\d{{4}}-\d{{2}}(-\d{{2}})?(-\d{{2}})?\.nc$'.
-                   format(P=self.prefix, B=y if y else r'\d+[hdmsy]'),
-            mt.MM: lambda y, m, s, f: r'{P}i.1m.{Y}-{M}.nc'.
-                   format(P=self.prefix, Y=y, M=m),
-            mt.SS: lambda y, m, s, f: r'{P}i.1s.{Y1}-{M1}_{Y2}-{M2}.nc'.
-                   format(P=self.prefix,
-                          Y1=int(y) - s[3] if isinstance(s[3], int) else y,
-                          Y2=y,
-                          M1=s[0],
-                          M2=s[2]),
-            mt.AA: lambda y, m, s, f: r'{P}i.1y.{Y1}-12_{Y2}-11.nc'.
-                   format(P=self.prefix,
-                          Y1=y if '*' in y else (int(y)-1),
-                          Y2=y),
+        mean_stencil = super(CicePostProc, self).mean_stencil
+        mean_stencil[mt.XX] = lambda field, base=None: \
+            r'^{P}i\.({B}\.\d{{4}}-\d{{2}}(-\d{{2}})?(-\d{{2}})?{M}).nc$'.\
+            format(P=self.prefix,
+                   B=base if base else r'\d+[hdsy]',
+                   M='' if base else r'|1m.\d{4}-\d{2}')
 
-        }
+        return mean_stencil
+
+    @property
+    def model_components(self):
+        '''Name of model component, to be used as a prefix to archived files '''
+        return {'cice': ''}
+
+    @property
+    def model_realm(self):
+        ''' Return the standard realm ID character for the model: i=ice '''
+        return 'i'
 
     @property
     def rsttypes(self):
+        ''' Returns a tuple of restart file types available '''
         return ('', r'.age')
 
     @property
@@ -120,63 +89,93 @@ class CicePostProc(mt.ModelTemplate):
         other than restarts and means.
         Returns a list of tuples: (method_name, bool)
         '''
-        return [('concat_daily_means', self.nl.cat_daily_means)]
+        return [('concat_daily_means', self.naml.cat_daily_means)]
 
-    def get_date(self, fname, startdate=True):
+    @staticmethod
+    def get_date(fname, enddate=False, base=None):
         '''
         Returns the date extracted from the filename provided.
         By default, the start date for the data is returned
+
+        Keyword argument `base` is required only if filename format does
+        not meet the Met Office convention.
         '''
-        datestrings = re.findall(r'\d{4}-\d{2}-\d{2}|\d{4}-\d{2}', fname)
-        if len(datestrings) == 0:
-            utils.log_msg('Unable to get date for file:\n\t' + fname,
-                          level='WARN')
-            return (None,)*3
+        rtndate = netcdf_filenames.ncf_getdate(fname, enddate=enddate)
+        if not rtndate:
+            # Filename datestamp is of the direct CICE output format
+            datestrings = re.findall(r'\d{4}-\d{2}-\d{2}-\d{2}\.|'
+                                     r'\d{4}-\d{2}-\d{2}|\d{4}-\d{2}', fname)
+            if len(datestrings) == 0:
+                utils.log_msg('Unable to get date for file:\n\t' + fname,
+                              level='WARN')
+                rtndate = [None]*3
 
-        date = datestrings[0 if startdate else -1].split('-')
-        day = date[2] if len(date) == 3 else None
+            else:
+                rtndate = datestrings[-1].strip('.').split('-')
+                if len(rtndate) == 2:
+                    rtndate.append('01')
+                if 'restart' in fname:
+                    # No change required.
+                    pass
+                else:
+                    digits, char = re.match(r'(\d+)(\w+)', base if base else
+                                            fname.split('.')[1]).groups()
+                    if enddate:
+                        # CICE data is datestamped with the end date
+                        # (non CF compliant).
+                        freq = '1' + char
+                    else:
+                        # Calculate start date based on the frequency
+                        freq = '-' + str(int(digits) - 1) + char
 
-        return date[0], date[1], day
+                    if len(rtndate) == 2:
+                        rtndate.append('01')
+                    indate = ['00']*5
+                    for i, val in enumerate(rtndate):
+                        indate[i] = val
+                    outdate = utils.add_period_to_date(indate, freq)
+                    rtndate = [str(i).zfill(2) for i in outdate[0:len(rtndate)]]
+
+        return tuple(rtndate)
 
     @timer.run_timer
     def archive_concat_daily_means(self):
-        '''Concatenate daily mean data into a single file'''
-        in_pat = r'^{P}i\.[0-9d_]*24h\.{{Y}}-{{M}}-{{D}}(-\d{{{{5}}}})?\.nc$'.\
+        '''
+        Concatenate daily mean data into a single file.
+        Files dated YYYY-M1-01 to YYYY-M2-01 are included in a monthly file.
+        '''
+        patt = r'^{P}i\.[0-9d_]*24h\.{{Y}}-{{M}}-{{D}}(-\d{{{{5}}}})?\.nc$'.\
             format(P=self.suite.prefix)
-        out_pat = r'{P}i_1d_{{Y1}}{{M1}}01-{{Y2}}{{M2}}01.nc'.\
-            format(P=self.suite.prefix)
-
         if self.work != self.share:
-            self.move_to_share(pattern=in_pat.format(Y=r'\d{4}', M=r'\d{2}',
-                                                     D=r'\d{2}'))
+            self.move_to_share(pattern=patt.format(Y=r'\d{4}', M=r'\d{2}',
+                                                   D=r'\d{2}'))
 
-        endset = utils.get_subset(self.share, in_pat.format(Y=r'\d{4}',
-                                                            M=r'\d{2}',
-                                                            D='01'))
+        endset = utils.get_subset(self.share,
+                                  patt.format(Y=r'\d{4}', M=r'\d{2}', D='01'))
         for end in endset:
             catfiles = [end]
-            end_yr, end_mo, _ = self.get_date(end)
-            if end_mo == '01':
-                start_yr = str(int(end_yr) - 1)
-                start_mo = '12'
-            else:
-                start_yr = end_yr
-                start_mo = str(int(end_mo) - 1).zfill(2)
-            catfiles += utils.get_subset(
-                self.share,
-                in_pat.format(Y=start_yr, M=start_mo,
-                              D=r'(0[2-9]|[1-3][0-9])')
-                )
+            # `base=2m` as get_date() usually expects the enddate in filename
+            # to be the last day of the previous month and adjusts accordingly.
+            startdate = self.get_date(end, base='2m')
+            catfiles += utils.get_subset(self.share,
+                                         patt.format(Y=startdate[0],
+                                                     M=startdate[1],
+                                                     D=r'(0[2-9]|[1-3][0-9])'))
 
             if len(catfiles) == 30:
                 catfiles = utils.add_path(catfiles, self.share)
-                outfile = out_pat.format(Y1=start_yr, Y2=end_yr,
-                                         M1=start_mo, M2=end_mo)
-                outfile = os.path.join(self.share, outfile)
+                outfile = os.path.join(self.share, 'cicecat')
                 icode = self.suite.preprocess_file('ncrcat', sorted(catfiles),
                                                    outfile=outfile)
                 if icode == 0:
                     utils.remove_files(catfiles)
+                    ncfname = netcdf_filenames.NCFilename(
+                        'cice', self.suite.prefix, self.model_realm,
+                        base='1d', start_date=startdate
+                        )
+                    # Rename file according to netCDF convention
+                    ncfname.rename_ncf(outfile, target='1m')
+
             else:
                 msg = 'concat_daily_means: Cannot create month of daily means '
                 msg += 'as only got {} files:\n{}'.format(len(catfiles),
@@ -184,8 +183,9 @@ class CicePostProc(mt.ModelTemplate):
                 utils.log_msg(msg, level='ERROR')
 
         to_archive = utils.get_subset(self.share,
-                                      out_pat.format(Y1=r'\d{4}', Y2=r'\d{4}',
-                                                     M1=r'\d{2}', M2=r'\d{2}'))
+                                      r'cice_{}{}_1d_\d{{8}}-\d{{8}}\.nc'.
+                                      format(self.suite.prefix.lower(),
+                                             self.model_realm))
         if to_archive:
             arch_files = self.archive_files(to_archive)
             del_files = [fn for fn in arch_files if arch_files[fn] != 'FAILED']

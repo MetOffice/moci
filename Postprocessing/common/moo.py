@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2016 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -37,6 +37,10 @@ import re
 import utils
 import timer
 
+# Dictionary of models which Moose is set up to accept
+MODELS = ['atmos', 'jules', 'nemo', 'medusa', 'cice']
+
+
 @timer.run_timer
 def archive_to_moose(filename, sourcedir, nlist, convertpp):
     '''Assemble the dictionary of variables required to archive'''
@@ -44,7 +48,7 @@ def archive_to_moose(filename, sourcedir, nlist, convertpp):
         'CURRENT_RQST_ACTION': 'ARCHIVE',
         'CURRENT_RQST_NAME':   filename,
         'DATAM':               sourcedir,
-        'RUNID':               nlist.archive_set,
+        'SETNAME':             nlist.archive_set,
         'CATEGORY':            'UNCATEGORISED',
         'DATACLASS':           nlist.dataclass,
         'ENSEMBLEID':          nlist.ensembleid,
@@ -64,7 +68,7 @@ class _Moose(object):
     """
     def __init__(self, comms):
         self._rqst_name = comms['CURRENT_RQST_NAME']
-        self._suite_id = comms['RUNID']
+        self._suite_id = comms['SETNAME']
         self._sourcedir = comms['DATAM']
         try:
             self._cat = comms['CATEGORY']
@@ -77,9 +81,10 @@ class _Moose(object):
         self.convertpp = comms['CONVERTPP']
 
         # Define the collection name
-        runid, rqst = re.split('[._]', os.path.basename(self._rqst_name), 1)
-        self._model_id = runid[-1]
-        self._file_id = rqst
+        splitname = re.split('[._]', os.path.basename(self._rqst_name))
+        index = 1 if splitname[0] in MODELS else 0
+        self._model_id = splitname[index][-1]
+        self._file_id = '_'.join(splitname[index+1:])
         self.fl_pp = False
         if not self.chkset():
             self.mkset()  # Create a set
@@ -301,7 +306,7 @@ class CommandExec(object):
             msg = 'moo.py: Neither ARCHIVE nor DELETE requested: '
             utils.log_msg(msg + commands['CURRENT_RQST_NAME'], level='WARN')
             ret_code['NO ACTION'] = 0
-        utils.log_msg('\n') # for clarity in output file.
+        utils.log_msg('\n')  # for clarity in output file.
 
         return ret_code
 

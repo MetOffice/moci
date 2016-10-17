@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2016 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -22,10 +22,9 @@ import runtime_environment
 
 import utils
 
-# Import of nemo and suite require 'RUNID' from runtime environment
+# Import of nemo requires 'RUNID' from runtime environment
 # Import of nemoNamelist requires 'DATAM' from runtime environment
 runtime_environment.setup_env()
-import suite
 import nemo
 import nemoNamelist
 
@@ -37,26 +36,15 @@ class StencilTests(unittest.TestCase):
             'RUNIDo_19951130_restart.nc',
             'RUNIDo_icebergs_19951130_restart.nc',
             'RUNIDo_19951130_restart_trc.nc',
-            'RUNIDo_6h_1995090101_1995091006_FIELD.nc',
-            'RUNIDo_2d_19950905_19950906_FIELD.nc',
-            'RUNIDo_2d_19950929_19950930_FIELD.nc',
-            'RUNIDo_10d_19950901_19950910_FIELD.nc',
-            'RUNIDo_10d_19950921_19950930_FIELD.nc',
-            'RUNIDo_1m_19951101_19951130_FIELD.nc',
-            'RUNIDo_1s_19950901_19951130_FIELD.nc',
-            'RUNIDo_1y_19941201_19951130_FIELD.nc',
-            'RUNIDo_1y_19951201_19961130_FIELD.nc',
+            'RUNIDo_6h_1995090101_1995090106_FIELD.nc',
+            'RUNIDo_2d_19950902_19950903_FIELD_0000.nc',
+            'RUNIDo_10d_19910601_19910630_FIELD_19910610-19910620_9999.nc',
+            'RUNIDo_1m_19950901_19950930_FIELD_1234.nc',
             ]
+
         self.nemo = nemo.NemoPostProc()
         self.nemo.suite = mock.Mock()
         self.nemo.suite.prefix = 'RUNID'
-        self.date = ('1995', '09')
-        self.ssn = ('09', '10', '11', 0)
-        self.setstencil = self.nemo.set_stencil
-        self.endstencil = self.nemo.end_stencil
-        self.meanstencil = self.nemo.mean_stencil
-        dummysuite = suite.SuiteEnvironment(os.getcwd())
-        self.nemo.suite.monthlength = dummysuite.monthlength
 
     def tearDown(self):
         for fname in runtime_environment.RUNTIME_FILES:
@@ -68,8 +56,7 @@ class StencilTests(unittest.TestCase):
     def test_set_stencil_restarts(self):
         '''Test the regular expressions of the set_stencil method - restarts'''
         func.logtest('Assert restart pattern matching of set_stencil:')
-        patt = re.compile(self.setstencil['Restarts']
-                          ('', None, None, ('', '')))
+        patt = re.compile(self.nemo.set_stencil['Restarts'](('', '')))
         nemo_rst = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(nemo_rst,
                          [fname for fname in self.files if 'restart' in fname
@@ -78,8 +65,8 @@ class StencilTests(unittest.TestCase):
     def test_set_stencil_iceberg_rsts(self):
         '''Test the regex of the set_stencil method - iceberg restarts'''
         func.logtest('Assert iceberg restart pattern matching of set_stencil:')
-        args = (None, None, None, self.nemo.rsttypes[1])
-        patt = re.compile(self.setstencil['Restarts'](*args))
+        patt = re.compile(self.nemo.set_stencil['Restarts']
+                          (self.nemo.rsttypes[1]))
         ice_rst = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(ice_rst,
                          [fname for fname in self.files if 'iceberg' in fname])
@@ -87,209 +74,28 @@ class StencilTests(unittest.TestCase):
     def test_set_stencil_tracer_rsts(self):
         '''Test the regex of the set_stencil method - tracer restarts'''
         func.logtest('Assert tracer restart pattern matching of set_stencil:')
-        args = (None, None, None, self.nemo.rsttypes[2])
-        patt = re.compile(self.setstencil['Restarts'](*args))
+        patt = re.compile(self.nemo.set_stencil['Restarts']
+                          (self.nemo.rsttypes[2]))
         ice_rst = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(ice_rst,
                          [fname for fname in self.files if '_trc' in fname])
 
-    def test_set_stencil_monthly_10days(self):
-        '''Test the regex of the set_stencil method - monthly (10days)'''
-        func.logtest('Assert monthly (10d) pattern matching of set_stencil:')
-        args = (self.date[0], self.date[1], None, 'FIELD')
-        patt = re.compile(self.setstencil['Monthly'](*args))
-        month_set = [fname for fname in self.files if patt.search(fname)]
-        self.assertEqual(month_set,
-                         [fname for fname in self.files if '10d_' in fname])
-
-    def test_set_stencil_monthly_2days(self):
-        '''Test the regex of the set_stencil method - monthly (2days)'''
-        func.logtest('Assert monthly (10d) pattern matching of set_stencil:')
-        args = (self.date[0], self.date[1], None, 'FIELD')
-        self.nemo.nl.base_component = '2d'
-        patt = re.compile(self.setstencil['Monthly'](*args))
-        month_set = [fname for fname in self.files if patt.search(fname)]
-        self.assertEqual(month_set,
-                         [fname for fname in self.files if '2d_' in fname])
-
-    def test_set_stencil_seasonal(self):
-        '''Test the regex of the set_stencil method - seasonal'''
-        func.logtest('Assert seasonal pattern matching of set_stencil:')
-        args = (self.date[0], None, self.ssn, 'FIELD')
-        patt = re.compile(self.setstencil['Seasonal'](*args))
-        season_set = [fname for fname in self.files if patt.search(fname)]
-        self.assertEqual(season_set,
-                         [fname for fname in self.files if '1m_' in fname])
-
-    def test_set_stencil_annual(self):
-        '''Test the regex of the set_stencil method - annual'''
-        func.logtest('Assert annual pattern matching of set_stencil:')
-        args = (self.date[0], None, None, 'FIELD')
-        patt = re.compile(self.setstencil['Annual'](*args))
-        annual_set = [fname for fname in self.files if patt.search(fname)]
-        self.assertEqual(annual_set,
-                         [fname for fname in self.files if '1s_' in fname])
-
-    def test_end_stencil_restarts(self):
-        '''Test the regular expressions of the set_stencil method - restarts'''
-        func.logtest('Assert restart pattern matching of end_stencil:')
-        self.assertEqual(self.endstencil['Restarts'], None)
-
-    def test_end_stencil_monthly(self):
-        '''Test the regex of the end_stencil method - monthly'''
-        func.logtest('Assert monthly pattern matching of end_stencil:')
-        args = (None, 'FIELD')
-        patt = re.compile(self.endstencil['Monthly'](*args))
-        annual_set = [fname for fname in self.files if patt.search(fname)]
-        self.assertEqual(annual_set,
-                         [fname for fname in self.files if
-                          '10d_' in fname and '30_FIELD' in fname])
-
-    def test_end_stencil_seasonal(self):
-        '''Test the regex of the end_stencil method - seasonal'''
-        func.logtest('Assert seasonal pattern matching of end_stencil:')
-        args = (self.ssn, 'FIELD')
-        patt = re.compile(self.endstencil['Seasonal'](*args))
-        annual_set = [fname for fname in self.files if patt.search(fname)]
-        self.assertEqual(annual_set,
-                         [fname for fname in self.files if '1m_' in fname])
-
-    def test_end_stencil_annual(self):
-        '''Test the regex of the end_stencil method - annual'''
-        func.logtest('Assert annual pattern matching of end_stencil:')
-        args = (None, 'FIELD')
-        patt = re.compile(self.endstencil['Annual'](*args))
-        annual_set = [fname for fname in self.files if patt.search(fname)]
-        self.assertEqual(annual_set,
-                         [fname for fname in self.files if '1s_' in fname])
-
-    def test_mean_stencil_hourly(self):
-        '''Test the regular expressions of the mean_stencil method - hourly'''
-        func.logtest('Assert hourly pattern matching of mean_stencil:')
-        patt = re.compile(self.meanstencil['General']('6h', None,
-                                                      None, 'FIELD'))
+    def test_mean_stencil_general(self):
+        '''Test the regular expressions of the mean_stencil method - general'''
+        func.logtest('Assert general pattern matching of mean_stencil:')
+        patt = re.compile(self.nemo.mean_stencil['General']('FIELD'))
         sixhr_set = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(sixhr_set,
-                         [fname for fname in self.files if '_6h_' in fname])
-
-    def test_mean_stencil_daily(self):
-        '''Test the regular expressions of the mean_stencil method - daily'''
-        func.logtest('Assert daily pattern matching of mean_stencil:')
-        patt = re.compile(self.meanstencil['General']('10d', None,
-                                                      None, 'FIELD'))
-        tenday_set = [fname for fname in self.files if patt.search(fname)]
-        self.assertEqual(tenday_set,
-                         [fname for fname in self.files if '_10d_' in fname])
-
-    def test_mean_stencil_monthly(self):
-        '''Test the regular expressions of the mean_stencil method - monthly'''
-        func.logtest('Assert monthly pattern matching of mean_stencil:')
-        args = (self.date[0], '11', None, 'FIELD')
-        patt = re.compile(self.meanstencil['Monthly'](*args))
-        month_set = [fname for fname in self.files if patt.search(fname)]
-        self.assertEqual(month_set,
                          [fname for fname in self.files if
-                          '1m_' in fname and 'FIELD.nc' in fname])
+                          'restart' not in fname])
 
-    def test_mean_stencil_monthly_365d(self):
-        '''Test the regexes of the mean_stencil method - monthly (365d)'''
-        func.logtest('Assert monthly patt matching of mean_stencil (365d):')
-        dummysuite = suite.SuiteEnvironment(os.getcwd())
-        dummysuite.envars.CYLC_CYCLING_MODE = '365day'
-        self.nemo.suite.monthlength = dummysuite.monthlength
-        cal_files = [
-            'RUNIDo_1m_20000201_20000228_FIELD.nc',
-            'RUNIDo_1m_20000201_20000229_FIELD.nc',
-            'RUNIDo_1s_19991201_20000228_FIELD.nc',
-            'RUNIDo_1s_19991201_20000229_FIELD.nc',
-            ]
-        args = ('2000', '02', None, 'FIELD')
-        patt = re.compile(self.meanstencil['Monthly'](*args))
-        month_set = [fname for fname in cal_files if patt.search(fname)]
-        self.assertEqual(month_set,
-                         ['RUNIDo_1m_20000201_20000228_FIELD.nc'])
-
-    def test_mean_stencil_monthly_greg(self):
-        '''Test the regexes of the mean_stencil method - monthly (GregCal)'''
-        func.logtest('Assert monthly patt matching of mean_stencil (Greg):')
-        dummysuite = suite.SuiteEnvironment(os.getcwd())
-        dummysuite.envars.CYLC_CYCLING_MODE = 'gregorian'
-        self.nemo.suite.monthlength = dummysuite.monthlength
-        cal_files = [
-            'RUNIDo_1m_20000201_20000228_FIELD.nc',
-            'RUNIDo_1m_20000201_20000229_FIELD.nc',
-            'RUNIDo_1s_19991201_20000228_FIELD.nc',
-            'RUNIDo_1s_19991201_20000229_FIELD.nc',
-            ]
-        args = ('2000', '02', None, 'FIELD')
-        patt = re.compile(self.meanstencil['Monthly'](*args))
-        month_set = [fname for fname in cal_files if patt.search(fname)]
-        self.assertEqual(month_set,
-                         ['RUNIDo_1m_20000201_20000229_FIELD.nc'])
-
-    def test_mean_stencil_seasonal(self):
-        '''Test the regexes of the mean_stencil method - seasonal'''
-        func.logtest('Assert seasonal pattern matching of mean_stencil:')
-        args = (self.date[0], self.date[1], self.ssn, 'FIELD')
-        patt = re.compile(self.meanstencil['Seasonal'](*args))
-        ssn_set = [fname for fname in self.files if patt.search(fname)]
-        self.assertEqual(ssn_set,
-                         [fname for fname in self.files if '1s_' in fname])
-
-    def test_mean_stencil_seasonal_365d(self):
-        '''Test the regexes of the mean_stencil method - seasonal (365d)'''
-        func.logtest('Assert seasonal patt matching of mean_stencil (365d):')
-        dummysuite = suite.SuiteEnvironment(os.getcwd())
-        dummysuite.envars.CYLC_CYCLING_MODE = '365day'
-        self.nemo.suite.monthlength = dummysuite.monthlength
-        cal_files = [
-            'RUNIDo_1m_20000201_20000228_FIELD.nc',
-            'RUNIDo_1m_20000201_20000229_FIELD.nc',
-            'RUNIDo_1s_19991201_20000228_FIELD.nc',
-            'RUNIDo_1s_19991201_20000229_FIELD.nc',
-            ]
-        args = ('2000', '02', ('12', '01', '02', 1), 'FIELD')
-        patt = re.compile(self.meanstencil['Seasonal'](*args))
-        ssn_set = [fname for fname in cal_files if patt.search(fname)]
-        self.assertEqual(ssn_set,
-                         ['RUNIDo_1s_19991201_20000228_FIELD.nc'])
-
-    def test_mean_stencil_seasonal_greg(self):
-        '''Test the regexes of the mean_stencil method - seasonal (GregCal)'''
-        func.logtest('Assert seasonal patt matching of mean_stencil (Greg):')
-        dummysuite = suite.SuiteEnvironment(os.getcwd())
-        dummysuite.envars.CYLC_CYCLING_MODE = 'gregorian'
-        self.nemo.suite.monthlength = dummysuite.monthlength
-        cal_files = [
-            'RUNIDo_1m_20000201_20000228_FIELD.nc',
-            'RUNIDo_1m_20000201_20000229_FIELD.nc',
-            'RUNIDo_1s_19991201_20000228_FIELD.nc',
-            'RUNIDo_1s_19991201_20000229_FIELD.nc',
-            ]
-        args = ('2000', '02', ('12', '01', '02', 1), 'FIELD')
-        patt = re.compile(self.meanstencil['Seasonal'](*args))
-        ssn_set = [fname for fname in cal_files if patt.search(fname)]
-        self.assertEqual(ssn_set,
-                         ['RUNIDo_1s_19991201_20000229_FIELD.nc'])
-
-    def test_mean_stencil_annual(self):
-        '''Test the regular expressions of the mean_stencil method - annual'''
-        func.logtest('Assert annual pattern matching of mean_stencil:')
-        args = (self.date[0], None, None, 'FIELD')
-        patt = re.compile(self.meanstencil['Annual'](*args))
-        annual_set = [fname for fname in self.files if patt.search(fname)]
-        self.assertEqual(annual_set,
-                         [fname for fname in self.files if
-                          '1y_' in fname and self.date[0] + '1130' in fname])
-
-    def test_mean_stencil_all_years(self):
-        '''Test the regex of the mean_stencil method - all years'''
-        func.logtest('Assert all years pattern matching of mean_stencil:')
-        args = ('.*', None, None, 'FIELD')
-        patt = re.compile(self.meanstencil['Annual'](*args))
-        annual_set = [fname for fname in self.files if patt.search(fname)]
-        self.assertEqual(annual_set,
-                         [fname for fname in self.files if '1y_' in fname])
+    def test_mean_stencil_general_6hr(self):
+        '''Test the regular expressions of the mean_stencil method - 6 hourly'''
+        func.logtest('Assert hourly pattern matching of mean_stencil - hourly:')
+        patt = re.compile(self.nemo.mean_stencil['General']('FIELD', base='6h'))
+        sixhr_set = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(sixhr_set,
+                         [fname for fname in self.files if '6h_' in fname])
 
 
 class Propertytests(unittest.TestCase):
@@ -308,33 +114,23 @@ class Propertytests(unittest.TestCase):
 
     def test_fields_property_default(self):
         '''Test the return value of the fields property - default'''
-        func.logtest('Assert return value of the fields property:')
-        self.assertEqual(self.nemo.nl.means_fieldsfiles, None)
-        self.assertEqual(self.nemo._fields, ('grid_T', 'grid_U', 'grid_V',
-                                             'grid_W', 'ptrc_T', 'diad_T',
-                                             'diaptr', 'trnd3d',))
-        self.nemo.nl.means_fieldsfiles = 'grid_W'
-        self.assertEqual(self.nemo._fields, ('grid_W',))
-        self.nemo.nl.means_fieldsfiles = ['grid_U', 'grid_T']
-        self.assertEqual(self.nemo._fields, ('grid_U', 'grid_T'))
+        func.logtest('Assert return value of fields property:')
+        self.assertEqual(self.nemo.naml.means_fieldsfiles, None)
+        self.assertEqual(self.nemo._fields, ('diad_T', 'diaptr', 'grid_T',
+                                             'grid_U', 'grid_V', 'grid_W',
+                                             'ptrc_T', 'trnd3d',))
 
     def test_fields_property_single(self):
         '''Test the return value of the fields property - single'''
         func.logtest('Assert return of the fields property - single supplied:')
-        self.assertEqual(self.nemo.nl.means_fieldsfiles, None)
-        self.assertEqual(self.nemo._fields, ('grid_T', 'grid_U', 'grid_V',
-                                             'grid_W', 'ptrc_T', 'diad_T',
-                                             'diaptr', 'trnd3d',))
-        self.nemo.nl.means_fieldsfiles = 'grid_W'
+        self.nemo.naml.means_fieldsfiles = 'grid_W'
         self.assertEqual(self.nemo._fields, ('grid_W',))
-        self.nemo.nl.means_fieldsfiles = ['grid_U', 'grid_T']
-        self.assertEqual(self.nemo._fields, ('grid_U', 'grid_T'))
 
     def test_fields_property_list(self):
         '''Test the return value of the fields property - list'''
         func.logtest('Assert return of fields property - list supplied:')
-        self.nemo.nl.means_fieldsfiles = ['grid_U', 'grid_T']
-        self.assertEqual(self.nemo._fields, ('grid_U', 'grid_T'))
+        self.nemo.naml.means_fieldsfiles = ['grid_U', 'grid_T']
+        self.assertEqual(self.nemo._fields, ('grid_T', 'grid_U'))
 
 
 class RebuildTests(unittest.TestCase):
@@ -395,9 +191,8 @@ class RebuildTests(unittest.TestCase):
     def test_call_rebuild_means(self):
         '''Test call to rebuild_means method'''
         func.logtest('Assert call to rebuild_fileset from rebuild_means:')
-        pattern = r'RUNIDo_\d+[hdmsy](_\d{8,10}){2}_' + \
-            r'{}(([_\-]\d{{6,10}}){{2}})?(_\d{{4}})?(\.nc)?'.format(
-                self.nemo.fields[-1])
+        pattern = r'[a-z]*_runido_10d_\d{4}\d{2}\d{2}-\d{4}\d{2}\d{2}_' + \
+            self.nemo.fields[-1]
         with mock.patch('nemo.NemoPostProc.rebuild_fileset') as mock_fs:
             self.nemo.rebuild_means()
             mock_fs.assert_called_with('ShareDir', pattern, rebuildall=True)
@@ -452,6 +247,20 @@ class RebuildTests(unittest.TestCase):
                                     'file_19980730_yyyymmdd_0000.nc']
         self.nemo.rebuild_fileset('SourceDir', 'field', rebuildall=True)
         mock_nl.assert_called_with('SourceDir', 'file_19980630_yyyymmdd',
+                                   1, omp=1)
+        self.assertEqual(mock_attr.mock_calls, [])
+
+    @mock.patch('nemo.NemoPostProc.rebuild_namelist')
+    @mock.patch('utils.get_subset')
+    @mock.patch('nemo.NemoPostProc.global_attr_to_zonal')
+    def test_rebuild_all_shortdate(self, mock_attr, mock_subset, mock_nl):
+        '''Test rebuild all function - short date format'''
+        func.logtest('Assert rebuild all function:')
+        mock_subset.return_value = ['file_199805_yyyymmdd_0000.nc',
+                                    'file_199806_yyyymmdd_0000.nc',
+                                    'file_199807_yyyymmdd_0000.nc']
+        self.nemo.rebuild_fileset('SourceDir', 'field', rebuildall=True)
+        mock_nl.assert_called_with('SourceDir', 'file_199806_yyyymmdd',
                                    1, omp=1)
         self.assertEqual(mock_attr.mock_calls, [])
 
@@ -548,15 +357,16 @@ class RebuildTests(unittest.TestCase):
         '''Test final cycle behaviour - deleting components of restarts'''
         func.logtest('Assert component files not deleted on final cycle:')
         mock_subset.side_effect = \
-            [['file_restart_0000.nc'],
-             ['file_restart_0000.nc', 'file_restart_0001.nc']]
+            [['file_11112233_restart_0000.nc'],
+             ['file_restart_11112233_0000.nc', 'file_11112233_restart_0001.nc']]
         mock_nl.return_value = 0
         self.nemo.buffer_rebuild = mock.Mock()
         self.nemo.buffer_rebuild.return_value = 0
         self.nemo.suite.finalcycle = True
         self.nemo.rebuild_fileset('SourceDir', 'yyyymmdd_restart',
                                   rebuildall=True)
-        mock_nl.assert_called_with('SourceDir', 'file_restart', 2, omp=1)
+        mock_nl.assert_called_with('SourceDir', 'file_11112233_restart',
+                                   2, omp=1)
         self.assertNotIn('deleting component files', func.capture().lower())
 
     @mock.patch('nemo.NemoPostProc.rebuild_namelist')
@@ -565,13 +375,14 @@ class RebuildTests(unittest.TestCase):
     def test_rebuild_means_final_cycle(self, mock_rm, mock_subset, mock_nl):
         '''Test final cycle behaviour - deleting components of means'''
         func.logtest('Assert component files not deleted on final cycle:')
-        mock_subset.return_value = ['file_mean1_0000.nc', 'file_mean2_0000.nc']
+        mock_subset.return_value = ['file_11112233_mean1_0000.nc',
+                                    'file_11112233_mean2_0000.nc']
         mock_nl.return_value = 0
         self.nemo.suite.finalcycle = True
         self.nemo.rebuild_fileset('SourceDir', 'mean', rebuildall=True)
-        mock_nl.assert_called_with('SourceDir', 'file_mean1', 1, omp=1)
+        mock_nl.assert_called_with('SourceDir', 'file_11112233_mean1', 1, omp=1)
         self.assertIn('deleting component files', func.capture().lower())
-        mock_rm.assert_called_with(['file_mean2_0000.nc'], 'SourceDir')
+        mock_rm.assert_called_with(['file_11112233_mean2_0000.nc'], 'SourceDir')
 
     @mock.patch('nemo.NemoPostProc.rebuild_namelist')
     @mock.patch('utils.get_subset')
@@ -805,7 +616,7 @@ class AdditionalArchiveTests(unittest.TestCase):
         self.nemo.suite = mock.Mock()
         self.nemo.suite.prefix = 'RUNID'
         self.nemo.archive_files = mock.Mock(return_value={})
-        self.nemo.nl.exec_rebuild_iceberg_trajectory = 'ICB_PP'
+        self.nemo.naml.exec_rebuild_iceberg_trajectory = 'ICB_PP'
         self.nemo.share = 'HERE'
         self.nemo.work = 'HERE'
 
@@ -830,7 +641,7 @@ class AdditionalArchiveTests(unittest.TestCase):
         self.nemo.archive_files.return_value = {'arch1.nc': 'FAILED',
                                                 'arch2.nc': 'SUCCEEDED'}
 
-        self.nemo.nl.archive_iceberg_trajectory = True
+        self.nemo.naml.archive_iceberg_trajectory = True
         self.nemo.archive_general()
 
         cmd = 'python2.7 ICB_PP -t HERE/file1_ -n 2 -o HERE/RUNIDo_file1.nc'
@@ -861,7 +672,7 @@ class AdditionalArchiveTests(unittest.TestCase):
                                                 'arch2.nc': 'SUCCEEDED',
                                                 'arch3.nc': 'SUCCEEDED'}
 
-        self.nemo.nl.archive_iceberg_trajectory = True
+        self.nemo.naml.archive_iceberg_trajectory = True
         self.nemo.archive_general()
 
         cmd = 'python2.7 ICB_PP -t HERE/file1_ -n 2 -o HERE/RUNIDo_file1.nc'
@@ -887,7 +698,7 @@ class AdditionalArchiveTests(unittest.TestCase):
                                 ['file1_0000.nc', 'file1_0001.nc'],
                                 ['arch1.nc']]
         mock_exec.return_value = (1, 'ICB_PP failed')
-        self.nemo.nl.archive_iceberg_trajectory = True
+        self.nemo.naml.archive_iceberg_trajectory = True
         with self.assertRaises(SystemExit):
             self.nemo.archive_general()
         with self.assertRaises(AssertionError):
@@ -905,7 +716,7 @@ class AdditionalArchiveTests(unittest.TestCase):
                                 ['arch1.nc']]
         mock_exec.return_value = (1, 'ICB_PP failed')
         utils.set_debugmode(True)
-        self.nemo.nl.archive_iceberg_trajectory = True
+        self.nemo.naml.archive_iceberg_trajectory = True
         self.nemo.archive_general()
         self.assertIn('Error=1\n\tICB_PP failed', func.capture('err'))
         self.nemo.archive_files.assert_called_once_with(['arch1.nc'])
@@ -914,20 +725,19 @@ class AdditionalArchiveTests(unittest.TestCase):
     def test_arch_iberg_trajectory_move(self, mock_mv):
         '''Test call to iceberg_trajectory archive method - move files'''
         func.logtest('Assert call to archive_iceberg_trajectory with move:')
-        self.nemo.nl.archive_iceberg_trajectory = True
+        self.nemo.naml.archive_iceberg_trajectory = True
         self.nemo.share = 'THERE'
         with mock.patch('utils.get_subset'):
             self.nemo.archive_general()
         mock_mv.assert_called_once_with(
-            source=None,
-            pattern=r'trajectory_icebergs_\d{6}_\d{4}.nc'
+            pattern=r'trajectory_icebergs_\d{6}_\d{4}\.nc'
             )
 
     @mock.patch('utils.remove_files')
     def test_arch_iberg_traj_archpass(self, mock_rm):
         '''Test call to iceberg_trajectory archive method - arch pass'''
         func.logtest('Assert call to archive_iceberg_trajectory - arch pass:')
-        self.nemo.nl.archive_iceberg_trajectory = True
+        self.nemo.naml.archive_iceberg_trajectory = True
         self.nemo.archive_files.return_value = {'arch1': 'SUCCESS'}
         with mock.patch('utils.get_subset'):
             self.nemo.archive_general()
@@ -938,7 +748,7 @@ class AdditionalArchiveTests(unittest.TestCase):
     def test_arch_iberg_traj_archfail(self, mock_rm):
         '''Test call to iceberg_trajectory archive method - arch fail'''
         func.logtest('Assert call to archive_iceberg_trajectory - arch fail:')
-        self.nemo.nl.archive_iceberg_trajectory = True
+        self.nemo.naml.archive_iceberg_trajectory = True
         self.nemo.archive_files.return_value = {'arch1': 'FAILED'}
         with mock.patch('utils.get_subset'):
             self.nemo.archive_general()
@@ -953,7 +763,6 @@ class UtilityMethodTests(unittest.TestCase):
         self.nemo = nemo.NemoPostProc()
         self.nemo.share = os.getcwd()
         self.nemo.suite = mock.Mock()
-        self.nemo.suite.monthlength.return_value = 30
         self.nemo.suite.prefix = 'RUNID'
 
     def tearDown(self):
@@ -961,155 +770,86 @@ class UtilityMethodTests(unittest.TestCase):
             os.remove('nemocicepp.nl')
         except OSError:
             pass
+        utils.set_debugmode(False)
 
-    def test_get_date(self):
-        '''Test get_date method'''
-        func.logtest('Assert functionality of get_date method:')
-        files = [
-            'RUNIDo_19820201_restart.nc',
-            'RUNIDo_12h_19820101_19821230_FIELD_1982020100-1982020112_0000.nc',
-            'RUNIDo_10d_19820101_19821230_FIELD_19820201-19820210_0000.nc',
-            'RUNIDo_1m_19820101_19821230_FIELD_19820201-19820230_0000.nc',
-            'RUNIDo_1m_19820101_19821230_FIELD_19820201-19820230.nc',
-            'RUNIDo_1m_19820101_19821230_FIELD_19820201-19820230',
-            'RUNIDo_1m_19820101_19821230_FIELD_198202-198202_0000.nc',
-            'RUNIDo_1m_19820101_19821230_FIELD_198202-198202.nc',
-            'RUNIDo_1m_19820201_19820230_FIELD_0000.nc',
-            'RUNIDo_1m_19820201_19820230_FIELD.nc',
-            'RUNIDo_1m_19820201_19820230_FIELD',
-            ]
-        for fname in files:
-            date = self.nemo.get_date(fname)
-            self.assertEqual(date, ('1982', '02', '01', '00'))
+    def test_get_date_start(self):
+        '''Test extraction of 6-10 digit strings from a filename - startdate'''
+        func.logtest('Assert startdate returned from get_date:')
+        fname = 'RUNIDo_Xf_1111-222222_33333333-4444444444_555555555555.nc'
+        startdate = self.nemo.get_date(fname)
+        self.assertTupleEqual(startdate, ('3333', '33', '33'))
 
-    def test_get_date_failure(self):
-        '''Test get_date method - catch failure'''
-        func.logtest('Assert error trapping in get_date method:')
-        date = self.nemo.get_date('RUNIDo_1m_YYYYMMDD_FIELD.nc')
-        self.assertEqual(date, (None,)*3)
-        self.assertIn('[WARN]  Unable to get date', func.capture('err'))
+    def test_get_date_end(self):
+        '''Test extraction of 6-10 digit strings from a filename - enddate'''
+        func.logtest('Assert enddate returned from get_date:')
+        fname = 'RUNIDo_Xf_1111_222222_33333333_4444444444_555555555555.nc'
+        enddate = self.nemo.get_date(fname, enddate=True)
+        self.assertTupleEqual(enddate, ('4444', '44', '44', '44'))
 
-    def test_get_date_enddate(self):
-        '''Test get_date method - startdate=False'''
-        func.logtest('Assert functionality of get_date method - enddate:')
-        files = [
-            'RUNIDo_19820230_restart.nc',
-            'RUNIDo_12h_19820101_19821230_FIELD_1982023012-1982023000_0000.nc',
-            'RUNIDo_10d_19820101_19821230_FIELD_19820221-19820230_0000.nc',
-            'RUNIDo_1m_19820101_19821230_FIELD_19820201-19820230_0000.nc',
-            'RUNIDo_1m_19820101_19821230_FIELD_19820201-19820230.nc',
-            'RUNIDo_1m_19820101_19821230_FIELD_198202-198202_0000.nc',
-            'RUNIDo_1m_19820101_19821230_FIELD_198202-198202.nc',
-            'RUNIDo_1m_19820201_19820230_FIELD_0000.nc',
-            'RUNIDo_1m_19820201_19820230_FIELD.nc',
-            ]
-        for fname in files:
-            date = self.nemo.get_date(fname, startdate=False)
-            self.assertEqual(date, ('1982', '02', '30', '00'))
-
-    def test_get_date_enddate_greg(self):
-        '''Test get_date method - startdate=False'''
-        func.logtest('Assert functionality of get_date method - enddate:')
-        self.nemo.suite.monthlength.return_value = 28
-        fname = 'RUNIDo_1m_19820101_19821230_FIELD_198202-198202.nc'
-        date = self.nemo.get_date(fname, startdate=False)
-        self.assertEqual(date, ('1982', '02', '28', '00'))
-
-    @mock.patch('os.rename')
-    def test_enforce_datestamp(self, mock_rename):
-        '''Test enforce_mean_datestamp method'''
-        func.logtest('Assert functionality of enforce_mean_datestamp:')
-        fname = 'RUNIDo_10d_00000000_11111111_grid_V_22222222-33333333_9999.nc'
-        self.nemo.enforce_mean_datestamp(fname)
-        mock_rename.assert_called_with(
-            os.path.join(self.nemo.share, fname),
-            os.path.join(self.nemo.share,
-                         'RUNIDo_10d_22222222_33333333_grid_V_9999.nc'))
-        self.assertEqual(len(mock_rename.mock_calls), 1)
-
-    @mock.patch('os.rename')
-    def test_enforce_datestamp_long(self, mock_rename):
-        '''Test enforce_mean_datestamp method - long date'''
-        func.logtest('Assert functionality of enforce_mean_datestamp:')
-        fname = 'RUNIDo_12h_0000000000_1111111111_grid_V' \
-            '_2222222222-3333333333_9999.nc'
-        self.nemo.enforce_mean_datestamp(fname)
-        mock_rename.assert_called_with(
-            os.path.join(self.nemo.share, fname),
-            os.path.join(self.nemo.share,
-                         'RUNIDo_12h_2222222222_3333333333_grid_V_9999.nc'))
-        self.assertEqual(len(mock_rename.mock_calls), 1)
-
-    @mock.patch('os.rename')
-    def test_enforce_datestamp_no_rbld(self, mock_rename):
-        '''Test enforce_mean_datestamp method - no rebuild required'''
-        func.logtest('Assert enforce_mean_datestamp handles no rebuild:')
-        fname = 'RUNIDo_10d_00000000_11111111_grid_V_22222222-33333333.nc'
-        self.nemo.enforce_mean_datestamp(fname)
-        mock_rename.assert_called_with(
-            os.path.join(self.nemo.share, fname),
-            os.path.join(self.nemo.share,
-                         'RUNIDo_10d_22222222_33333333_grid_V.nc'))
-        self.assertEqual(len(mock_rename.mock_calls), 1)
-
-    @mock.patch('os.rename')
-    def test_enforce_datestamp_nochange(self, mock_rename):
-        '''Test enforce_mean_datestamp method - no change'''
-        func.logtest('Assert functionality of enforce_mean_datestamp:')
-        fname = 'RUNIDo_10d_00000000_11111111_grid_V_9999.nc'
-        self.nemo.enforce_mean_datestamp(fname)
-        self.assertEqual(len(mock_rename.mock_calls), 0)
-
-    def test_enforce_datestamp_nofield(self):
-        '''Test enforce_mean_datestamp method - unknown field'''
-        func.logtest('Assert enforce_mean_datestamp handles unknown field :')
-        fname = 'RUNIDo_genericfile_999999.nc'
-        with self.assertRaises(SystemExit):
-            self.nemo.enforce_mean_datestamp(fname)
-        self.assertIn('unable to extract datestring', func.capture('err'))
-
-    @mock.patch('nemo.NemoPostProc.enforce_mean_datestamp')
+    @mock.patch('nemo.NemoPostProc.rebuild_means')
     @mock.patch('modeltemplate.ModelTemplate.move_to_share')
-    def test_move_to_share(self, mock_mt, mock_stamp):
+    def test_move_to_share(self, mock_mt, mock_rbld):
         '''Test NEMO Specific move_to_share functionality'''
         func.logtest('Assert additional move_to_share processing in NEMO:')
-        mock_mt.return_value = ['FILE1', 'FILE2']
         self.nemo.move_to_share()
-        mock_mt.assert_called_with(source=None, pattern=None)
-        self.assertEqual(len(mock_mt.mock_calls), 1)
-        for move in mock_mt.return_value:
-            self.assertIn(mock.call(move), mock_stamp.mock_calls)
-
-    @mock.patch('nemo.NemoPostProc.enforce_mean_datestamp')
-    @mock.patch('modeltemplate.ModelTemplate.move_to_share')
-    def test_move_to_share_check(self, mock_mt, mock_stamp):
-        '''Test NEMO Specific move_to_share functionality - check SHARE'''
-        func.logtest('Assert move_to_share called twice for no return:')
-        mock_mt.return_value = []
-        self.nemo.move_to_share()
-        mock_mt.assert_called_with(source=os.getcwd())
-        self.assertEqual(len(mock_mt.mock_calls), 2)
-        self.assertEqual(len(mock_stamp.mock_calls), 0)
-
-    @mock.patch('nemo.NemoPostProc.rebuild_means')
-    @mock.patch('modeltemplate.ModelTemplate.move_to_share')
-    def test_move_to_share_rebuild(self, mock_mt, mock_rbld):
-        '''Test move_to_share functionality - share==work'''
-        func.logtest('Assert rebuild behaviour of move_to_share method:')
-        self.nemo.nl.means_directory = 'ShareDir'
-        with mock.patch('nemo.NemoPostProc.enforce_mean_datestamp'):
-            self.nemo.move_to_share()
+        mock_mt.assert_called_once_with(pattern=None)
         mock_rbld.assert_called_once_with()
-        mock_mt.assert_called_once_with(pattern=None, source=None)
 
     @mock.patch('nemo.NemoPostProc.rebuild_means')
-    @mock.patch('nemo.NemoPostProc.enforce_mean_datestamp')
     @mock.patch('modeltemplate.ModelTemplate.move_to_share')
-    def test_move_to_share_pattern(self, mock_mt, mock_stamp, mock_rbld):
+    def test_move_to_share_pattern(self, mock_mt, mock_rbld):
         '''Test move_to_share functionality - with pattern'''
         func.logtest('Assert pattern behaviour of move_to_share method:')
-        mock_mt.return_value = []
+        mock_mt.return_value = ['FILE1']
         self.nemo.move_to_share(pattern=r'abcde')
-        self.assertEqual(mock_stamp.mock_calls, [])
         self.assertEqual(mock_rbld.mock_calls, [])
-        mock_mt.assert_called_once_with(pattern='abcde', source=None)
+        mock_mt.assert_called_once_with(pattern='abcde')
+
+    def test_components_nemo_model(self):
+        '''Test component extraction - nemo model identification'''
+        func.logtest('Assert NEMO in model identification:')
+        with mock.patch('nemo.NemoPostProc.model_components',
+                        new_callable=mock.PropertyMock,
+                        return_value={'nemo': ['GRID', 'FIELD']}):
+            ncf = self.nemo.filename_components(
+                'RUNIDo_10d_20001201_20011210_FIELD.nc'
+                )
+        self.assertEqual(ncf.prefix, 'nemo_runido')
+        self.assertEqual(ncf.base, '10d')
+        self.assertEqual(ncf.start_date, ('2000', '12', '01'))
+        self.assertEqual(ncf.calc_enddate(), ('2000', '12', '11'))
+
+    @mock.patch('netcdf_filenames.NCFilename')
+    def test_components_medusa_model(self, mock_ncf):
+        '''Test component extraction - medusa model identification'''
+        func.logtest('Assert MEDUSA in model identification:')
+        with mock.patch('nemo.NemoPostProc.model_components',
+                        new_callable=mock.PropertyMock,
+                        return_value={'medusa': ['GRID', 'FIELD']}):
+            self.nemo.filename_components(
+                'RUNIDo_1m_11112233_44445566_FIELD.nc'
+                )
+        mock_ncf.assert_called_once_with('medusa', 'RUNID', 'o', base='1m',
+                                         start_date=('1111', '22', '33'),
+                                         custom='FIELD')
+
+    @mock.patch('netcdf_filenames.NCFilename.__init__', return_value=None)
+    def test_components_4date_format(self, mock_ncf):
+        '''Test component extraction - 4 date format filename'''
+        func.logtest('Assert correct date extraction - 4 date format:')
+        fname = 'RUNIDo_10d_00000000_11111111_grid_V_22222222-33333333.nc'
+        self.nemo.filename_components(fname)
+        mock_ncf.assert_called_once_with('nemo', 'RUNID', 'o', base='10d',
+                                         start_date=('2222', '22', '22'),
+                                         custom='grid-V')
+
+    @mock.patch('netcdf_filenames.NCFilename.__init__', return_value=None)
+    def test_components_10digit_format(self, mock_ncf):
+        '''Test component extraction - 4 date format filename'''
+        func.logtest('Assert correct date extraction - 4 date format:')
+        fname = 'RUNIDo_12h_0000000000_1111111111_grid_V' \
+            '_2222222222-3333333333.nc'
+        self.nemo.filename_components(fname)
+        mock_ncf.assert_called_once_with('nemo', 'RUNID', 'o', base='12h',
+                                         start_date=('2222', '22', '22', '22'),
+                                         custom='grid-V')

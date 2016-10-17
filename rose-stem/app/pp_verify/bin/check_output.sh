@@ -10,23 +10,25 @@
 # Required Environment:
 #
 # Updates:
-#   MOCI #62 - Moved start date to October to test acceptance of spinup period 
-#              for means
-#            - Removed archived files:
-#                 hg3esa.da19811001_00
-#                 hg3esa.ph19810901
-#                 hg3esa.ph19810911
-#                 hg3esa.ph19810921
-#                 hg3esa.pj19810901
-#                 hg3esa.pm1981sep
-#                 hg3esi.1m.1981-09.nc
-#                 hg3esi.1s.1981-11.nc
-#                 hg3eso_1m_19810901_19810930_grid_V.nc
-#                 hg3eso_1s_19810901_19811130_grid_V.nc
-#   MOCI #94 - Change to the datestamp format for the CICE seasonal and 
-#              annual means
-#            - hg3esi.is.YYY2-M2.nc -> hg3esi.1s.YYY1-M1_YYY2-M2.nc
-#            - hg3esi.iy.YYY2-11.nc -> hg3esi.1y.YYY1-12_YYY2-11.nc
+#   MOCI #62  - Moved start date to October to test acceptance of spinup period 
+#               for means
+#             - Removed archived files:
+#                  hg3esa.da19811001_00
+#                  hg3esa.ph19810901
+#                  hg3esa.ph19810911
+#                  hg3esa.ph19810921
+#                  hg3esa.pj19810901
+#                  hg3esa.pm1981sep
+#                  hg3esi.1m.1981-09.nc
+#                  hg3esi.1s.1981-11.nc
+#                  hg3eso_1m_19810901_19810930_grid_V.nc
+#                  hg3eso_1s_19810901_19811130_grid_V.nc
+#   MOCI #94  - Change to the datestamp format for the CICE seasonal and 
+#               annual means
+#             - hg3esi.is.YYY2-M2.nc -> hg3esi.1s.YYY1-M1_YYY2-M2.nc
+#             - hg3esi.iy.YYY2-11.nc -> hg3esi.1y.YYY1-12_YYY2-11.nc
+#   MOCI #108 - Change to NEMO/CICE output filenames in accordance with
+#               filenaming convention
 #
 ###############################################################################
 
@@ -125,61 +127,107 @@ a.pj19820301
 a.pj19820601
 a.pj19820901"
 
+ipd="
+cice_hg3esi_10d_19811001-19811011.nc
+cice_hg3esi_10d_19811011-19811021.nc
+cice_hg3esi_10d_19811021-19811101.nc
+cice_hg3esi_10d_19811101-19811111.nc
+cice_hg3esi_10d_19811111-19811121.nc
+cice_hg3esi_10d_19811121-19811201.nc
+cice_hg3esi_10d_19811201-19811211.nc
+cice_hg3esi_10d_19811211-19811221.nc
+cice_hg3esi_10d_19811221-19820101.nc
+cice_hg3esi_10d_19820101-19820111.nc
+cice_hg3esi_10d_19820111-19820121.nc
+cice_hg3esi_10d_19820121-19820201.nc
+cice_hg3esi_10d_19820201-19820211.nc
+cice_hg3esi_10d_19820211-19820221.nc
+cice_hg3esi_10d_19820221-19820301.nc
+cice_hg3esi_10d_19820301-19820311.nc
+cice_hg3esi_10d_19820311-19820321.nc
+cice_hg3esi_10d_19820321-19820401.nc
+cice_hg3esi_10d_19820401-19820411.nc
+cice_hg3esi_10d_19820411-19820421.nc
+cice_hg3esi_10d_19820421-19820501.nc
+cice_hg3esi_10d_19820501-19820511.nc
+cice_hg3esi_10d_19820511-19820521.nc
+cice_hg3esi_10d_19820521-19820601.nc
+cice_hg3esi_10d_19820601-19820611.nc
+cice_hg3esi_10d_19820611-19820621.nc
+cice_hg3esi_10d_19820621-19820701.nc
+cice_hg3esi_10d_19820701-19820711.nc
+cice_hg3esi_10d_19820711-19820721.nc
+cice_hg3esi_10d_19820721-19820801.nc
+cice_hg3esi_10d_19820801-19820811.nc
+cice_hg3esi_10d_19820811-19820821.nc
+cice_hg3esi_10d_19820821-19820901.nc
+cice_hg3esi_10d_19820901-19820911.nc
+cice_hg3esi_10d_19820911-19820921.nc
+cice_hg3esi_10d_19820921-19821001.nc
+cice_hg3esi_10d_19821001-19821011.nc
+cice_hg3esi_10d_19821011-19821021.nc
+cice_hg3esi_10d_19821021-19821101.nc
+cice_hg3esi_10d_19821101-19821111.nc
+cice_hg3esi_10d_19821111-19821121.nc
+cice_hg3esi_10d_19821121-19821201.nc
+"
+
 ipm="
-hg3esi.1m.1981-10.nc
-hg3esi.1m.1981-11.nc
-hg3esi.1m.1981-12.nc
-hg3esi.1m.1982-01.nc
-hg3esi.1m.1982-02.nc
-hg3esi.1m.1982-03.nc
-hg3esi.1m.1982-04.nc
-hg3esi.1m.1982-05.nc
-hg3esi.1m.1982-06.nc
-hg3esi.1m.1982-07.nc
-hg3esi.1m.1982-08.nc
-hg3esi.1m.1982-09.nc
-hg3esi.1m.1982-10.nc
-hg3esi.1m.1982-11.nc"
+cice_hg3esi_1m_19811001-19811101.nc
+cice_hg3esi_1m_19811101-19811201.nc
+cice_hg3esi_1m_19811201-19820101.nc
+cice_hg3esi_1m_19820101-19820201.nc
+cice_hg3esi_1m_19820201-19820301.nc
+cice_hg3esi_1m_19820301-19820401.nc
+cice_hg3esi_1m_19820401-19820501.nc
+cice_hg3esi_1m_19820501-19820601.nc
+cice_hg3esi_1m_19820601-19820701.nc
+cice_hg3esi_1m_19820701-19820801.nc
+cice_hg3esi_1m_19820801-19820901.nc
+cice_hg3esi_1m_19820901-19821001.nc
+cice_hg3esi_1m_19821001-19821101.nc"
 
 ips="
-hg3esi.1s.1981-12_1982-02.nc
-hg3esi.1s.1982-03_1982-05.nc
-hg3esi.1s.1982-06_1982-08.nc
-hg3esi.1s.1982-09_1982-11.nc"
+cice_hg3esi_1s_19811201-19820301.nc
+cice_hg3esi_1s_19820301-19820601.nc
+cice_hg3esi_1s_19820601-19820901.nc
+cice_hg3esi_1s_19820901-19821201.nc"
 
-ipy="hg3esi.1y.1981-12_1982-11.nc"
+ipy="cice_hg3esi_1y_19811201-19821201.nc"
 
 idumps="
 hg3esi.restart.1981-12-01-00000
 hg3esi.restart.1982-06-01-00000
 hg3esi.restart.1982-12-01-00000"
 
+opd=""
+
 opm="
-hg3eso_1m_19811001_19811030_grid_V.nc
-hg3eso_1m_19811101_19811130_grid_V.nc
-hg3eso_1m_19811201_19811230_grid_V.nc
-hg3eso_1m_19820101_19820130_grid_V.nc
-hg3eso_1m_19820201_19820230_grid_V.nc
-hg3eso_1m_19820301_19820330_grid_V.nc
-hg3eso_1m_19820401_19820430_grid_V.nc
-hg3eso_1m_19820501_19820530_grid_V.nc
-hg3eso_1m_19820601_19820630_grid_V.nc
-hg3eso_1m_19820701_19820730_grid_V.nc
-hg3eso_1m_19820801_19820830_grid_V.nc
-hg3eso_1m_19820901_19820930_grid_V.nc
-hg3eso_1m_19821001_19821030_grid_V.nc
-hg3eso_1m_19821101_19821130_grid_V.nc"
+nemo_hg3eso_1m_19811001-19811101_grid-V.nc
+nemo_hg3eso_1m_19811101-19811201_grid-V.nc
+nemo_hg3eso_1m_19811201-19820101_grid-V.nc
+nemo_hg3eso_1m_19820101-19820201_grid-V.nc
+nemo_hg3eso_1m_19820201-19820301_grid-V.nc
+nemo_hg3eso_1m_19820301-19820401_grid-V.nc
+nemo_hg3eso_1m_19820401-19820501_grid-V.nc
+nemo_hg3eso_1m_19820501-19820601_grid-V.nc
+nemo_hg3eso_1m_19820601-19820701_grid-V.nc
+nemo_hg3eso_1m_19820701-19820801_grid-V.nc
+nemo_hg3eso_1m_19820801-19820901_grid-V.nc
+nemo_hg3eso_1m_19820901-19821001_grid-V.nc
+nemo_hg3eso_1m_19821001-19821101_grid-V.nc
+nemo_hg3eso_1m_19821101-19821201_grid-V.nc"
 
 #1st seasonal mean removed since MOCI #62 - start date moved to October
 #hg3eso_1s_19810901_19811130_grid_V.nc
 ops="
-hg3eso_1s_19811201_19820230_grid_V.nc 
-hg3eso_1s_19820301_19820530_grid_V.nc
-hg3eso_1s_19820601_19820830_grid_V.nc
-hg3eso_1s_19820901_19821130_grid_V.nc"
+nemo_hg3eso_1s_19811201-19820301_grid-V.nc 
+nemo_hg3eso_1s_19820301-19820601_grid-V.nc
+nemo_hg3eso_1s_19820601-19820901_grid-V.nc
+nemo_hg3eso_1s_19820901-19821201_grid-V.nc"
 
 opy="
-hg3eso_1y_19811201_19821130_grid_V.nc"
+nemo_hg3eso_1y_19811201-19821201_grid-V.nc"
 
 odumps="
 hg3eso_19811130_restart.nc
@@ -212,7 +260,7 @@ for fn in $adumps $aph $apj $apm $apm $aps $apy; do
 done
 
 echo "[INFO] Checking NEMO output all present and correct..."
-for fn in $odumps $opm $opm $ops $opy; do
+for fn in $odumps $opd $opm $ops $opy; do
     if [[ "$search" != *"$fn WOULD BE ARCHIVED"* ]] && [[ "$search" != *"$fn ARCHIVE OK"* ]]; then 
         echo "[FAIL] File archive not logged: $fn"
         RC=$((RC + 2))
@@ -228,7 +276,7 @@ for fn in $odumps $opm $opm $ops $opy; do
 done
 
 echo "[INFO] Checking CICE output all present and correct..."
-for fn in $idumps $ipm $ipm $ips $ipy; do
+for fn in $idumps $ipd $ipm $ips $ipy; do
     if [[ "$search" != *"$fn WOULD BE ARCHIVED"* ]] && [[ "$search" != *"$fn ARCHIVE OK"* ]]; then 
         echo "[FAIL] File archive not logged: $fn"
         RC=$((RC + 3))

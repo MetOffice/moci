@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2016 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -23,15 +23,16 @@ import runtime_environment
 runtime_environment.setup_env()
 import moo
 
+
 class CommandTests(unittest.TestCase):
     '''Unit tests relating to the moo.CommandExec() method'''
 
     def setUp(self):
         self.cmd = {
             'CURRENT_RQST_ACTION': 'ARCHIVE',
-            'CURRENT_RQST_NAME':   'RUNIDa.daTestFile',
+            'CURRENT_RQST_NAME':   'atmos_runida.daTestFile',
             'DATAM':               'TestDir',
-            'RUNID':               'runid',
+            'SETNAME':             'runid',
             'CATEGORY':            'UNCATEGORISED',
             'DATACLASS':           'myclass',
             'ENSEMBLEID':          '',
@@ -110,9 +111,9 @@ class MooseTests(unittest.TestCase):
     def setUp(self):
         cmd = {
             'CURRENT_RQST_ACTION': 'ARCHIVE',
-            'CURRENT_RQST_NAME':   'full/path/to/RUNIDa.daTestFile',
+            'CURRENT_RQST_NAME':   'full/path/to/atmos_runida.daTestFile',
             'DATAM':               'TestDir',
-            'RUNID':               'runid',
+            'SETNAME':             'runid',
             'CATEGORY':            'UNCATEGORISED',
             'DATACLASS':           'myclass',
             'ENSEMBLEID':          '',
@@ -358,7 +359,7 @@ class PutCommandTests(unittest.TestCase):
             'CURRENT_RQST_ACTION': 'ARCHIVE',
             'CURRENT_RQST_NAME':   'RUNIDa.daTestFile',
             'DATAM':               'TestDir',
-            'RUNID':               'runid',
+            'SETNAME':             'runid',
             'CATEGORY':            'UNCATEGORISED',
             'DATACLASS':           'classname',
             'ENSEMBLEID':          '',
@@ -369,7 +370,7 @@ class PutCommandTests(unittest.TestCase):
         os.environ['PREFIX'] = 'PATH/'
         self.moocmd = 'moo put -f -vv '
         self.testfile = os.path.join(cmd['DATAM'], cmd['CURRENT_RQST_NAME'])
-        self.archdest = os.path.join(cmd['DATACLASS'], cmd['RUNID'],
+        self.archdest = os.path.join(cmd['DATACLASS'], cmd['SETNAME'],
                                      'ada.file')
         with mock.patch('moo._Moose.chkset', return_value=True):
             self.inst = moo._Moose(cmd)
@@ -424,7 +425,7 @@ class Utilitytests(unittest.TestCase):
             'CURRENT_RQST_ACTION': 'ARCHIVE',
             'CURRENT_RQST_NAME':   'FILE',
             'DATAM':               'SOURCEDIR',
-            'RUNID':               self.nlist.archive_set,
+            'SETNAME':             self.nlist.archive_set,
             'CATEGORY':            'UNCATEGORISED',
             'DATACLASS':           self.nlist.dataclass,
             'ENSEMBLEID':          self.nlist.ensembleid,

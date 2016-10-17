@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2016 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -100,6 +100,7 @@ def exec_subproc(cmd, verbose=True, cwd=os.environ['PWD']):
             msg = '[SUBPROCESS]: Command: {}\n[SUBPROCESS]: Error = {}:\n\t{}'
             log_msg(msg.format(' '.join(cmd), rcode, output), level='WARN')
             break
+
     return rcode, output
 
 
@@ -198,7 +199,7 @@ def add_period_to_date(indate, delta):
     Add a delta (list of integers) to a given date (list of integers).
         Call `rose date` with calendar argument -
       taken from environment variable CYLC_CYCLING_MODE.
-        If no indate is provided ([0,0,0,0,0}) then delta is returned.
+        If no indate is provided ([0,0,0,0,0]) then delta is returned.
     '''
 
     while len(indate) < 5:
@@ -206,22 +207,39 @@ def add_period_to_date(indate, delta):
         msg = '`rose date` requires length=5 input date array - adding zero: '
         log_msg(msg + str(indate), level='WARN')
 
-    offset = 'P'
+    if isinstance(delta, str):
+        all_targets = {'h': 3, 'd': 2, 'm': 1, 's': 1, 'y': 0, 'a': 0}
+        digits = re.match(r'(-?\d+)([{}])'.format(''.join(all_targets.keys())),
+                          delta.lower())
+        if digits:
+            base, target = digits.groups()
+        else:
+            base = 1
+            target = delta[0].lower()
+        delta = [0]*5
+        try:
+            index = [all_targets[t] for t in all_targets if
+                     t == target][0]
+            delta[index] = int(base) * (3 if target == 's' else 1)
+        except IndexError:
+            msg = 'add_period_to_date - Unknown target period: '
+            log_msg(msg + target, level='FAIL')
+
+    offset = ('-' if any([d for d in delta if d < 0]) else '') + 'P'
     for elem in delta:
-        if elem > 0:
+        if elem != 0:
             try:
-                offset += str(elem) + ['Y', 'M', 'D'][delta.index(elem)]
+                offset += str(abs(elem)) + ['Y', 'M', 'D'][delta.index(elem)]
             except IndexError:
                 if 'T' not in offset:
                     offset += 'T'
-                offset += str(elem) + ['M', 'H'][delta.index(elem)-4]
+                offset += str(abs(elem)) + ['M', 'H'][delta.index(elem)-4]
 
     if all(elem == 0 for elem in indate):
         output = '{0:0>4},{1:0>2},{2:0>2},{3:0>2},{4:0>2}'.format(*delta)
         rcode = 0
     else:
         dateinput = '{0:0>4}{1:0>2}{2:0>2}T{3:0>2}{4:0>2}'.format(*indate)
-
         if re.match(r'^\d{8}T\d{4}$', dateinput):
             cal = os.environ['CYLC_CYCLING_MODE']
             if cal.lower() == 'integer':
@@ -232,7 +250,7 @@ def add_period_to_date(indate, delta):
                 except KeyError:
                     cal = '360day'
             cmd = 'rose date {} --calendar {} --offset {} --print-format ' \
-            '%Y,%m,%d,%H,%M'.format(dateinput, cal, offset)
+                '%Y,%m,%d,%H,%M'.format(dateinput, cal, offset)
             rcode, output = exec_subproc(cmd, verbose=False)
         else:
             log_msg('add_period_to_date: Invalid date for conversion to ISO '
