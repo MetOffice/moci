@@ -27,7 +27,6 @@ runtime_environment.setup_env()
 import suite
 
 
-
 class SuiteTests(unittest.TestCase):
     '''Unit tests for the SuiteEnvironment class'''
     def setUp(self):
@@ -244,7 +243,7 @@ class PreProcessTests(unittest.TestCase):
         self.mysuite = suite.SuiteEnvironment('somePath/directory', 'input.nl')
 
     def tearDown(self):
-        pass
+        utils.set_debugmode(False)
 
     def test_preprocess_file_nccopy(self):
         '''Test preprocess_file command'''
@@ -298,22 +297,56 @@ class PreProcessTests(unittest.TestCase):
         with mock.patch('utils.exec_subproc') as mock_exec:
             mock_exec.return_value = (1, '')
             with self.assertRaises(SystemExit):
-                self.mysuite.preproc_nccopy(infile, compression=5,
-                                            chunking=['a/1', 'b/2', 'c/3'])
+                _ = self.mysuite.preproc_nccopy(infile, compression=5,
+                                                chunking=['a/1', 'b/2', 'c/3'])
             mock_exec.assert_called_with(cmd)
+        self.assertIn('Compression failed', func.capture('err'))
 
     def test_nccopy_rename_fail(self):
-        '''Test file compression with nccopy'''
-        func.logtest('Assert function of file compression with nccopy:')
+        '''Test file compression with nccopy - fail rename'''
+        func.logtest('Assert file compression with nccopy - failure to rename:')
         infile = 'TestDir/myMean'
         cmd = ' '.join(['nccopy -d 5 -c a/1,b/2,c/3',
                         infile, infile + '.tmp'])
         with mock.patch('utils.exec_subproc') as mock_exec:
             mock_exec.return_value = (0, '')
             with self.assertRaises(SystemExit):
-                self.mysuite.preproc_nccopy(infile, compression=5,
-                                            chunking=['a/1', 'b/2', 'c/3'])
+                _ = self.mysuite.preproc_nccopy(infile, compression=5,
+                                                chunking=['a/1', 'b/2', 'c/3'])
             mock_exec.assert_called_with(cmd)
+        self.assertIn('Failed to rename', func.capture('err'))
+
+    @mock.patch('suite.os.rename')
+    def test_nccopy_fail_debug(self, mock_rename):
+        '''Test file compression with nccopy - debug failure'''
+        func.logtest('Assert file compression with nccopy - debug failure:')
+        utils.set_debugmode(True)
+        infile = 'TestDir/myMean'
+        cmd = ' '.join(['nccopy -d 5 -c a/1,b/2,c/3',
+                        infile, infile + '.tmp'])
+        with mock.patch('utils.exec_subproc') as mock_exec:
+            mock_exec.return_value = (1, '')
+            rtn = self.mysuite.preproc_nccopy(infile, compression=5,
+                                              chunking=['a/1', 'b/2', 'c/3'])
+            mock_exec.assert_called_with(cmd)
+        self.assertListEqual(mock_rename.mock_calls, [])
+        self.assertIn('Compression failed', func.capture('err'))
+        self.assertEqual(rtn, 1)
+
+    def test_nccopy_rename_fail_debug(self):
+        '''Test file compression with nccopy - rename failure debug'''
+        func.logtest('Assert file compression with nccopy - rename fail debug:')
+        utils.set_debugmode(True)
+        infile = 'TestDir/myMean'
+        cmd = ' '.join(['nccopy -d 5 -c a/1,b/2,c/3',
+                        infile, infile + '.tmp'])
+        with mock.patch('utils.exec_subproc') as mock_exec:
+            mock_exec.return_value = (0, '')
+            rtn = self.mysuite.preproc_nccopy(infile, compression=5,
+                                              chunking=['a/1', 'b/2', 'c/3'])
+            mock_exec.assert_called_with(cmd)
+        self.assertIn('Failed to rename', func.capture('err'))
+        self.assertEqual(rtn, 99)
 
     def test_ncdump(self):
         '''Test call to ncdump utility'''

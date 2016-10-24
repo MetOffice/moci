@@ -62,11 +62,11 @@ class ModelTemplate(control.RunPostProc):
                                          name.upper()[:-8] + ' SHARE')
             self.work = self._directory(self.naml.means_directory,
                                         name.upper()[:-8] + ' WORK')
+            self.meansdir = os.path.join(self.share, 'archive_ready_means')
             self.suite = suite.SuiteEnvironment(self.share, input_nl)
             self.suite.envars = utils.loadEnv('CYLC_SUITE_INITIAL_CYCLE_POINT',
                                               'INITCYCLE_OVERRIDE',
                                               append=self.suite.envars)
-            self.del_base = []
             # Initialise debug mode - calling base class method
             self._debug_mode(self.naml.debug)
 
@@ -467,6 +467,8 @@ class ModelTemplate(control.RunPostProc):
         Create monthly, seasonal, annual means.
         Delete component files as necessary.
         '''
+        utils.create_dir(self.meansdir)
+
         for inputs in self.loop_inputs(self.fields):
             # Loop over set of means which it should be possible to create
             # from files available.
@@ -508,13 +510,16 @@ class ModelTemplate(control.RunPostProc):
                         self.fix_mean_time(utils.add_path(meanset, self.share),
                                            fn_full)
 
-                        if period == MM:
-                            if self.month_base in self.additional_means:
-                                self.del_base = self.del_base + meanset
-                            else:
-                                msg = 'Deleting component means for '
-                                utils.log_msg(msg + meanfile)
-                                utils.remove_files(meanset, path=self.share)
+                        if period == MM and \
+                                self.month_base not in self.additional_means:
+                            msg = 'Deleting component means for '
+                            utils.log_msg(msg + meanfile)
+                            utils.remove_files(meanset, path=self.share)
+                        else:
+                            # Move component files to `archive_ready` directory
+                            utils.move_files(meanset, self.meansdir,
+                                             originpath=self.share)
+
                     else:
                         msg = '{C}: Error={E}\n{O}\nFailed to create {M}: {L}'
                         msg = msg.format(C=self.means_cmd, E=icode, O=output,
@@ -619,12 +624,22 @@ class ModelTemplate(control.RunPostProc):
             for setend in self.periodend(inputs, archive=True):
                 inputs.start_date = self.get_date(setend) if setend else \
                     (r'\d{4}', r'\d{2}', r'\d{2}')
-                for mean in self.periodset(inputs, archive=True):
+                # Sort list so periodend file is the last of the set to be
+                # processed - necessary to pick up all available sets in retry
+                # following failure during archiving
+                for mean in sorted(self.periodset(inputs, archive=True)):
                     to_archive.append(mean)
 
-        for other_mean in self.additional_means:
-            if other_mean not in MEANPERIODS:
-                for field in self.fields:
+        for field in self.fields:
+            # Select all files in "archive ready" directory
+            if os.path.exists(self.meansdir):
+                pattern = r'{}.*{}\.nc$'.format(self.prefix.lower(), field)
+                files = utils.get_subset(self.meansdir, pattern)
+                to_archive += [os.path.join(self.meansdir, fn) for fn in files]
+
+            # Select additional means files, not in month_base or standard means
+            for other_mean in self.additional_means:
+                if other_mean not in [self.month_base] + list(MEANPERIODS):
                     ncf = netcdf_filenames.NCFilename(self.component(field),
                                                       self.suite.prefix,
                                                       self.model_realm,
@@ -633,28 +648,35 @@ class ModelTemplate(control.RunPostProc):
                     meanset = utils.get_subset(self.share,
                                                self.mean_stencil['All'](ncf))
                     for mean in meanset:
-                        if self.month_base not in mean \
-                                or mean in self.del_base:
-                            to_archive.append(mean)
+                        to_archive.append(mean)
 
+        # Debugmode - removed already archived files from the list
+        to_archive = [fn for fn in to_archive if not fn.endswith('ARCHIVED')]
         if to_archive:
-            # Compress means files prior to archive.
-            if self.naml.compression_level > 0:
-                # NEMO diaptr files cannot currently be compressed.
-                for fname in [fn for fn in to_archive if '_diaptr' not in fn]:
-                    self.compress_file(fname, self.naml.compress_means)
+            for fname in to_archive:
+                # Compress means files prior to archive.
+                if self.naml.compression_level > 0 and '_diaptr' not in fname:
+                    # NEMO diaptr files cannot currently be compressed.
+                    rcode = self.compress_file(fname, self.naml.compress_means)
+                    if rcode != 0:
+                        # Do not archive - failed to compress (debug_mode only)
+                        continue
 
-            arch_files = self.archive_files(to_archive)
-            if not [fn for fn in arch_files if arch_files[fn] == 'FAILED']:
-                msg = 'Deleting archived files: \n\t' + '\n\t'.join(to_archive)
-                utils.log_msg(msg)
-                if utils.get_debugmode():
-                    # Append "ARCHIVED" suffix to files, rather than deleting
-                    for fname in to_archive:
-                        fname = os.path.join(self.share, fname)
+                arch_rtn = self.archive_files(fname)
+                if arch_rtn[fname] != 'FAILED':
+                    utils.log_msg('Deleting archived file: ' + fname)
+
+                    dirname = os.path.dirname(fname)
+                    if utils.get_debugmode():
+                        # Append "ARCHIVED" suffix to file rather than delete
+                        if not dirname:
+                            fname = os.path.join(self.share, fname)
                         os.rename(fname, fname + '_ARCHIVED')
-                else:
-                    utils.remove_files(to_archive, self.share)
+                    else:
+                        utils.remove_files(
+                            fname,
+                            path=dirname if dirname else self.share
+                            )
         else:
             utils.log_msg(' -> Nothing to archive')
 
@@ -690,7 +712,8 @@ class ModelTemplate(control.RunPostProc):
                     # Append "ARCHIVED" suffix to files, rather than deleting
                     for fname in to_archive:
                         fname = os.path.join(self.share, fname)
-                        os.rename(fname, fname + '_ARCHIVED')
+                        os.rename(fname,
+                                  fname.rstrip('_ARCHIVED') + '_ARCHIVED')
                 else:
                     utils.remove_files(to_delete, self.share)
             else:
@@ -739,13 +762,17 @@ class ModelTemplate(control.RunPostProc):
     def compress_file(self, fname, utility):
         '''Create command to compress netCDF file'''
         if utility == 'nccopy':
-            self.suite.preprocess_file(utility,
-                                       os.path.join(self.share, fname),
-                                       compression=self.naml.compression_level,
-                                       chunking=self.naml.chunking_arguments)
+            rcode = self.suite.preprocess_file(
+                utility,
+                os.path.join(self.share, fname),
+                compression=self.naml.compression_level,
+                chunking=self.naml.chunking_arguments
+                )
         else:
             utils.log_msg('Preprocessing command not yet implemented',
-                          level='FAIL')
+                          level='ERROR')
+            rcode = 99
+        return rcode
 
     def fix_mean_time(self, infiles, meanfile):
         '''

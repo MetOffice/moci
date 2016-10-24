@@ -414,6 +414,39 @@ class FileManipulationTests(unittest.TestCase):
                       func.capture('err'))
         self.assertFalse(utils.get_debugok())
 
+    def test_create_dir(self):
+        '''Test performance of create_dir method'''
+        func.logtest('Assert creation of a directory:')
+        self.assertFalse(os.path.isdir('./MyDir'))
+        utils.create_dir('MyDir')
+        self.assertTrue(os.path.isdir('./MyDir'))
+        os.rmdir('./MyDir')
+
+    def test_create_dir_existing(self):
+        '''Test performance of create_dir method - pre-existing'''
+        func.logtest('Assert creation of a directory - pre-existing:')
+        utils.create_dir('MyDir')
+        self.assertTrue(os.path.isdir('./MyDir'))
+        utils.create_dir('MyDir')
+        self.assertTrue(os.path.isdir('./MyDir'))
+        os.rmdir('./MyDir')
+
+    def test_create_dir_path(self):
+        '''Test performance of create_dir method'''
+        func.logtest('Assert creation of a directory:')
+        self.assertFalse(os.path.isdir('./MyDir'))
+        utils.create_dir('MyDir', path='TopLev')
+        self.assertTrue(os.path.isdir('./TopLev/MyDir'))
+        os.rmdir('./TopLev/MyDir')
+        os.rmdir('./TopLev')
+
+    def test_create_dir_fail(self):
+        '''Test performance of create_dir method - failure'''
+        func.logtest('Assert creation of a directory - failure:')
+        with self.assertRaises(SystemExit):
+            utils.create_dir('/MyDir')
+        self.assertIn('Unable to create directory', func.capture('err'))
+
 
 class GetSubsetTests(unittest.TestCase):
     '''Unit tests for the get_subset method'''

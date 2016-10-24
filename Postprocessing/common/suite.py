@@ -234,19 +234,19 @@ class SuiteEnvironment(object):
         level = 'OK'
         if ret_code == 0:
             msg = 'nccopy: Compression successful of file {}'.format(filename)
+            # Move the compressed file so it overwrites the original
+            try:
+                os.rename(tmpfile, filename)
+            except OSError:
+                msg = msg + '\n -> Failed to rename compressed file'
+                level = 'ERROR'
+                ret_code = 99
         else:
             msg = 'nccopy: Compression failed of file {}\n{}'.format(filename,
                                                                      output)
             level = 'ERROR'
 
-        # Move the compressed file so it overwrites the original
-        try:
-            os.rename(tmpfile, filename)
-        except OSError:
-            msg = msg + '\n -> Failed to rename compressed file'
-            level = 'ERROR'
         utils.log_msg(msg, level=level)
-
         return ret_code
 
     @timer.run_timer

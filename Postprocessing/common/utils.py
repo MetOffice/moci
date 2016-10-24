@@ -21,6 +21,7 @@ DESCRIPTION
 import sys
 import re
 import os
+import errno
 import shutil
 import timer
 
@@ -141,6 +142,20 @@ def add_path(files, path):
         files = [files]
 
     return [os.path.join(path, f) for f in files]
+
+
+def create_dir(dirname, path=None):
+    ''' Create a directory '''
+    if path:
+        dirname = os.path.join(path, dirname)
+    try:
+        os.makedirs(dirname)
+    except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(dirname):
+            pass
+        else:
+            log_msg('create_dir: Unable to create directory: ' + dirname,
+                    level='FAIL')
 
 
 @timer.run_timer
