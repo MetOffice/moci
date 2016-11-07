@@ -16,13 +16,13 @@ class UpgradeError(Exception):
       __str__ = __repr__
 
 
-class pp12_tXXX(rose.upgrade.MacroUpgrade):
+class pp12_pp20(rose.upgrade.MacroUpgrade):
 
-    """Upgrade macro for ticket #XXXX by <author>."""
+    """Upgrade macro for Version 2.0 Release (#142)"""
     BEFORE_TAG = "postproc_1.2"
-    AFTER_TAG = "pp11_tXXX"
+    AFTER_TAG = "postproc_2.0"
 
     def upgrade(self, config, meta_config=None):
         """Upgrade a Postproc make app configuration."""
-        # Input your macro commands here
+        # No changes required
         return config, self.reports
