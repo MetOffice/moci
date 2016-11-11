@@ -20,7 +20,6 @@ build and test scripts
 import os
 import textwrap
 
-SYSTEM_NAME_MONSOON = 'Monsoon'
 SYSTEM_NAME_EXTERNAL = 'external'
 
 def formatted_write(output, text):

@@ -83,7 +83,7 @@ module load {{OASIS3_MCT}}/{{OASIS_MODULE_VERSION}}/{{ROSE_SUITE_REV_NO}}/{{OASI
     [[TEST_OASIS_RESOURCE]]
         inherit=XC40
         [[[directives]]]
-            -l walltime=00:02:00
+            -l walltime={{XBS_TEST_TIME_LIMIT}}
             -l select=2
             
     [[BUILD_XIOS_SETUP]]
@@ -153,7 +153,7 @@ module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}
     [[TEST_XIOS_RESOURCE]]
         inherit=XC40
         [[[directives]]]
-            -l walltime=00:02:00
+            -l walltime={{XBS_TEST_TIME_LIMIT}}
             -l select=2
             -q = normal
 {% if SPECIFY_PROJECT %}

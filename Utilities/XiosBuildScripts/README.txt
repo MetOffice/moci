@@ -56,14 +56,14 @@ complete test suite using rose stem use the following command:
 rose stem --group=XBS_ALL --opt-conf-key=SYSTEM_NAME
 
 where SYSTEM_NAME is the name of the platform you are running on. Each file in 
-the opt sub-directory of the rose-stem directory represents an available. 
-Alternatively the --opt-conf-key can be ommitted and the rose-suite.conf can be 
-be configured accordingly.
+the opt sub-directory of the rose-stem directory represents an available 
+platform. Alternatively the --opt-conf-key can be ommitted and the 
+rose-suite.conf can be be configured accordingly.
 
 There is also a standalone suite intended to be used for deploying the 
 libraries. The suite can be found in roses section of the Met Office Science
 Repository Service (https://code.metoffice.gov.uk/trac/roses-u/) with suite ID
-u-ab692. You can checkoput this suite and then run it to build and test the
+u-ab692. You can checkout this suite and then run it to build and test the
 libraries.
 
 To run them individually, several environment variables need to be set up 

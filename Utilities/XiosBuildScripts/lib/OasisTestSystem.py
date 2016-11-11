@@ -271,10 +271,6 @@ def create_test_system(system_name, settings_dict):
     test_system1 = None
     if system_name == OasisCrayTestSystem.SYSTEM_NAME:
         test_system1 = OasisCrayTestSystem(settings_dict)
-    elif system_name == common.SYSTEM_NAME_MONSOON:
-        test_system1 = OasisCrayTestSystem(settings_dict)
-    elif system_name == common.SYSTEM_NAME_EXTERNAL:
-        test_system1 = OasisCrayTestSystem(settings_dict)
     elif system_name == OasisLinuxIntelTestSystem.SYSTEM_NAME:
         test_system1 = OasisLinuxIntelTestSystem(settings_dict)
     return test_system1

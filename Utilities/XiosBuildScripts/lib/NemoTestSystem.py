@@ -225,7 +225,7 @@ class NemoCrayXc40TestSystem(NemoTestSystem):
         aprun_cmd = 'aprun '\
             '-n {xios_tasks:d} -N {xios_tasks_per_node:d} '\
             './{xios_server_link_name} : '\
-            '-n {nemo_tasks:d} ./{nemo_exec_name}\n'
+            '-n {nemo_tasks:d} -N {tasks_per_node:d} ./{nemo_exec_name}\n'
 
         test_cmd1 += aprun_cmd
         test_cmd1 += '\n'
@@ -347,10 +347,6 @@ def build_test_system(system_name, settings_dict):
     """
     test_system = None
     if system_name == NemoCrayXc40TestSystem.SYSTEM_NAME:
-        test_system = NemoCrayXc40TestSystem(settings_dict)
-    elif system_name == common.SYSTEM_NAME_MONSOON:
-        test_system = NemoCrayXc40TestSystem(settings_dict)
-    elif system_name == common.SYSTEM_NAME_EXTERNAL:
         test_system = NemoCrayXc40TestSystem(settings_dict)
     elif system_name == NemoLinuxIntelTestSystem.SYSTEM_NAME:
         test_system = NemoLinuxIntelTestSystem(settings_dict)

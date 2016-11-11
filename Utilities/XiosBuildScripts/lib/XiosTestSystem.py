@@ -280,10 +280,6 @@ def create_test_system(system_name, settings_dict):
     test_system1 = None
     if system_name == XiosCrayXC40TestSystem.SYSTEM_NAME:
         test_system1 = XiosCrayXC40TestSystem(settings_dict)
-    elif system_name == common.SYSTEM_NAME_MONSOON:
-        test_system1 = XiosCrayXC40TestSystem(settings_dict)
-    elif system_name == common.SYSTEM_NAME_EXTERNAL:
-        test_system1 = XiosCrayXC40TestSystem(settings_dict)
     elif system_name == XiosLinuxIntelTestSystem.SYSTEM_NAME:
         test_system1 = XiosLinuxIntelTestSystem(settings_dict)
     else:

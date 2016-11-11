@@ -8,7 +8,6 @@ import nemo_build_tests
 import oasis_build_tests
 
 import OasisBuildSystem
-import common
 def main():
     '''
     The main function for running unit tests
@@ -20,12 +19,12 @@ def main():
         nemo_build_tests.NemoBuildCrayTests,
         oasis_build_tests.OasisBuildCrayTests]
     
-    test_list_dict[common.SYSTEM_NAME_MONSOON] = [
+    test_list_dict[unit_test_common.SYSTEM_NAME_MONSOON] = [
         xios_build_tests.XiosBuildMonsoonTests,
         nemo_build_tests.NemoBuildMonsoonTests,
         oasis_build_tests.OasisBuildMonsoonTests]
         
-    test_list_dict[common.SYSTEM_NAME_EXTERNAL] = [
+    test_list_dict[unit_test_common.SYSTEM_NAME_EXTERNAL] = [
         xios_build_tests.XiosBuildMonsoonTests,
         nemo_build_tests.NemoBuildMonsoonTests,
         oasis_build_tests.OasisBuildMonsoonTests]

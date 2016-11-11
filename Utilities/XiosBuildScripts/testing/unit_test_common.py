@@ -43,9 +43,12 @@ sys.path += [LIB_DIR]
 import common
 import OasisBuildSystem
 
+SYSTEM_NAME_MONSOON = 'Monsoon'
+SYSTEM_NAME_EXTERNAL = 'external'
+
 SYSTEM_NAME_OPTIONS = [OasisBuildSystem.OasisCrayBuildSystem.SYSTEM_NAME,
-                       common.SYSTEM_NAME_MONSOON,
-                       common.SYSTEM_NAME_EXTERNAL]
+                       SYSTEM_NAME_MONSOON,
+                       SYSTEM_NAME_EXTERNAL]
 
 class CommandLineArguments(object):
     """

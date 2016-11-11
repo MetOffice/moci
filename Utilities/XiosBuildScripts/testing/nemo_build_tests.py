@@ -393,7 +393,7 @@ class NemoBuildMonsoonTests(NemoBuildCrayTests):
     Unit test class for running Nemo Build tests on Monsoon
     """
     def get_system_name(self):
-        return common.SYSTEM_NAME_MONSOON
+        return unit_test_common.SYSTEM_NAME_MONSOON
 
 
 class NemoBuildExternalTests(NemoBuildCrayTests):
@@ -418,7 +418,7 @@ def main():
     test_list_dict = {}
     test_list_dict[NemoBuildSystem.NemoCrayXC40BuildSystem.SYSTEM_NAME] = [
         NemoBuildCrayTests]
-    test_list_dict[common.SYSTEM_NAME_MONSOON] = [
+    test_list_dict[unit_test_common.SYSTEM_NAME_MONSOON] = [
         NemoBuildCrayTests]
     test_list_dict[common.SYSTEM_NAME_EXTERNAL] = [
         NemoBuildExternalTests]

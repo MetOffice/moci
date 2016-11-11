@@ -495,11 +495,8 @@ def create_nemo_build_system(system_name, settings_dict):
     specified by system_name.
     """
     build_system1 = None
+
     if system_name == NemoCrayXC40BuildSystem.SYSTEM_NAME:
-        build_system1 = NemoCrayXC40BuildSystem(settings_dict)
-    elif system_name == common.SYSTEM_NAME_MONSOON:
-        build_system1 = NemoCrayXC40BuildSystem(settings_dict)
-    elif system_name == common.SYSTEM_NAME_EXTERNAL:
         build_system1 = NemoCrayXC40BuildSystem(settings_dict)
     elif system_name == NemoLinuxIntelBuildSystem.SYSTEM_NAME:
         build_system1 = NemoLinuxIntelBuildSystem(settings_dict)

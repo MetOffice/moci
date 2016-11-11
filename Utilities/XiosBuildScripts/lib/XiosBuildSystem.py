@@ -1013,10 +1013,6 @@ def create_build_system(system_name, build_settings):
     system1 = None
     if system_name == XiosCrayBuildSystem.SYSTEM_NAME:
         system1 = XiosCrayBuildSystem(build_settings)
-    elif system_name == common.SYSTEM_NAME_MONSOON:
-        system1 = XiosCrayBuildSystem(build_settings)
-    elif system_name == common.SYSTEM_NAME_EXTERNAL:
-        system1 = XiosCrayBuildSystem(build_settings)
     elif system_name == XiosLinuxIntelSystem.SYSTEM_NAME:
         system1 = XiosLinuxIntelSystem(build_settings)
     else:

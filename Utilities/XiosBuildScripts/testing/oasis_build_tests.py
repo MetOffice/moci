@@ -350,8 +350,9 @@ class OasisBuildMonsoonTests(OasisBuildCrayTests):
     Unit test class for running Oasis Build tests on Monsoon
     """
     def get_system_name(self):
-        print 'retrieving system name: {0}'.format(common.SYSTEM_NAME_MONSOON)
-        return common.SYSTEM_NAME_MONSOON
+        print 'retrieving system name: {0}'.\
+            format(unit_test_common.SYSTEM_NAME_MONSOON)
+        return unit_test_common.SYSTEM_NAME_MONSOON
 
 class OasisBuildExternalTests(OasisBuildCrayTests):
     """
@@ -376,7 +377,7 @@ def main():
     test_list_dict = {}
     test_list_dict[OasisBuildSystem.OasisCrayBuildSystem.SYSTEM_NAME] = [
         OasisBuildCrayTests]
-    test_list_dict[common.SYSTEM_NAME_MONSOON] = [
+    test_list_dict[unit_test_common.SYSTEM_NAME_MONSOON] = [
         OasisBuildMonsoonTests]
     test_list_dict[common.SYSTEM_NAME_EXTERNAL] = [
         OasisBuildExternalTests]

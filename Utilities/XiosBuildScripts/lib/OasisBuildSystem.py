@@ -516,8 +516,4 @@ def create_build_system(system_name, settings_dict):
     build_system_1 = None
     if system_name == OasisCrayBuildSystem.SYSTEM_NAME:
         build_system_1 = OasisCrayBuildSystem(settings_dict)
-    elif system_name == common.SYSTEM_NAME_MONSOON:
-        build_system_1 = OasisCrayBuildSystem(settings_dict)
-    elif system_name == common.SYSTEM_NAME_EXTERNAL:
-        build_system_1 = OasisCrayBuildSystem(settings_dict)
     return build_system_1
