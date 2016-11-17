@@ -15,15 +15,14 @@ NAME
     xios_driver.py
 
 DESCRIPTION
-    Driver for the XIOS component. Can cater for XIOS running in either
-    attatched or detatched mode
+    Driver for the XIOS component, called from link_drivers. Can cater for
+    XIOS running in either attatched or detatched mode
 '''
 
-
-import error
-import common
 import os
 import sys
+import error
+import common
 
 def _setup_executable(_):
     '''

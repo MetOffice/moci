@@ -15,20 +15,20 @@ NAME
     nemo_driver.py
 
 DESCRIPTION
-    Driver for the NEMO 3.6 model. Note that this does not cater for any
-    earlier versions of NEMO
+    Driver for the NEMO 3.6 model, called from link_drivers. Note that this
+    does not cater for any earlier versions of NEMO
 '''
 
 
-import error
 import re
 import os
 import time
-import common
 import sys
-import inc_days
 import glob
 import shutil
+import inc_days
+import common
+import error
 
 # Define errors for the NEMO driver only
 SERIAL_MODE_ERROR = 99
@@ -337,7 +337,7 @@ def _setup_executable(common_envar):
                 os.symlink(nemo_envar['NEMO_START'], 'restart.nc')
                 ln_restart = ".true."
             elif os.path.isfile('%s_0000.nc' %
-                                 nemo_envar['NEMO_START']):
+                                nemo_envar['NEMO_START']):
                 for fname in glob.glob('%s_????.nc' %
                                        nemo_envar['NEMO_START']):
                     proc_number = fname.split('.')[-2][-4:]
@@ -358,7 +358,7 @@ def _setup_executable(common_envar):
                 os.symlink(nemo_envar['NEMO_ICEBERG_START'],
                            'restart_icebergs.nc')
             elif os.path.isfile('%s_0000.nc' %
-                           nemo_envar['NEMO_ICEBERG_START']):
+                                nemo_envar['NEMO_ICEBERG_START']):
                 for fname in glob.glob('%s_????.nc' %
                                        nemo_envar['NEMO_ICEBERG_START']):
                     proc_number = fname.split('.')[-2][-4:]

@@ -18,22 +18,27 @@
 #     as required (via driver_envar), run the model (via driver_cmd) and
 #     finalize the model using the drivers (via link_drivers --finalize)
 
-#Fail if environment variables are unset, for sanitys sake
+# Fail if environment variables are unset, for sanitys sake
 set -eu
 
 echo $CYLC_SUITE_RUN_DIR
 
-#Copy scripts to work directory so they can be found
+# Copy scripts to work directory so they can be found
 cp $CYLC_SUITE_SHARE_DIR/fcm_make_drivers/build/bin/* ./
 
-#Run our drivers, this produces two command files
+# Run our drivers, this produces two command files
 #  driver_envar containing environment variables to be exported
 #  driver_cmd containing a command for the system launcher
 ./link_drivers --run
 
 echo '[DRIVER_TEST_SCRIPT] Drivers successfully linked'
 
+# Export the enviromnent variables from all the drivers
 source driver_envar
+# Run the aprun command
 source driver_cmd
 
+# Run the drivers in finalize mode (after completion of the model). This deals
+# with model standard out / standard error, and also with any file details
+# required prior to the start of the next model cycle (if applicable)
 ./link_drivers --finalize

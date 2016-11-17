@@ -19,11 +19,11 @@ DESCRIPTION
     to run a given configuration
 '''
 
-import error
-import common
 import sys
 import os
 import argparse
+import error
+import common
 
 def _check_drivers(models):
     '''
@@ -81,13 +81,13 @@ def _setup_common():
                          ' is not present\n')
         sys.exit(error.MISSING_EVAR_ERROR)
     if common_envars.load_envar('RUNID') != 0:
-        sys.stderr.write('[FAIL] Environment variable RUNID not specified\n')
+        sys.stderr.write('[FAIL] Environment variable RUNID is not specified\n')
         sys.exit(error.MISSING_EVAR_ERROR)
     if common_envars.load_envar('DATAM') != 0:
-        sys.stderr.write('[FAIL] Environment variable DATAM not specified\n')
+        sys.stderr.write('[FAIL] Environment variable DATAM is not specified\n')
         sys.exit(error.MISSING_EVAR_ERROR)
     if common_envars.load_envar('ROSE_LAUNCHER') != 0:
-        sys.stderr.write('[FAIL] Environment variable ROSE_LAUNCHER not '
+        sys.stderr.write('[FAIL] Environment variable ROSE_LAUNCHER is not '
                          'specified\n')
         sys.exit(error.MISSING_EVAR_ERROR)
     return common_envars
@@ -138,15 +138,30 @@ if __name__ == '__main__':
         sys.exit(error.INVALID_DRIVER_ARG_ERROR)
     if args.run:
         mode = 'run_driver'
+        # Setup the environment variables required to all drivers
         common_envars = _setup_common()
+
+        # Create two lists by looping through all the required driver files:
+        #    1. envinsts is a list of common.LoadEnvar() instances, each
+        #      instance containing environment variables for a given driver
+        #    2. launchcmds is a list of strings, containing options for each
+        #      model to be passed to the parallel launcher on the system.
         envinsts, launchcmds = _run_drivers(common_envars, mode)
+
+        # Create a string containing the export command and a list of
+        # environment variable definitions that can be run by the shell
         envar_str = _export_envar_str(envinsts)
+
+        # Create the aprun command
         cmd_str = _export_cmd_str_XC40(launchcmds, common_envars)
 
+        # Write the export commands for common and model specific environment
+        # variables (envar_str) into the file driver_envar
         envar_file = common.open_text_file('driver_envar', 'w')
         envar_file.write(envar_str)
         envar_file.close()
 
+        # Write the model launch commands (cmd_str) into file driver_cmd
         cmd_file = common.open_text_file('driver_cmd', 'w')
         cmd_file.write(cmd_str)
         cmd_file.close()

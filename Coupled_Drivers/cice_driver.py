@@ -15,18 +15,19 @@ NAME
     cice_driver.py
 
 DESCRIPTION
-    Driver for the CICE model. Currently this does not cater for stand alone
-    CICE and therefore must be run in conjuction with the NEMO driver
+    Driver for the CICE model, called from link_drivers. Currently this does
+    not cater for stand alone CICE and therefore must be run in conjuction
+    with the NEMO driver
 '''
 
 
 import os
-import common
+import sys
 import re
 import time
 import time2days
 import inc_days
-import sys
+import common
 import error
 
 
@@ -169,7 +170,7 @@ def _setup_executable(common_envar):
             sys.exit(error.MISSING_DRIVER_FILE_ERROR)
         if not cice_envar['MODELBASIS']:
             _, modelbasis_val = common.exec_subproc('grep', 'model_basis_time',
-                                  cice_envar['SHARED_FNAME'])
+                                                    cice_envar['SHARED_FNAME'])
             modelbasis_val = re.findall(r'model_basis_time\s*=\s*(.*)',
                                         modelbasis_val)
             modelbasis = map(int, __expand_array(modelbasis_val))
@@ -178,7 +179,7 @@ def _setup_executable(common_envar):
             cice_envar.add('TASKSTART', cice_envar['MODELBASIS'])
         if not cice_envar['TASKLENGTH']:
             _, tasklength_val = common.exec_subproc('grep', 'run_target_end',
-                                  cice_envar['SHARED_FNAME'])
+                                                    cice_envar['SHARED_FNAME'])
             tasklength_val = re.findall(r'run_target_end\s*=\s*(.*)',
                                         tasklength_val)
             tasklength = map(int, __expand_array(tasklength_val))
@@ -230,7 +231,7 @@ def _setup_executable(common_envar):
                 cice_runtype = 'continue'
                 ice_ic = 'set in pointer file'
                 _, _ = common.exec_subproc([cice_envar['CICE_START'],
-                                     '>', cice_restart])
+                                            '>', cice_restart])
                 sys.stdout.write('[INFO] %s > %s' %
                                  (cice_envar['CICE_START'],
                                   cice_restart))
