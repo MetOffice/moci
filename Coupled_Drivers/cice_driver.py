@@ -151,7 +151,7 @@ def _setup_executable(common_envar):
     cice_histfreq_n_val = re.findall(r'histfreq_n\s*=\s*(.*)',
                                      cice_histfreq_n_val)[0]
     cice_histfreq_n = __expand_array(cice_histfreq_n_val)
-    cice_histfreq_n = int(cice_histfreq_n[0])
+    cice_histfreq_n = int(cice_histfreq_n.split(',')[0])
 
     _, cice_age_rest_val = common.exec_subproc([ \
             'grep', '^restart_age', cice_nl])
@@ -255,7 +255,7 @@ def _setup_executable(common_envar):
     #block of code to modify the main CICE namelist
     mod_cicenl = common.ModNamelist(cice_nl)
     mod_cicenl.var_val('days_per_year', caldays)
-    mod_cicenl.var_val('history_file', '%si.%s%s' %
+    mod_cicenl.var_val('history_file', '%si.%i%s' %
                        (common_envar['RUNID'],
                         cice_histfreq_n,
                         cice_histfreq))
