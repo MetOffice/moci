@@ -14,6 +14,7 @@
 '''
 import unittest
 import os
+import re
 import mock
 
 import testing_functions as func
@@ -135,6 +136,13 @@ class HousekeepTests(unittest.TestCase):
              mock.call(['MEAN1.arch', 'MEAN2.arch', 'MEAN3.arch'],
                        path='WorkDir', ignoreNonExist=True)]
             )
+        arch_regex = '^RUNIDa\\.[pm][a-z1-9]*(_\\d{2})?\\.arch$'
+        mock_mark.assert_called_once_with('WorkDir', arch_regex, '.arch')
+        ppfiles = ['RUNIDa.pa11112233.arch', 'RUNIDa.pb11112233_44.arch',
+                   'RUNIDa.pc1111mmm.arch']
+        for fname in ppfiles:
+            self.assertIsNotNone(re.match(arch_regex, fname))
+        self.assertIsNone(re.match(arch_regex, 'GARBAGE'))
 
     def test_convert_convpp(self):
         '''Test convert_to_pp functionality with um-convpp'''

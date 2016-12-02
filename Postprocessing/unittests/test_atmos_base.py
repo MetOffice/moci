@@ -14,6 +14,7 @@
 '''
 import unittest
 import os
+import re
 import mock
 
 import testing_functions as func
@@ -341,3 +342,29 @@ class PropertyTests(unittest.TestCase):
         self.assertEqual(self.atmos.means, 'msy')
         self.atmos.naml.archiving.process_means = 'at-z'
         self.assertEqual(self.atmos.means, 'at-z')
+
+    @mock.patch('atmos.suite.SuiteEnvironment')
+    def test_ff_pattern(self, mock_suite):
+        '''Test the fieldsfile regular expression'''
+        func.logtest('Assert correct return of fields file regex:')
+
+        atmos.utils.loadEnv = mock.Mock()
+        mock_suite().finalcycle = False
+        mock_suite().prefix = 'RUNID'
+        atmos.AtmosPostProc._directory = mock.Mock(return_value='ModelDir')
+        with mock.patch('atmos.AtmosPostProc.runpp',
+                        new_callable=mock.PropertyMock,
+                        return_value=True):
+            myatmos = atmos.AtmosPostProc()
+
+        ff_pattern = r'^RUNIDa\.[pm][{}]\d{{4}}(\d{{4}}|\w{{3}})' \
+            r'(_\d{{2}})?(\.pp)?(\.arch)?$'
+
+        self.assertEqual(myatmos.ff_pattern, ff_pattern)
+        ppfiles = ['RUNIDa.pa11112233.pp', 'RUNIDa.pb11112233_44.arch',
+                   'RUNIDa.pc1111mmm', 'RUNIDa.pd12345678.pp.arch']
+        for fname in ppfiles:
+            self.assertIsNotNone(re.match(ff_pattern.format('a-e'), fname))
+        badfiles = ['RUNIDa.pz11112233.pp', 'GARBAGE']
+        for fname in badfiles:
+            self.assertIsNone(re.match(ff_pattern.format('a-e'), fname))

@@ -65,7 +65,7 @@ class AtmosPostProc(control.RunPostProc):
             self.work = self._directory(self._work, 'ATMOS WORK')
 
             self.ff_pattern = r'^{}a\.[pm][{{}}]'.format(self.suite.prefix) + \
-                r'\d{{4}}(\d{{4}}|\w{{3}})(\.pp)?(\.arch)?$'
+                r'\d{{4}}(\d{{4}}|\w{{3}})(_\d{{2}})?(\.pp)?(\.arch)?$'
 
             if self.suite.finalcycle:
                 dumpdate = utils.add_period_to_date(self.suite.cycledt,

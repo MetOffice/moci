@@ -118,7 +118,8 @@ def delete_ppfiles(atmos, pp_inst_names, pp_mean_names, archived):
             to_delete += [pp for pp, tag in pp_mean_names if tag]
 
     else:  # Not archiving
-        pattern = r'^{}a\.[pm][a-z1-9]*\.arch$'.format(atmos.suite.prefix)
+        pattern = r'^{}a\.[pm][a-z1-9]*(_\d{{2}})?\.arch$'.\
+            format(atmos.suite.prefix)
         for ppfile in get_marked_files(atmos.work, pattern, '.arch'):
             pp_inst = atmos.naml.delete_sc.gpdel and \
                 re.search(FILETYPE['pp_inst_names'][REGEX](atmos.suite.prefix,
