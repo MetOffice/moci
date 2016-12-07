@@ -62,6 +62,7 @@ def _load_run_environment_variables(um_envar):
         sys.stderr.write('[FAIL] Environment variable '
                          'ROSE_LAUNCHER_PREOPTS_UM is not set\n')
         sys.exit(error.MISSING_EVAR_ERROR)
+    _ = um_envar.load_envar('ATMOS_LINK', 'atmos.exe')
     _ = um_envar.load_envar('DR_HOOK', '0')
     _ = um_envar.load_envar('DR_HOOK_OPT', 'noself')
     _ = um_envar.load_envar('PRINT_STATUS', 'PrStatus_Normal')
@@ -107,10 +108,10 @@ def _setup_executable(_):
     um_envar = _load_run_environment_variables(um_envar)
 
     # Create a link to the UM atmos exec in the work directory
-    if not os.path.isfile('toyatm'):
-        os.symlink(um_envar['ATMOS_EXEC'],
-                   'toyatm')
-
+    if os.path.isfile(um_envar['ATMOS_LINK']):
+        os.remove(um_envar['ATMOS_LINK'])
+    os.symlink(um_envar['ATMOS_EXEC'],
+               um_envar['ATMOS_LINK'])
 
     if um_envar['CONTINUE'] in ('', 'false'):
         sys.stdout.write('[INFO] This is an NRUN\n')
@@ -171,9 +172,10 @@ def _set_launcher_command(um_envar):
     '''
     Setup the launcher command for the executable
     '''
-    launch_cmd = um_envar['ROSE_LAUNCHER_PREOPTS_UM']
 
-    launch_cmd = '%s ./toyatm' % um_envar['ROSE_LAUNCHER_PREOPTS_UM']
+    launch_cmd = '%s ./%s' % \
+        (um_envar['ROSE_LAUNCHER_PREOPTS_UM'], \
+             um_envar['ATMOS_LINK'])
 
     # Put in quotes to allow this environment variable to be exported as it
     # contains (or can contain) spaces

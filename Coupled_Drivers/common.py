@@ -102,7 +102,7 @@ class LoadEnvar(object):
             return self.env_vars[var_name]
         except KeyError:
             sys.stderr.write('[FAIL] Attempt to access environment variable'
-                             '%s. This has not been loaded\n' %
+                             ' %s. This has not been loaded\n' %
                              var_name)
             sys.exit(error.MISSING_EVAR_ERROR)
 

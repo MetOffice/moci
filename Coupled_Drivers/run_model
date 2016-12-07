@@ -41,4 +41,5 @@ source driver_cmd
 # Run the drivers in finalize mode (after completion of the model). This deals
 # with model standard out / standard error, and also with any file details
 # required prior to the start of the next model cycle (if applicable)
+echo '[DRIVER_TEST_SCRIPT] Finalizing drivers'
 ./link_drivers --finalize

@@ -1,0 +1,198 @@
+#!/usr/bin/env perl
+#*****************************COPYRIGHT******************************
+# (C) Crown copyright 2016 Met Office. All rights reserved.
+#
+# Use, duplication or disclosure of this code is subject to the restrictions
+# as set forth in the licence. If no licence has been raised with this copy
+# of the code, the use, duplication or disclosure of it is strictly
+# prohibited. Permission to do so must first be obtained in writing from the
+# Met Office Information Asset Owner at the following address:
+#
+# Met Office, FitzRoy Road, Exeter, Devon, EX1 3PB, United Kingdom
+#*****************************COPYRIGHT******************************
+#
+# Description: Examine namcouple files and extract the names and types 
+# of fields to be exchanged, writing them to a namelist so that 
+# all our component codes can read these details and define
+# transients in an appropriate and consistent order without 
+# having to hard code field names and all the associated problems. 
+# NOTE: The file thus produced does not have to be copied 
+# from run to run in the case of CRUNS because it will be 
+# regenerated from scratch at every submission - the payoff being   
+# extra processing v complicating an already complicated 
+# data file handling system. 
+#
+# This code relies on namcouple files being annotated to indicate
+# the position of transient field name definitions. We expect:
+# the namcouple line immediately prior to the first line of each 
+# transient field definition (the $STRINGS section) to contain
+# ## TRANSDEF: mmmg  nnnh  i  f  x ############################
+#
+# Where:
+#    TRANSDEF: is just a string to identify appropriate lines.  
+#    mmm is a 3 letter string indicating the sending component (e.g. ATM, OCN)
+#    g is a 1 letter string indicating the grid cell type in the sending 
+#              component (T, U or V)
+#    nnn is a 3 letter string indicating the receiving component (e.g. OCN, ATM)
+#    h is a 1 letter string indicating the grid cell type in the receiving 
+#              component (T, U or V)
+#    i is an integer indicating the exchange sequence number of the field.
+#              e.g. if ocn_sst is the first field to be exchanged, then this 
+#              would have i=1. If heatflux is the 25th field to be exchanged
+#              it would have the value of 25. Index numbers need not 
+#              be contiguous. E.g. if a particular field is not required, then 
+#              it can simply be deactivated by making the index number negative,
+#              thus avoiding the need to undertake wholesale alterations to 
+#              namcouple files. 
+#              Further, fields can appear in any physical order within a 
+#              file. e.g. one could define a field with index 24, followed by 
+#              a field with  with index 53, followed by a field with  with index
+#              7. 
+#              The index number must be unique (unless negative.)
+#              Gaps are allowed in index ranges. E.g. you could legitimately
+#              define fields with indexes 1, 2, 3, 4, 8, 9 10 ....  
+#              without defining 5, 6 or 7. 
+#    f is the field ID integer. This is an identifying integer which is used
+#              by each component to identify what physical field this
+#              quantity relates to and therefore to allow that field to be
+#              identified and processed appropriately within the components.  
+#    x is an optional flag to say whether 2nd order conservative regridding 
+#              is to be used. If it is, and IFF we are using OASIS3-MCT 
+#              then we must perform extra operations on the put side. 
+#              to generate transient field gradients and include them 
+#              in put operations. 
+############################################################################
+
+# Standard pragmas
+use strict;
+use warnings;
+
+# cat all the namcouples into one file. 
+# The order is not important, so a straight cat 
+# should be good enough. 
+
+# Note this needs to cater for pseudo parallel 
+# as well as oasis3-mct (mono coupler process) 
+system("cat namcouple* > namclist");
+
+my $process = 0; 
+my $begin = 0;
+my $end = 0;
+my $max_index = 0; 
+my $mapping_type = 1;
+my $items_count = 0; 
+
+my @types;
+my @names;
+
+# Now read our combined namcouple file and extract details for each transient
+# to a FORTRAN namelist file. Namcouple files must be annotated in the 
+# appropriate way. 
+
+open( F0, "< namclist" );
+open( F1, "> translist_part2" );
+while (<F0>) {
+   
+    my $line = $_;
+    chomp $line;    
+    
+    $line =~ s/^\s+//;    #remove leading spaces
+    $line =~ s/\s+$//;    #remove trailing spaces
+    
+    if ( $line =~ m/\$STRINGS/) {
+       # We have reached the start of the transients section, set the
+       # flag to indicate that we want to process the file from here onwards.
+       $process = 1;
+    }
+
+
+    if ( $process == 1 ) {
+
+
+      if ( $begin == 1 ) {
+         @names = split( / +/, $line );
+	 
+	 $mapping_type = 1; 
+	 
+	 $items_count = @types;
+	 if ( $items_count > 6 ) {
+	 
+	    # If the first character if our extra item is a hash
+	    # then it's just a comment in namcouple terms in which 
+	    # case we ignore it and presume first order remapping
+	    # or that we're using OASIS3. 
+	    if ( substr($types[6],0,1) ne "#" ) {
+	    
+	       # If our extra item indicates 1st or 2nd order 
+	       # remapping specifically, then that's fine.
+               if (($types[6] eq "1")||($types[6] eq "2")) {
+            
+	          if ( $types[6] eq "2" ){
+	          # This indicates that the field should use 2nd order terms. 
+	            $mapping_type = 2; 
+	          }
+
+               } else {
+	          # If our extra item is not a valid order or a comment 
+		  # indicator then say something. It's a moot point 
+		  # whether we should abort or not - but we assume
+		  # that anything invalid is a typo and default to 
+		  # first order.   
+		  print "****************** WARNING ***********************\n";
+	          print "OASIS_fields: INVALID mapping type: $types[6] \n"; 
+		  print "for $names[0] : 1st order remapping is assumed! \n";
+		  print "**************************************************\n"; 
+	       }
+	    }   
+	 }   
+	 
+	 
+         print F1 " &TRANSFLD C_OUT=\'$types[2]\' , C_IN=\'$types[3]\' , 
+                              N_OUT=\'$names[0]\', N_IN=\'$names[1]\', 
+                              I_NUMBER=$types[4] , F_ID=$types[5] , 
+			      MAP_TYPE=$mapping_type ,/ \n";     
+
+         if ( $types[4] > $max_index ) {
+            $max_index = $types[4] ;
+         }	  
+         $begin = 0;
+
+
+      }
+    
+    
+      if ( $line =~ m/TRANSDEF/) {
+    
+         # If we've found a line containing TRANSDEF
+         # then it holds details about which components
+         # and grids are involved in this exchange.
+          
+         @types = split( / +/, $line );
+       
+         # Ignore fields with a non positive sequence number
+         if ( $types[4] >= 1) { 
+            $begin = 1;
+         }
+      }
+    }   
+    
+}    
+
+close(F1);
+close(F0);
+
+# Create a namelist with the maximum index number used by our fields. 
+# This is not the same thing as the maximum number of fields we have to process
+# since there may well be gaps in the indexing where certain fields are
+# not active. 
+open( F1, "> translist" );
+
+  print F1 " &TRANSCOUNT MAX_TRANSIENTS=$max_index, / \n";
+
+close(F1);
+
+# 
+# Now amalgamate the two namelists into one file. 
+system("cat translist_part2 >> translist");
+
+

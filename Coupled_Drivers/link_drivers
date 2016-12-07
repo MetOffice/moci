@@ -100,6 +100,12 @@ def _export_envar_str(envinsts):
     envar_str = ''
     for inst in envinsts:
         for var, val in inst.env_vars.iteritems():
+	    # If there is a space in the environment variable string and
+            # it isn't already in quotes, we need to place it in quotes.
+            # Note some environment variables may be unset currently
+            if val:
+                if val[0] not in ('\'', '\"') and ' ' in val:
+                    val = "'%s'" % val
             envar_str += 'export %s=%s; ' % (var, val)
     return envar_str[:-1]
 
@@ -112,7 +118,7 @@ def _export_cmd_str_XC40(launchcmds, common_envars):
     for launchcmd in launchcmds:
         if launchcmd != '':
             cmd += launchcmd+' : '
-    sys.stdout.write('[LINK_DRIVERS] attemting to run with command: %s'
+    sys.stdout.write('[LINK_DRIVERS] attemting to run with command: %s\n'
                      % cmd[:-3])
     return cmd[:-3]
 
@@ -122,10 +128,10 @@ def _export_cmd_str_XC40(launchcmds, common_envars):
 
 
 if __name__ == '__main__':
-    #Owing to the limitations of aprun and passing information between the
-    #shell and the python drivers, prepare two command files, one containing
-    #an aprun command to execute, the other containing a command allowing
-    #environment variables to be exported
+    # Owing to the limitations of aprun and passing information between the
+    # shell and the python drivers, prepare two command files, one containing
+    # an aprun command to execute, the other containing a command allowing
+    # environment variables to be exported
     parser = argparse.ArgumentParser()
     parser.add_argument("--run", help="run the coupled model",
                         action="store_true")
