@@ -67,7 +67,7 @@ Revision: {revNo}
                                              revNo=self.oasis_revision_number)
 
         if self.external_url != '' and self.external_revision_number != '':
-            help_msg_ext_url = 'External URL: {0}\n '\
+            help_msg_ext_url = 'External URL: {0}\n'\
                 'External revision number: {1}\n'
             help_msg_ext_url = \
                 help_msg_ext_url.format(self.external_url,
@@ -123,7 +123,9 @@ class OasisCrayModuleWriter(OasisModuleWriter):
                                    suiteUrl,
                                    suite_rev_num,
                                    moduleName,
-                                   platform)
+                                   platform,
+                                   prerequisites,
+                                   compiler_module)
 
     Parameters:
     * version - The module file version number (a string)
@@ -150,7 +152,8 @@ class OasisCrayModuleWriter(OasisModuleWriter):
                  suite_rev_num,
                  moduleName,
                  platform,
-                 prerequisites):
+                 prerequisites,
+                 compiler_module):
         OasisModuleWriter.__init__(self,
                                    version=version,
                                    modulePath=modulePath,
@@ -164,7 +167,7 @@ class OasisCrayModuleWriter(OasisModuleWriter):
                                    moduleName=moduleName,
                                    parents='',
                                    platform=platform)
-
+        self.compiler_module = compiler_module
 
 class OasisCrayRemoteModuleWriter(OasisModuleWriter):
 

@@ -206,7 +206,8 @@ class XiosBuildCrayTests(XiosBuildTests):
         """
         Create a module writer object.
         """
-        mw1 = XiosModuleWriter.XiosCrayModuleWriter( \
+        mw1 = XiosModuleWriter.XiosCrayModuleWriter(
+            self.build_system.library_name,
             self.build_system.module_version,
             self.build_system.module_root_dir,
             self.build_system.xios_repository_url,
@@ -214,8 +215,9 @@ class XiosBuildCrayTests(XiosBuildTests):
             self.build_system.xios_external_url,
             self.build_system.suite_url,
             self.build_system.suite_revision_number,
-            self.build_system.SYSTEM_NAME,
-            self.build_system.prerequisite_modules)
+            self.build_system.system_name,
+            self.build_system.prerequisite_modules,
+            self.build_system.compiler_module)
         return mw1
 
     def create_module_file_reference(self, module_relative_path):
@@ -248,6 +250,8 @@ set module_base {module_root_dir}
 set xiosdir $module_base/packages/{rel_path}
 
 '''
+        mod_file_string += \
+            'prereq {0}\n'.format(self.build_system.compiler_module)
         for mod_name in self.build_system.prerequisite_modules:
             mod_file_string += 'prereq {0}\n'.format(mod_name)
         mod_file_string += '''
@@ -293,10 +297,11 @@ module list
 echo MODULES AFTER LOAD:
 module list
 cd {working_dir}/XIOS
-./make_xios --arch XC30_Cray {options} --job {num_procs}
+./make_xios --arch {system_name} {options} --job {num_procs}
 '''
         ref_file_str = ref_file_str.format(
             working_dir=self.build_system.working_dir,
+            system_name=self.build_system.system_name,
             options=option_str,
             num_procs=self.build_system.number_of_build_tasks)
 

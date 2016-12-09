@@ -40,7 +40,7 @@ def main():
     if settings_dict['XBS_SPECIFY_COMPILER_PRGENV'] == 'true':
         compiler_module = settings_dict['XBS_COMPILER_PRGENV']
         cmd1 += 'module swap PrgEnv-cray {0}\n'.format(compiler_module)
-    
+
     prereq_str = ''.join([s1 for s1 in settings_dict['XBS_PREREQ_MODULES']
                           if "'[] ".count(s1) == 0])
     prereq_mod_list = prereq_str.split(',')

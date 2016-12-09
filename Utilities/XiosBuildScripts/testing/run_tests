@@ -13,24 +13,24 @@ def main():
     The main function for running unit tests
     '''
     test_list_dict = {}
-    
+
     test_list_dict[OasisBuildSystem.OasisCrayBuildSystem.SYSTEM_NAME] = [
         xios_build_tests.XiosBuildCrayTests,
         nemo_build_tests.NemoBuildCrayTests,
         oasis_build_tests.OasisBuildCrayTests]
-    
+
     test_list_dict[unit_test_common.SYSTEM_NAME_MONSOON] = [
         xios_build_tests.XiosBuildMonsoonTests,
         nemo_build_tests.NemoBuildMonsoonTests,
         oasis_build_tests.OasisBuildMonsoonTests]
-        
+
     test_list_dict[unit_test_common.SYSTEM_NAME_EXTERNAL] = [
         xios_build_tests.XiosBuildMonsoonTests,
         nemo_build_tests.NemoBuildMonsoonTests,
         oasis_build_tests.OasisBuildMonsoonTests]
 
     unit_test_common.run_tests(test_list_dict)
-    
+
 
 if __name__ == '__main__':
     main()

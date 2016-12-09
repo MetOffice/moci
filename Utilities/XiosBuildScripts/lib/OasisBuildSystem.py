@@ -112,14 +112,6 @@ class OasisBuildSystem(common.XbsBuild):
                 self.oasis_revision_number = 'unknown'
 
         try:
-            self.oasis_external_url = settings_dict['OASIS_EXTERNAL_REPO_URL']
-            self.oasis_external_revision_number = \
-                settings_dict['OASIS_EXTERNAL_REV_NO']
-        except KeyError:
-            self.oasis_external_url = ''
-            self.oasis_external_revision_number = ''
-
-        try:
             self.suite_url = settings_dict['ROSE_SUITE_URL']
             self.suite_revision_number = settings_dict['ROSE_SUITE_REV_NO']
         except KeyError:
@@ -467,13 +459,14 @@ make model2
             modulePath=self.module_root_dir,
             srcUrl=self.oasis_repository_url,
             revNo=self.oasis_revision_number,
-            externalUrl=self.oasis_external_url,
-            externalRevNo=self.oasis_external_revision_number,
+            externalUrl=self.oasis_repository_url,
+            externalRevNo=self.oasis_revision_number,
             suiteUrl=self.suite_url,
             suite_rev_num=self.suite_revision_number,
             moduleName=self.library_name,
-            platform=self.system_name,
-            prerequisites=self.prerequisite_modules)
+            platform=self.SYSTEM_NAME,
+            prerequisites=self.prerequisite_modules,
+            compiler_module=self.compiler_module)
 
         module_writer_1.write_module()
 
@@ -489,8 +482,8 @@ make model2
             modulePath=self.module_root_dir,
             srcUrl=self.oasis_repository_url,
             revNo=self.oasis_revision_number,
-            externalUrl=self.oasis_external_url,
-            externalRevNo=self.oasis_external_revision_number,
+            externalUrl=self.oasis_repository_url,
+            externalRevNo=self.oasis_revision_number,
             suiteUrl=self.suite_url,
             suite_rev_num=self.suite_revision_number,
             moduleName=self.library_name,

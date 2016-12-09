@@ -19,7 +19,7 @@ class NemoBuildTests(unittest.TestCase):
     Class to test Nemo build scripts
     """
 
-    CONFIG_LIST = ['NEMO', 'NEMO_unit']
+    CONFIG_LIST = ['NEMO', 'NEMO_unit', 'XIOS-app']
     def setUp(self):
         """
         Setup class to test Nemo build scripts
@@ -188,7 +188,7 @@ class NemoBuildTests(unittest.TestCase):
 
         ref_build_script_str = """#!/bin/sh
 cd {source_directory}/CONFIG
-./makenemo -m {system_name} -r {nemo_config} -n {nemo_config_build_name} -j {number_of_build_processors} add_key "key_mpp_mpi key_iomput"
+./makenemo -m {system_name} -r {nemo_config} -n {nemo_config_build_name} -j {number_of_build_processors} add_key "{build_keys}" del_key "{remove_keys}"
 """
         ref_build_script_str = \
             ref_build_script_str.format(**self.build_system.__dict__)

@@ -46,7 +46,6 @@ class NemoBuildSystem(common.XbsBuild):
 
         common.XbsBuild.__init__(self, settings_dict)
 
-        self.modules_to_load = []
         self.library_name = settings_dict['NEMO']
         self.source_directory = '{0}/{1}'.format(self.working_dir,
                                                  self.library_name)
@@ -70,8 +69,18 @@ class NemoBuildSystem(common.XbsBuild):
             self.oasis_directory = settings_dict['OASIS_ROOT']
         else:
             self.oasis_directory = ''
-        self.nemo_config = 'GYRE'
-        self.config_suffix = settings_dict['JP_CFG']
+        
+        build_key_list = []
+        self.xios_version = settings_dict['XIOS_VERSION']
+        if self.xios_version == '2.0':
+            self.nemo_config = 'GYRE_XIOS'
+            self.config_suffix = '10'
+            build_key_list += ['key_xios2 key_nosignedzero']
+        elif self.xios_version == '1.0':
+            self.config_suffix = '1'
+            self.nemo_config = 'GYRE'
+        self.build_keys = ' '.join(build_key_list)
+
         self.nemo_config_build_name = '{0}_{1}'.format(self.nemo_config,
                                                        self.config_suffix)
         self.oasis_fcflags = ''
@@ -81,6 +90,11 @@ class NemoBuildSystem(common.XbsBuild):
         self.do_post_build_cleanup = \
             settings_dict['NEMO_POST_BUILD_CLEANUP'] == 'true'
         self.number_of_build_processors = 4
+
+
+
+        remove_key_list = []
+        self.remove_keys = ' '.join(remove_key_list)
 
     def __str__(self):
         return 'Nemo build system base class'
@@ -159,8 +173,6 @@ fcm co {repository_url}@{revision_number} {destination_dir}
         # version of code is present.
         if os.path.exists(self.source_directory):
             os.rmdir(self.source_directory)
-
-        os.mkdir(self.source_directory)
 
         print 'copying source code from {SRC} to {DEST}'\
               .format(SRC=self.source_code_dir,
@@ -273,8 +285,6 @@ class NemoCrayXC40BuildSystem(NemoBuildSystem):
         NemoBuildSystem.__init__(self, settings_dict)
 
         self.arch_file_name = 'arch-CRAY_XC40.fcm'
-        self.modules_to_load += ['cray-hdf5-parallel/1.8.13']
-        self.modules_to_load += ['cray-netcdf-hdf5parallel/4.3.2']
         if self.use_oasis:
             self.oasis_fcflags = '-I{0}/build'.format(self.oasis_directory)
             self.oasis_ldflags = \
@@ -354,12 +364,15 @@ class NemoCrayXC40BuildSystem(NemoBuildSystem):
         make_nemo build script with the relvant options.
         """
         build_str1 = 'cd {source_directory}/CONFIG\n'
-#        for module1 in self.modules_to_load:
-#            build_str1 += 'module load {0}\n'.format(module1)
+
         build_str1 += './makenemo -m {system_name} -r {nemo_config} '\
                       '-n {nemo_config_build_name} '\
-                      '-j {number_of_build_processors} '\
-                      'add_key "key_mpp_mpi key_iomput"\n'
+                      '-j {number_of_build_processors} '
+        if not (self.build_keys is None or self.build_keys == []):
+            build_str1 += 'add_key "{build_keys}" '
+        if not (self.remove_keys is None or self.remove_keys == []):
+            build_str1 += 'del_key "{remove_keys}"'
+        build_str1 += '\n'
 
         build_str1 = build_str1.format(**self.__dict__)
 
@@ -399,10 +412,7 @@ class NemoLinuxIntelBuildSystem(NemoBuildSystem):
         """
         NemoBuildSystem.__init__(self, settingsDict)
         self.tar_command = 'tar'
-        self.arch_file_name = 'arch-{0}.fcm'.format(self.SYSTEM_NAME)
-
-        self.modules_to_load += \
-            ['environment/dynamo/compiler/intelfortran/15.0.0']
+        self.arch_file_name = 'arch-{0}.fcm'.format(self.system_name)
 
     def __str__(self):
         return '\n'.join(textwrap.wrap('Nemo build system for Linux (UKMO '
@@ -465,13 +475,11 @@ class NemoLinuxIntelBuildSystem(NemoBuildSystem):
         build_str1 = 'cd {SourceDirectory}/CONFIG\n'
         # TODO: take in location as an option
         build_str1 += 'source /data/cr1/mhambley/modules/setup\n'
-#        for module1 in self.modules_to_load:
-#            build_str1 +='module load {0}\n'.format(module1)
         build_str1 += '\n'
         build_str1 += './makenemo -m {system_name} -r {nemo_config}'\
                       '-n {nemo_config_build_name} '\
                       '-j {number_of_build_processors} '\
-                      'add_key "key_mpp_mpi key_iomput"\n'
+                      'add_key "{build_keys}"\n'
 
         build_str1 = build_str1.format(**self.__dict__)
 

@@ -592,7 +592,8 @@ class XiosCrayBuildSystem(XiosBuildSystem):
         """
         XiosBuildSystem.__init__(self, settings_dict)
 
-        self.file_name_base = 'arch-XC30_Cray'
+        self.file_name_base = 'arch-{0}'.format(XiosCrayBuildSystem.SYSTEM_NAME)
+
 
     def create_build_command(self):
         """
@@ -617,7 +618,8 @@ class XiosCrayBuildSystem(XiosBuildSystem):
         build_cmd1 += 'cd {0}\n'.format(xios_src_dir)
 
         # main build command
-        build_cmd1 += './make_xios --arch XC30_Cray'
+        build_cmd1 += \
+            './make_xios --arch {0}'.format(XiosCrayBuildSystem.SYSTEM_NAME)
         if self.do_clean_build:
             build_cmd1 += ' --full'
         if self.use_oasis:
@@ -671,9 +673,9 @@ class XiosCrayBuildSystem(XiosBuildSystem):
         Sets up the arch.path file used in the build.
         """
         arch_path_string = '''
-NETCDF_INCDIR=""
-NETCDF_LIBDIR=""
-NETCDF_LIB=""
+NETCDF_INCDIR="-I $NETCDF_DIR/include"
+NETCDF_LIBDIR="-L $NETCDF_DIR/lib"
+NETCDF_LIB="-lnetcdf -lnetcdff"
 
 MPI_INCDIR=""
 MPI_LIBDIR=""
@@ -763,7 +765,8 @@ export NETCDF_LIB_DIR=""
                 suite_rev_num=self.suite_revision_number,
                 moduleName=self.oasis_module_name,
                 platform=self.system_name,
-                prerequisites=[])
+                prerequisites=[],
+                compiler_module=self.compiler_module)
         omw1.setup_file_path()
         return omw1.module_relative_path
 
@@ -773,7 +776,8 @@ export NETCDF_LIB_DIR=""
         """
         print 'Creating XIOS module'
         mod_writer1 = \
-            XiosModuleWriter.XiosCrayModuleWriter(self.module_version,
+            XiosModuleWriter.XiosCrayModuleWriter(self.library_name,
+                                                  self.module_version,
                                                   self.module_root_dir,
                                                   self.xios_repository_url,
                                                   self.xios_revision_number,
@@ -781,7 +785,9 @@ export NETCDF_LIB_DIR=""
                                                   self.suite_url,
                                                   self.suite_revision_number,
                                                   self.system_name,
-                                                  self.prerequisite_modules)
+                                                  self.prerequisite_modules,
+                                                  self.compiler_module)
+
         mod_writer1.write_module()
 
         module_package_directory = \
@@ -822,6 +828,7 @@ export NETCDF_LIB_DIR=""
         """
         remote_mod_writer1 = \
             XiosModuleWriter.XiosCrayRemoteModuleWriter(
+                self.library_name,
                 self.module_version,
                 self.module_root_dir,
                 self.xios_repository_url,

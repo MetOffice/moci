@@ -44,14 +44,7 @@ class OasisBuildTests(unittest.TestCase):
 
         self.library_name = settings_dict['OASIS3_MCT']
         self.oasis_repository_url = settings_dict['OASIS_REPO_URL']
-        try:
-            self.external_repo_url = settings_dict['OASIS_EXTERNAL_REPO_URL']
-            self.external_rev_no = settings_dict['OASIS_EXTERNAL_REV_NO']
-        except KeyError:
-            self.external_repo_url = 'http://server/path/to/repository'
-            settings_dict['OASIS_EXTERNAL_REPO_URL'] = self.external_repo_url
-            self.external_rev_no = '1234'
-            settings_dict['OASIS_EXTERNAL_REV_NO'] = self.external_rev_no
+        self.oasis_revision_number = settings_dict['OASIS_REV_NO']
 
         self.verbose = settings_dict['VERBOSE'] == 'true'
 
@@ -237,13 +230,14 @@ class OasisBuildCrayTests(OasisBuildTests):
             self.build_system.module_root_dir,
             self.build_system.oasis_repository_url,
             self.build_system.oasis_revision_number,
-            self.external_repo_url,
-            self.external_rev_no,
+            self.oasis_repository_url,             
+            self.oasis_revision_number,
             self.build_system.suite_url,
             self.build_system.suite_revision_number,
             self.build_system.library_name,
-            self.build_system.SYSTEM_NAME,
-            self.build_system.prerequisite_modules)
+            self.build_system.system_name,
+            self.build_system.prerequisite_modules,
+            self.build_system.compiler_module)
         return mw1
 
 
@@ -307,8 +301,8 @@ proc ModulesHelp {{ }} {{
     puts stderr "Sets up Oasis3-MCT coupler I/O server for use.
 Met Office source code URL: {oasis_repository_url}
 Revision: {oasis_revision_number}
-External URL: {oasis_external_url}
- External revision number: {oasis_external_revision_number}
+External URL: {oasis_repository_url}
+External revision number: {oasis_revision_number}
 Build using Rose suite:
 URL: {suite_url}
 Revision: {suite_revision_number}
@@ -324,6 +318,8 @@ set module_base {module_root_dir}
 set oasisdir $module_base/packages/{rel_path}
 
 '''
+        mod_file_string += \
+            'prereq {0}\n'.format(self.build_system.compiler_module)
         for mod_name in self.build_system.prerequisite_modules:
             mod_file_string += 'prereq {0}\n'.format(mod_name)
         mod_file_string += '''

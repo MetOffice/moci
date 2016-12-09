@@ -71,6 +71,7 @@ class ModuleWriterBase(object):
 
         self.module_relative_path = None
         self.module_file_path = None
+        self.compiler_module = None
 
     @abstractmethod
     def write_module(self):
@@ -185,6 +186,9 @@ class SingleModuleWriter(ModuleWriterBase):
                 module_file.write('set {0} {1}\n'.format(*local_var1))
             module_file.write('\n')
 
+            if self.compiler_module:
+                module_file.write('prereq {0}\n'.format(self.compiler_module))
+
             for prereq1 in self.prerequisite_list:
                 module_file.write('prereq {0}\n'.format(prereq1))
             module_file.write('\n')
@@ -220,7 +224,6 @@ class PrgEnvModuleWriter(ModuleWriterBase):
         '''
         ModuleWriterBase.__init__(self)
         self.modules_to_load = []
-        self.compiler_module = None
         self.default_compiler = None
 
     def write_module(self):

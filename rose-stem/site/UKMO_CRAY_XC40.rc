@@ -53,7 +53,7 @@
     [[BUILD_OASIS_RESOURCE]]
         inherit=XC40_serial
         [[[directives]]]
-            -l walltime=00:10:00
+            -l walltime={{ format_wallclock(OASIS_BUILD_TIME) }}
             -l ncpus={{XIOS_NUM_CORES}}
             -l mem=2000MB
 {% if USE_RAMDISK %}
@@ -83,7 +83,7 @@ module load {{OASIS3_MCT}}/{{OASIS_MODULE_VERSION}}/{{ROSE_SUITE_REV_NO}}/{{OASI
     [[TEST_OASIS_RESOURCE]]
         inherit=XC40
         [[[directives]]]
-            -l walltime={{XBS_TEST_TIME_LIMIT}}
+            -l walltime={{ format_wallclock(XBS_TEST_TIME) }}
             -l select=2
             
     [[BUILD_XIOS_SETUP]]
@@ -106,22 +106,23 @@ module load {{OASIS3_MCT}}/{{OASIS_MODULE_VERSION}}/{{ROSE_SUITE_REV_NO}}/{{OASI
     [[BUILD_XIOS_RESOURCE]]
         inherit=XC40_serial
         [[[directives]]]
-            -l walltime=00:40:00
+            -l walltime={{ format_wallclock(XIOS_BUILD_TIME) }}
+            
     {% if XIOS_USE_PREBUILT_LIB == false %}
             -l ncpus={{XIOS_NUM_CORES}}
     {% else %}
             -l ncpus=1
     {% endif %}
-            -l mem=2000MB
+            -l mem=16GB
 {% if USE_RAMDISK %}
-            -l tmpsize=4gb
+            -l tmpsize=8gb
 {% endif %}            
 
     [[BUILD_PRGENV_USER]]
         pre-command scripting = """
 {% if DEPLOY_AS_MODULE %}
 module use {{MODULE_INSTALL_PATH}}/modules; 
-module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}
+module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}/{{ROSE_SUITE_REV_NO}}
 {% else %}
 {% if XBS_SPECIFY_COMPILER_PRGENV %}
     module swap PrgEnv-cray {{XBS_COMPILER_PRGENV}}
@@ -139,7 +140,39 @@ module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}
         pre-command scripting = """
 {% if DEPLOY_AS_MODULE %}
 module use {{MODULE_INSTALL_PATH}}/modules; 
-module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}
+module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}/{{ROSE_SUITE_REV_NO}}
+{% else %}
+{% if XBS_SPECIFY_COMPILER_PRGENV %}
+    module swap PrgEnv-cray {{XBS_COMPILER_PRGENV}}
+{% endif %}
+{% for mod_name in XBS_PREREQ_MODULES %}
+    module load {{mod_name}}
+{% endfor %}
+{% endif %}
+"""
+    [[BUILD_NOOASIS_PRGENV_USER]]
+        pre-command scripting = """
+{% if DEPLOY_AS_MODULE %}
+module use {{MODULE_INSTALL_PATH}}/modules; 
+module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}-nooasis/{{ROSE_SUITE_REV_NO}}
+{% else %}
+{% if XBS_SPECIFY_COMPILER_PRGENV %}
+    module swap PrgEnv-cray {{XBS_COMPILER_PRGENV}}
+{% endif %}
+{% for mod_name in XBS_PREREQ_MODULES %}
+    module load {{mod_name}}
+{% endfor %}
+{% endif %}
+{% if USE_RAMDISK %}
+    export WORKING_DIR=$RAMTMP
+{% endif %}
+"""
+
+    [[TEST_NOOASIS_PRGENV_USER]]
+        pre-command scripting = """
+{% if DEPLOY_AS_MODULE %}
+module use {{MODULE_INSTALL_PATH}}/modules; 
+module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}-nooasis/{{ROSE_SUITE_REV_NO}}
 {% else %}
 {% if XBS_SPECIFY_COMPILER_PRGENV %}
     module swap PrgEnv-cray {{XBS_COMPILER_PRGENV}}
@@ -153,7 +186,7 @@ module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}
     [[TEST_XIOS_RESOURCE]]
         inherit=XC40
         [[[directives]]]
-            -l walltime={{XBS_TEST_TIME_LIMIT}}
+            -l walltime={{ format_wallclock(XBS_TEST_TIME) }}
             -l select=2
             -q = normal
 {% if SPECIFY_PROJECT %}
@@ -168,7 +201,8 @@ module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}
             -P = {{PROJECT_NAME}}
 {% endif %}
             -l ncpus=8
-            -l walltime=00:20:00
+            -l walltime={{ format_wallclock(NEMO_BUILD_TIME) }}
+            -l mem=4GB
 {% if USE_RAMDISK %}
             -l tmpsize=4gb
 {% endif %}            
@@ -193,7 +227,7 @@ module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}
             -l select={{(NEMO_TASKS_JPI*NEMO_TASKS_JPJ)//TASKS_PER_NODE + (XIOS_TASKS//XIOS_TASKS_PER_NODE) + 2 }}
     {% endif %}
 {% endif %}
-            -l walltime={{NEMO_TEST_TIME_LIMIT}}
+            -l walltime={{ format_wallclock(NEMO_TEST_TIME) }}
 
     [[VALIDATE_APP]]
         inherit=None, XBS, XC40_serial

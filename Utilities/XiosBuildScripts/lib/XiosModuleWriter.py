@@ -38,6 +38,7 @@ class XiosModuleWriter(EnvironmentModules.SingleModuleWriter):
     """
 
     def __init__(self,
+                 module_name,
                  version,
                  modulePath,
                  prerequisites,
@@ -49,7 +50,7 @@ class XiosModuleWriter(EnvironmentModules.SingleModuleWriter):
                  parents,
                  platform):
         EnvironmentModules.SingleModuleWriter.__init__(self)
-        self.module_name = 'XIOS'
+        self.module_name = module_name
         self.module_version = version
         self.module_home_path = modulePath
         self.parent_modules = parents
@@ -175,6 +176,7 @@ class XiosCrayModuleWriter(XiosModuleWriter):
     """
 
     def __init__(self,
+                 module_name,
                  version,
                  modulePath,
                  srcUrl,
@@ -183,8 +185,10 @@ class XiosCrayModuleWriter(XiosModuleWriter):
                  suiteUrl,
                  suite_revision_number,
                  platform,
-                 prerequisites):
+                 prerequisites,
+                 compiler_module):
         XiosModuleWriter.__init__(self,
+                                  module_name,
                                   version,
                                   modulePath,
                                   prerequisites,
@@ -195,7 +199,7 @@ class XiosCrayModuleWriter(XiosModuleWriter):
                                   suite_revision_number,
                                   '',
                                   platform)
-
+        self.compiler_module = compiler_module
 
 class XiosCrayPrgEnvWriter(XiosPrgEnvWriter):
 
@@ -285,6 +289,7 @@ class XiosCrayRemoteModuleWriter(XiosModuleWriter):
     """
 
     def __init__(self,
+                 module_name,
                  version,
                  modulePath,
                  srcUrl,
@@ -295,6 +300,7 @@ class XiosCrayRemoteModuleWriter(XiosModuleWriter):
                  platform):
         prereq = []
         XiosModuleWriter.__init__(self,
+                                  module_name,
                                   version,
                                   modulePath,
                                   prereq,
@@ -357,11 +363,13 @@ class XiosLinuxIntelModuleWriter(XiosModuleWriter):
     """
 
     def __init__(self,
+                 module_name,
                  version,
                  modulePath,
                  srcUrl,
                  revNo,
-                 platform):
+                 platform,
+                 compiler_module):
         prereq = ['fortran/intel/15.0.0',
                   'mpi/mpich/3.1.2/ifort/15.0.0',
                   'hdf5/1.8.12/ifort/15.0.0',
@@ -375,3 +383,4 @@ class XiosLinuxIntelModuleWriter(XiosModuleWriter):
                                   revNo,
                                   '',
                                   platform)
+        self.compiler_module = compiler_module

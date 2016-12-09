@@ -29,12 +29,13 @@ class NemoTestSystem(common.XbsBase):
     """
     # factory method
     SYSTEM_NAME = 'BASE_NEMO_TEST_SYSTEM'
+    XIOS_SERVER_LINK_NAME = 'xios_server.exe'
     __metaclass__ = ABCMeta
 
-    OUTPUT_FILE_LIST = ['GYRE_5d_00010101_00011230_grid_T.nc',
-                        'GYRE_5d_00010101_00011230_grid_V.nc',
-                        'GYRE_5d_00010101_00011230_grid_U.nc',
-                        'GYRE_5d_00010101_00011230_grid_W.nc']
+    OUTPUT_FILE_LIST = ['GYRE_1d_00010101_00010103_grid_T.nc',
+                        'GYRE_1d_00010101_00010103_grid_V.nc',
+                        'GYRE_1d_00010101_00010103_grid_U.nc',
+                        'GYRE_1d_00010101_00010103_grid_W.nc']
 
     def __init__(self, settings_dict):
         """
@@ -50,15 +51,33 @@ class NemoTestSystem(common.XbsBase):
         self.nemo_tasks_jpi = int(settings_dict['NEMO_TASKS_JPI'])
         self.nemo_tasks_jpj = int(settings_dict['NEMO_TASKS_JPJ'])
         self.xios_tasks = int(settings_dict['XIOS_TASKS'])
-        self.jpcfg = int(settings_dict['JP_CFG'])
         self.nemo_experiment_rel_path = settings_dict['NEMO_EXP_REL_PATH']
         self.launch_directory = os.getcwd()
         self.suite_mode = settings_dict.has_key('ROSE_DATA')
         self.tasks_per_node = int(settings_dict['TASKS_PER_NODE'])
         self.xios_tasks_per_node = int(settings_dict['XIOS_TASKS_PER_NODE'])
-        self.xios_server_link_name = 'xios_server.exe'
         self.nemo_exec_name = 'opa'
-        self.xios_server_exec = settings_dict['XIOS_EXEC']
+        
+        self.xios_version = settings_dict['XIOS_VERSION']
+        if self.xios_version == '2.0':
+            self.nemo_config = 'GYRE_XIOS'
+            self.jpcfg = '10'
+        elif self.xios_version == '1.0':
+            self.nemo_config = 'GYRE'
+            self.jpcfg = '1'
+        
+        try:
+            self.xios_use_server = settings_dict['XIOS_USE_SERVER'] == 'true'
+        except:
+            self.xios_use_server = False
+
+        if self.xios_use_server:
+            self.xios_server_exec = settings_dict['XIOS_EXEC']
+            self.xios_server_link_name = NemoTestSystem.XIOS_SERVER_LINK_NAME
+        else:
+            self.xios_server_link_name = None
+            self.xios_server_exec = None
+
         try:
             self.result_dest_dir = settings_dict['NEMO_RESULT_DIR']
             self.do_result_copy = True
@@ -68,13 +87,17 @@ class NemoTestSystem(common.XbsBase):
 
         # Number of NEMO tasks
         self.nemo_tasks = self.nemo_tasks_jpi * self.nemo_tasks_jpj
+        if self.nemo_tasks > self.tasks_per_node:
+            self.nemo_tasks_per_node = self.tasks_per_node
+        else:
+            self.nemo_tasks_per_node = self.nemo_tasks
         # Total Number of tasks
 
         self.path_to_nemo_experiment = \
             os.path.join(self.build_path_dir,
                          self.nemo_dir_name,
                          self.nemo_experiment_rel_path,
-                         'GYRE_{0}'.format(str(self.jpcfg)),
+                         '{nemo_config}_{jpcfg}'.format(**self.__dict__),
                          'EXP00')
         if not os.path.isdir(self.path_to_nemo_experiment):
             except_msg1 = 'NEMO experiment directory not found {0:s}'
@@ -109,18 +132,19 @@ class NemoTestSystem(common.XbsBase):
         print 'launch directory is {0}'.format(self.launch_directory)
         print 'current directory is {0}'.format(os.getcwd())
 
-        # Create symbolic link to IO server
-        xios_binary_link = os.path.join(self.path_to_nemo_experiment,
-                                        self.xios_server_link_name)
-        msg_1 = '''creating symbolic link to XIOS server:
-target: {0}
-link: {1}'''.format(self.xios_server_exec, xios_binary_link)
-        print msg_1
+        if self.xios_use_server:
+            # Create symbolic link to IO server
+            xios_binary_link = os.path.join(self.path_to_nemo_experiment,
+                                            self.xios_server_link_name)
+            msg_1 = '''creating symbolic link to XIOS server:
+        target: {0}
+        link: {1}'''.format(self.xios_server_exec, xios_binary_link)
+            print msg_1
 
-        if os.path.islink(xios_binary_link):
-            os.remove(xios_binary_link)
-        os.symlink(self.xios_server_exec,
-                   xios_binary_link)
+            if os.path.islink(xios_binary_link):
+                os.remove(xios_binary_link)
+            os.symlink(self.xios_server_exec,
+                       xios_binary_link)
 
         print 'writing test script'
         self.write_script()
@@ -188,13 +212,13 @@ class NemoCrayXc40TestSystem(NemoTestSystem):
                                             self.script_name)
 
         self.total_tasks = self.nemo_tasks + self.xios_tasks
-
         self.nnodes = ((self.nemo_tasks // self.tasks_per_node) +
                        (self.xios_tasks // self.xios_tasks_per_node))
         if self.nemo_tasks % self.tasks_per_node != 0:
             self.nnodes += 1
         if self.xios_tasks % self.xios_tasks_per_node != 0:
             self.nnodes += 1
+
 
         self.edit_iodef_xml_file()
 
@@ -222,10 +246,13 @@ class NemoCrayXc40TestSystem(NemoTestSystem):
 #        for mod_1 in self.prerequisite_modules:
 #            test_cmd1 += 'module load {0}\n'.format(mod_1)
         test_cmd1 += '\n'
-        aprun_cmd = 'aprun '\
-            '-n {xios_tasks:d} -N {xios_tasks_per_node:d} '\
-            './{xios_server_link_name} : '\
-            '-n {nemo_tasks:d} -N {tasks_per_node:d} ./{nemo_exec_name}\n'
+        aprun_cmd = 'aprun '
+        if self.xios_use_server:
+            aprun_cmd += '-n {xios_tasks:d} -N {xios_tasks_per_node:d} '\
+                         './{xios_server_link_name} : '
+        aprun_cmd += '-n {nemo_tasks:d} -N {nemo_tasks_per_node} '
+        aprun_cmd += './{nemo_exec_name}'
+
 
         test_cmd1 += aprun_cmd
         test_cmd1 += '\n'
@@ -312,9 +339,10 @@ class NemoLinuxIntelTestSystem(NemoTestSystem):
             script_file.write(
                 'module load environment/dynamo/compiler/intelfortran/15.0.0\n')
             script_file.write('\n')
-            mpirun_cmd = 'mpirun '\
-                         '-np {xios_tasks:d} ./{xios_server_exec} : '\
-                         '-np {nemo_tasks:d} ./{nemo_exec_name}\n'
+            mpirun_cmd = 'mpirun '
+            if self.xios_use_server:
+                mpirun_cmd += '-np {xios_tasks:d} ./{xios_server_exec} : '
+            mpirun_cmd += '-np {nemo_tasks:d} ./{nemo_exec_name}\n'
             mpirun_cmd = mpirun_cmd.format(**self.__dict__)
             script_file.write(mpirun_cmd)
             script_file.write('\n')

@@ -60,7 +60,7 @@ class CommandLineArguments(object):
         desc_msg = '''Run the XIOS/Oasis3-mct build script unit tests on the
 specified platform
 
-The platform is set using the --system-name command line argument. 
+The platform is set using the --system-name command line argument.
 The options are:
 '''
         for name1 in SYSTEM_NAME_OPTIONS:

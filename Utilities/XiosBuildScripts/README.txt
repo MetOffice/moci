@@ -20,7 +20,6 @@ would normally be provided by the Rose suite to run individual script.
 The scripts are written in Python and should be run using Python 2.7. The 
 scripts support and have been tested on multiple platforms.  
 
-
 Source code overview
 ====================
 The scripts are written in Python. The code is structured as follows
