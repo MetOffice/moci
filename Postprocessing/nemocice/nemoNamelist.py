@@ -28,6 +28,7 @@ class NemoNamelist:
 
     pp_run = False
     restart_directory = os.environ['DATAM']
+    msk_rebuild = False
     exec_rebuild = '/projects/ocean/hadgem3/scripts/GC2.0/rebuild_nemo.exe'
     exec_rebuild_icebergs = os.environ['CYLC_SUITE_SHARE_DIR'] + \
         '/fcm_make_pp/build/bin/icb_combrest.py'

@@ -16,10 +16,23 @@ class UpgradeError(Exception):
       __str__ = __repr__
 
 
+class pp20_t100(rose.upgrade.MacroUpgrade):
+
+    """Upgrade macro for ticket #100 by Pierre Mathiot."""
+    BEFORE_TAG = "postproc_2.0"
+    AFTER_TAG = "pp20_t100"
+
+    def upgrade(self, config, meta_config=None):
+        """Upgrade a Postproc app configuration."""
+        self.add_setting(config,
+                        ["namelist:nemopostproc", "msk_rebuild",], "false")
+        return config, self.reports
+
+
 class pp12_tXXX(rose.upgrade.MacroUpgrade):
 
     """Upgrade macro for ticket #XXXX by <author>."""
-    BEFORE_TAG = "postproc_2.0"
+    BEFORE_TAG = "pp20_tXXX"
     AFTER_TAG = "pp20_tXXX"
 
     def upgrade(self, config, meta_config=None):

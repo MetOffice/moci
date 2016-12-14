@@ -204,7 +204,8 @@ class NemoPostProc(mt.ModelTemplate):
                                process='rebuild') or rebuildall:
                 utils.log_msg('Rebuilding: ' + corename, level='INFO')
                 icode = self.rebuild_namelist(datadir, corename,
-                                              len(bldset), omp=1)
+                                              len(bldset), omp=1,
+                                              msk=self.naml.msk_rebuild)
             else:
                 msg = 'Only rebuilding periodic files: ' + \
                     str(self.naml.rebuild_timestamps)
@@ -282,11 +283,13 @@ class NemoPostProc(mt.ModelTemplate):
 
     @timer.run_timer
     def rebuild_namelist(self, datadir, filebase, ndom,
-                         omp=16, chunk=None, dims=None):
+                         omp=16, chunk=None, dims=None, msk=False):
         '''Create the namelist file required by the rebuild_nemo executable'''
         namelist = 'nam_rebuild'
         namelistfile = os.path.join(datadir, namelist)
         txt = "&{}\nfilebase='{}'\nndomain={}".format(namelist, filebase, ndom)
+        if msk:
+            txt += "\nl_maskout=.true."
         if dims:
             txt += "\ndims='{}','{}'".format(*dims)
         if chunk:

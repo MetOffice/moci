@@ -104,7 +104,7 @@ class Propertytests(unittest.TestCase):
     def setUp(self):
         self.nemo = nemo.NemoPostProc()
         self.nemo.suite = mock.Mock()
-        self.nemo.nl = nemoNamelist.NemoNamelist()
+        self.nemo.naml = nemoNamelist.NemoNamelist()
 
     def tearDown(self):
         try:
@@ -250,7 +250,7 @@ class RebuildTests(unittest.TestCase):
                                    ['f2_component1', 'f2_component2']]
         self.nemo.rebuild_fileset('SourceDir', 'field', rebuildall=True)
         mock_nl.assert_called_with('SourceDir', 'file_19980630_yyyymmdd',
-                                   2, omp=1)
+                                   2, omp=1, msk=False)
         self.assertEqual(mock_attr.mock_calls, [])
 
     @mock.patch('nemo.NemoPostProc.rebuild_namelist')
@@ -266,7 +266,7 @@ class RebuildTests(unittest.TestCase):
                                    ['f2_component1', 'f2_component2']]
         self.nemo.rebuild_fileset('SourceDir', 'field', rebuildall=True)
         mock_nl.assert_called_with('SourceDir', 'file_199806_yyyymmdd',
-                                   2, omp=1)
+                                   2, omp=1, msk=False)
         self.assertEqual(mock_attr.mock_calls, [])
 
     @mock.patch('nemo.NemoPostProc.rebuild_namelist')
@@ -284,7 +284,7 @@ class RebuildTests(unittest.TestCase):
         self.nemo.rebuild_fileset(os.getcwd(), 'field')
         mock_nl.assert_called_with(os.getcwd(),
                                    'RUNIDo_19980530_yyyymmdd_field',
-                                   3, omp=1)
+                                   3, omp=1, msk=False)
         for fname in myfiles:
             os.remove(fname)
 
@@ -308,7 +308,7 @@ class RebuildTests(unittest.TestCase):
                                   'RUNIDo_19980530_restart')
         mock_nl.assert_called_with(os.getcwd(),
                                    'RUNIDo_19980530_restart',
-                                   3, omp=1)
+                                   3, omp=1, msk=False)
         for fname in myfiles:
             os.remove(fname)
 
@@ -331,7 +331,7 @@ class RebuildTests(unittest.TestCase):
                                   'RUNIDo_icebergs_19980530_restart')
         mock_nl.assert_called_with(os.getcwd(),
                                    'RUNIDo_icebergs_19980530_restart',
-                                   2, omp=1)
+                                   2, omp=1, msk=False)
         for fname in myfiles:
             os.remove(fname)
 
@@ -352,7 +352,7 @@ class RebuildTests(unittest.TestCase):
                                   'RUNIDo_19980530_restart_trc')
         mock_nl.assert_called_with(os.getcwd(),
                                    'RUNIDo_19980530_restart_trc',
-                                   2, omp=1)
+                                   2, omp=1, msk=False)
         for fname in myfiles:
             os.remove(fname)
 
@@ -371,7 +371,7 @@ class RebuildTests(unittest.TestCase):
         self.nemo.rebuild_fileset('SourceDir', 'yyyymmdd_restart',
                                   rebuildall=True)
         mock_nl.assert_called_with('SourceDir', 'file_11112233_restart',
-                                   2, omp=1)
+                                   2, omp=1, msk=False)
         self.assertNotIn('deleting component files', func.capture().lower())
 
     @mock.patch('nemo.NemoPostProc.rebuild_namelist')
@@ -389,8 +389,10 @@ class RebuildTests(unittest.TestCase):
         self.nemo.rebuild_fileset('SourceDir', 'mean', rebuildall=True)
 
         self.assertIn('deleting component files', func.capture().lower())
-        nl_calls = [mock.call('SourceDir', 'file_11112233_mean1', 2, omp=1),
-                    mock.call('SourceDir', 'file_11112233_mean2', 2, omp=1)]
+        nl_calls = [mock.call('SourceDir', 'file_11112233_mean1', 2,
+                              omp=1, msk=False),
+                    mock.call('SourceDir', 'file_11112233_mean2', 2,
+                              omp=1, msk=False)]
         self.assertListEqual(mock_nl.mock_calls, nl_calls)
         rm_calls = [mock.call(['mean1_c1', 'mean1_c2'], path='SourceDir'),
                     mock.call(['mean2_c1', 'mean2_c2'], path='SourceDir')]
@@ -408,7 +410,7 @@ class RebuildTests(unittest.TestCase):
         self.nemo.rebuild_fileset('SourceDir', 'f_diaptr', rebuildall=True)
         mock_nl.assert_called_once_with('SourceDir',
                                         'file_19980530_yyyymmdd_diaptr',
-                                        2, omp=1)
+                                        2, omp=1, msk=False)
         mock_attr.assert_called_once_with(
             'SourceDir', ['component_file1', 'component_file2']
             )
@@ -448,12 +450,29 @@ class RebuildTests(unittest.TestCase):
                                              'file_19980530_yyyymmdd',
                                              3,
                                              omp=1, chunk='opt_chunk',
-                                             dims=[1, 2])
+                                             dims=[1, 2],
+                                             msk=True)
         self.assertEqual(int(os.environ['OMP_NUM_THREADS']), 1)
         self.assertEqual(rtn, 0)
         txt = open('nam_rebuild', 'r').read()
         self.assertIn('dims=\'1\',\'2\'', txt)
         self.assertIn('nchunksize=opt_chunk', txt)
+        self.assertIn('l_maskout=.true.', txt)
+
+    @mock.patch('nemo.NemoPostProc.rebuild_namelist')
+    @mock.patch('utils.get_subset')
+    def test_rebuild_mask(self, mock_subset, mock_nl):
+        '''Test rebuild all function with mask option'''
+        func.logtest('Assert rebuild all function with mask option:')
+        # Buffer is 1 buy default - 1st subset side_effect must be list of 2.
+        mock_subset.side_effect = [['file_19980530', 'file_19980630'],
+                                   ['file_19980530_0000.nc',
+                                    'file_19980530_0001.nc',
+                                    'file_19980530_0002.nc']]
+        self.nemo.naml.msk_rebuild = True
+        self.nemo.rebuild_fileset(os.environ['PWD'], 'field', rebuildall=True)
+        mock_nl.assert_called_with(os.environ['PWD'], 'file_19980530',
+                                   3, omp=1, msk=True)
 
     @mock.patch('utils.exec_subproc')
     @mock.patch('os.path.isfile')
