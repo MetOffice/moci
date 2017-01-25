@@ -1,0 +1,47 @@
+#!/usr/bin/env python2.7
+#
+#*****************************COPYRIGHT******************************
+#(C) Crown copyright Met Office. All rights reserved.
+# For further details please refer to the file COPYRIGHT.txt
+# which you should have received as part of this distribution.
+#*****************************COPYRIGHT******************************
+"""
+ CODE OWNER
+   Stephen Haddad
+
+ NAME
+   compare_ga7_output
+"""
+import argparse
+
+import comp_norms
+import mule_compare_dump_files
+
+def get_cmd_args():
+    """Get command lines arguments"""
+    desc_msg = 'Compare output from 2 GA7 tasks.'
+    parser = argparse.ArgumentParser(description=desc_msg)
+    parser.add_argument('--norm-file1', dest='norm_path1')
+    parser.add_argument('--norm-file2', dest='norm_path2')
+    parser.add_argument('--dump-file1', dest='dump_path1')
+    parser.add_argument('--dump-file2', dest='dump_path2')
+    return parser.parse_args()
+
+def main():
+    """Main function for comapre_ga7_output script"""
+    cmd_args1 = get_cmd_args()
+    norm_path1 = cmd_args1.norm_path1
+    norm_path2 = cmd_args1.norm_path2
+    dump_path1 = cmd_args1.dump_path1
+    dump_path2 = cmd_args1.dump_path2
+
+    print 'comparing norm files {0} and {1}'.format(norm_path1,
+                                                    norm_path2)
+    comp_norms.compare_norm_files(norm_path1, norm_path2)
+
+    print 'comparing dump files {0} and {1}'.format(dump_path1,
+                                                    dump_path2)
+    mule_compare_dump_files.compare_files(dump_path1, dump_path2)
+
+if __name__ == '__main__':
+    main()
