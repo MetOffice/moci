@@ -116,7 +116,7 @@ class Propertytests(unittest.TestCase):
         self.assertEqual(self.nemo.naml.means_fieldsfiles, None)
         self.assertEqual(self.nemo._fields, ('diad_T', 'diaptr', 'grid_T',
                                              'grid_U', 'grid_V', 'grid_W',
-                                             'ptrc_T', 'trnd3d',))
+                                             'ptrc_T', 'scalar', 'trnd3d',))
 
     def test_fields_property_single(self):
         '''Test the return value of the fields property - single'''

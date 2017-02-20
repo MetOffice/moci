@@ -674,7 +674,8 @@ class ModelTemplate(control.RunPostProc):
         if to_archive:
             for fname in to_archive:
                 # Compress means files prior to archive.
-                if self.naml.compression_level > 0 and '_diaptr' not in fname:
+                if (self.naml.compression_level > 0 and
+                        '_diaptr' not in fname and '_scalar' not in fname):
                     # NEMO diaptr files cannot currently be compressed.
                     rcode = self.compress_file(fname, self.naml.compress_means)
                     if rcode != 0:

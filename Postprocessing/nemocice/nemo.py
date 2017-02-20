@@ -57,7 +57,7 @@ class NemoPostProc(mt.ModelTemplate):
         '''Name of model component, to be used as a prefix to archived files '''
         return {
             'nemo': ['grid_T', 'grid_U', 'grid_V',
-                     'grid_W', 'diaptr', 'trnd3d'],
+                     'grid_W', 'diaptr', 'trnd3d', 'scalar'],
             'medusa': ['ptrc_T', 'diad_T']
             }
 
