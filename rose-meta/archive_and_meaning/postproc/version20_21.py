@@ -29,6 +29,20 @@ class pp20_t100(rose.upgrade.MacroUpgrade):
         return config, self.reports
 
 
+class pp20_t189(rose.upgrade.MacroUpgrade):
+
+    """Upgrade macro for ticket #189 by Erica Neininger."""
+    BEFORE_TAG = "pp20_t100"
+    AFTER_TAG = "pp20_t189"
+
+    def upgrade(self, config, meta_config=None):
+        """Upgrade a Postproc make app configuration."""
+        # Input your macro commands here
+        self.add_setting(config, ["namelist:moose_arch", "non_duplexed_set"],
+                         "false")
+        return config, self.reports
+
+
 class pp12_tXXX(rose.upgrade.MacroUpgrade):
 
     """Upgrade macro for ticket #XXXX by <author>."""

@@ -50,6 +50,7 @@ def archive_to_moose(filename, fnprefix, sourcedir, nlist, convertpp):
         'FILENAME_PREFIX':     fnprefix,
         'DATAM':               sourcedir,
         'SETNAME':             nlist.archive_set,
+        'NON_DUPLEXED':        nlist.non_duplexed_set,
         'CATEGORY':            'UNCATEGORISED',
         'DATACLASS':           nlist.dataclass,
         'ENSEMBLEID':          nlist.ensembleid,
@@ -71,14 +72,9 @@ class _Moose(object):
         self._rqst_name = comms['CURRENT_RQST_NAME']
         self._suite_id = comms['SETNAME']
         self._sourcedir = comms['DATAM']
-        try:
-            self._cat = comms['CATEGORY']
-        except KeyError:
-            self._cat = 'UNCATEGORISED'
         self._class = comms['DATACLASS']
         self._ens_id = comms['ENSEMBLEID']
         self._moopath = comms['MOOPATH']
-        self._project = comms['PROJECT']
         self.convertpp = comms['CONVERTPP']
 
         # Define the collection name
@@ -108,7 +104,10 @@ class _Moose(object):
         self.fl_pp = False
 
         if not self.chkset():
-            self.mkset()  # Create a set
+            # Create a set
+            self.mkset(comms['CATEGORY'],
+                       comms['PROJECT'],
+                       comms['NON_DUPLEXED'])
 
     @property
     def dataset(self):
@@ -127,13 +126,15 @@ class _Moose(object):
             utils.log_msg('chkset: Using existing Moose set', level='INFO')
         return exist
 
-    def mkset(self):
+    def mkset(self, cat, project, non_duplexed):
         '''Create Moose set'''
         mkset_cmd = os.path.join(self._moopath, 'moo') + ' mkset -v '
-        if self._cat != 'UNCATEGORISED':
-            mkset_cmd += '-c ' + self._cat + ' '
-        if self._project:
-            mkset_cmd += '-p ' + self._project + ' '
+        if cat != 'UNCATEGORISED':
+            mkset_cmd += '-c ' + cat + ' '
+        if project:
+            mkset_cmd += '-p ' + project + ' '
+        if non_duplexed:
+            mkset_cmd += '--single-copy '
         mkset_cmd += self.dataset
 
         utils.log_msg('mkset command: ' + mkset_cmd)
@@ -335,6 +336,7 @@ class CommandExec(object):
 class MooseArch(object):
     '''Default namelist for Moose archiving'''
     archive_set = os.environ['CYLC_SUITE_REG_NAME']
+    non_duplexed_set = False
     dataclass = 'crum'
     ensembleid = ''
     moopath = ''

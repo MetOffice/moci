@@ -34,6 +34,7 @@ class CommandTests(unittest.TestCase):
             'FILENAME_PREFIX':     'TESTP',
             'DATAM':               'TestDir',
             'SETNAME':             'mysuite',
+            'NON_DUPLEXED':        False,
             'CATEGORY':            'UNCATEGORISED',
             'DATACLASS':           'myclass',
             'ENSEMBLEID':          '',
@@ -116,6 +117,7 @@ class MooseTests(unittest.TestCase):
             'FILENAME_PREFIX':     'TESTP',
             'DATAM':               'TestDir',
             'SETNAME':             'mysuite',
+            'NON_DUPLEXED':        False,
             'CATEGORY':            'UNCATEGORISED',
             'DATACLASS':           'myclass',
             'ENSEMBLEID':          '',
@@ -207,22 +209,29 @@ class MooseTests(unittest.TestCase):
             self.assertEqual(inst._model_id, 'i')
             self.assertEqual(inst._file_id, 'YYYYMMDD...nc')
 
-    @mock.patch('moo.utils.exec_subproc')
-    def test_create_set(self, mock_subproc):
+    def test_create_set(self):
         '''Test creation of a Moose data set'''
         func.logtest('test creation of a Moose set:')
-        mock_subproc.return_value = (0, 'false')
         self.assertFalse(self.inst.chkset())
-        self.assertIn('mkset:', func.capture())
 
     @mock.patch('moo.utils.exec_subproc')
     def test_mkset_project(self, mock_subproc):
         '''Test mkset function with project'''
         func.logtest('test mkset function, with project:')
         mock_subproc.return_value = (0, '')
-        self.inst._project = 'UKESM'
-        self.inst.mkset()
-        cmd = 'moo mkset -v -p ' + self.inst._project + ' ' + self.inst.dataset
+        project = 'UKESM'
+        self.inst.mkset('UNCATEGORISED', project, False)
+        cmd = 'moo mkset -v -p ' + project + ' ' + self.inst.dataset
+        mock_subproc.assert_called_with(cmd, verbose=False)
+        self.assertIn('created set', func.capture())
+
+    @mock.patch('moo.utils.exec_subproc')
+    def test_mkset_nonduplex(self, mock_subproc):
+        '''Test mkset function with non-duplex option'''
+        func.logtest('test mkset function, with non-duplex option:')
+        mock_subproc.return_value = (0, '')
+        self.inst.mkset('UNCATEGORISED', '', True)
+        cmd = 'moo mkset -v --single-copy ' + self.inst.dataset
         mock_subproc.assert_called_with(cmd, verbose=False)
         self.assertIn('created set', func.capture())
 
@@ -231,9 +240,9 @@ class MooseTests(unittest.TestCase):
         '''Test mkset function with category - Failed operation'''
         func.logtest('test mkset with category - Failed operation:')
         mock_subproc.return_value = (-1, '')
-        self.inst._cat = 'GLOBAL'
-        self.inst.mkset()
-        cmd = 'moo mkset -v -c ' + self.inst._cat + ' ' + self.inst.dataset
+        cat = 'GLOBAL'
+        self.inst.mkset(cat, '', False)
+        cmd = 'moo mkset -v -c ' + cat + ' ' + self.inst.dataset
         mock_subproc.assert_called_with(cmd, verbose=False)
         self.assertIn('Unable to create', func.capture(direct='err'))
 
@@ -242,7 +251,7 @@ class MooseTests(unittest.TestCase):
         '''Test mkset function with pre-existing set'''
         func.logtest('test mkset function, with pre-existing set:')
         mock_subproc.return_value = (10, '')
-        self.inst.mkset()
+        self.inst.mkset('UNCATEGORISED', '', False)
         mock_subproc.assert_called_with('moo mkset -v ' + self.inst.dataset,
                                         verbose=False)
         self.assertIn('already exists', func.capture())
@@ -421,6 +430,7 @@ class PutCommandTests(unittest.TestCase):
             'FILENAME_PREFIX':     'FN-PREFIX',
             'DATAM':               'TestDir',
             'SETNAME':             'mysuite',
+            'NON_DUPLEXED':        False,
             'CATEGORY':            'UNCATEGORISED',
             'DATACLASS':           'classname',
             'ENSEMBLEID':          '',
@@ -488,6 +498,7 @@ class Utilitytests(unittest.TestCase):
             'FILENAME_PREFIX':     'FN-PREFIX',
             'DATAM':               'SOURCEDIR',
             'SETNAME':             self.nlist.archive_set,
+            'NON_DUPLEXED':        False,
             'CATEGORY':            'UNCATEGORISED',
             'DATACLASS':           self.nlist.dataclass,
             'ENSEMBLEID':          self.nlist.ensembleid,
