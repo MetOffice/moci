@@ -337,9 +337,11 @@ class PropertyTests(unittest.TestCase):
         '''Test the return value of the streams property'''
         func.logtest('Assert return value of the streams property:')
         self.assertEqual(self.atmos.naml.archiving.process_streams, None)
-        self.assertEqual(self.atmos.streams, '1-9a-lp-rt-xz')
+        self.assertEqual(self.atmos.streams, '1-9a-ln-rt-xz')
         self.atmos.naml.archiving.process_streams = 'at-z'
         self.assertEqual(self.atmos.streams, 'at-z')
+        self.atmos.naml.archiving.process_streams = ''
+        self.assertEqual(self.atmos.streams, '')
 
     def test_means_property(self):
         '''Test the return value of the means property'''

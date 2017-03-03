@@ -109,16 +109,16 @@ class AtmosPostProc(control.RunPostProc):
         '''
         Returns a regular expression for the fieldsfile
         instantaneous streams to process'''
-        if self.naml.archiving.process_streams:
+        if isinstance(self.naml.archiving.process_streams, str):
             streams = self.naml.archiving.process_streams
         else:
-            streams = '1-9a-lp-rt-xz'
+            streams = '1-9a-ln-rt-xz'
         return streams
 
     @property
     def means(self):
         'Returns a regular expression for the fieldsfile means to process'
-        if self.naml.archiving.process_means:
+        if isinstance(self.naml.archiving.process_means, str):
             means = self.naml.archiving.process_means
         else:
             means = 'msy'
@@ -172,10 +172,11 @@ class AtmosPostProc(control.RunPostProc):
     def pp_to_archive(self, log_file, finalcycle):
         '''Returns a list of [fields|pp]files to archive'''
         arch_pp = []
-        if self.naml.archiving.archive_pp:
+        all_ppstreams = self.streams + self.means
+        if self.naml.archiving.archive_pp and all_ppstreams:
             datadir = self.share if finalcycle else self.work
             suffix = '' if finalcycle else '.arch'
-            patt = self.ff_pattern.format(self.streams + self.means)
+            patt = self.ff_pattern.format(all_ppstreams)
             ppfiles = housekeeping.get_marked_files(datadir, patt, suffix)
         else:
             ppfiles = []

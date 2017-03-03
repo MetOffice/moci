@@ -51,7 +51,7 @@ def read_arch_logfile(logfile, prefix, inst, mean):
         tag = 'FAILED' not in tag
         for ftype in FILETYPE:
             stream = inst if ftype == 'pp_inst_names' else mean
-            if FILETYPE[ftype][REGEX](prefix, stream).\
+            if stream and FILETYPE[ftype][REGEX](prefix, stream).\
                     search(os.path.basename(fname)):
                 FILETYPE[ftype][RTN].append((fname, tag))
 
