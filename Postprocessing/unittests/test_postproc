@@ -21,6 +21,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir))
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'common'))
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'atmos'))
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'nemocice'))
+sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir,
+                             'archive_verify'))
 
 # Setup a null timer instance to ensure the decorated functions behave
 # correctly with the unit tests
@@ -35,7 +37,7 @@ def main():
         'all':      'test_*.py',
         'main':     'test_main.py',
         'common':   'test_common_*.py',
-        'control':    'test_common_control.py',
+        'control':  'test_common_control.py',
         'suitegen': 'test_common_suitegen.py',
         'nlist':    'test_common_nlist.py',
         'utils':    'test_common_utils.py',
@@ -49,15 +51,18 @@ def main():
         'nemo':     'test_nemocice_nemo.py',
         'cice':     'test_nemocice_cice.py',
         'template': 'test_nemocice_template.py',
+        'verify':   'test_verify_*.py',
         }
 
     subgroups = [
-        ' '.join(['common'] + [c for c in groups.keys() if
-                               'common_' in groups[c]]),
-        ' '.join(['atmos'] + [a for a in groups.keys() if
-                              'atmos_' in groups[a]]),
-        ' '.join(['nemocice'] + [n for n in groups.keys() if
-                                 'nemocice_' in groups[n]]),
+        ' '.join(['common groups:'] + [c for c in groups.keys() if
+                                       'common_' in groups[c]]),
+        ' '.join(['atmos groups:'] + [a for a in groups.keys() if
+                                      'atmos_' in groups[a]]),
+        ' '.join(['nemo and cice groups:'] + [n for n in groups.keys() if
+                                              'nemocice_' in groups[n]]),
+        ' '.join(['verification group:'] + [v for v in groups.keys() if
+                                            'verify_' in groups[v]]),
         ]
 
     parser = argparse.ArgumentParser(

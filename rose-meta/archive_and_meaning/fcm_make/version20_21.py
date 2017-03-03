@@ -26,3 +26,19 @@ class pp20_tXXX(rose.upgrade.MacroUpgrade):
         """Upgrade a Postproc make app configuration."""
         # Input your macro commands here
         return config, self.reports
+
+class pp20_t109(rose.upgrade.MacroUpgrade):
+
+    """Upgrade macro for ticket #109 by Erica Neininger."""
+    BEFORE_TAG = "postproc_2.0"
+    AFTER_TAG = "pp20_t109"
+
+    def upgrade(self, config, meta_config=None):
+        """Adding source for new verification app"""
+
+        # Additional source for new verification app
+        self.add_setting(config,
+                         ["env", "verify_config",],
+                         "verify.cfg")
+
+        return config, self.reports

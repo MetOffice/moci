@@ -1,0 +1,634 @@
+#!/usr/bin/env python2.7
+'''
+*****************************COPYRIGHT******************************
+ (C) Crown copyright 2016 Met Office. All rights reserved.
+
+ Use, duplication or disclosure of this code is subject to the restrictions
+ as set forth in the licence. If no licence has been raised with this copy
+ of the code, the use, duplication or disclosure of it is strictly
+ prohibited. Permission to do so must first be obtained in writing from the
+ Met Office Information Asset Owner at the following address:
+
+ Met Office, FitzRoy Road, Exeter, Devon, EX1 3PB, United Kingdom
+*****************************COPYRIGHT******************************
+NAME
+    archived_files.py
+
+DESCRIPTION
+    Parent class for methods used to calculate archived filenames
+'''
+
+import re
+
+import filenames
+import utils
+
+MONTHS = {
+    1: 'jan', 2: 'feb', 3: 'mar', 4: 'apr',
+    5: 'may', 6: 'jun', 7: 'jul', 8: 'aug',
+    9: 'sep', 10: 'oct', 11: 'nov', 12: 'dec'
+}
+
+
+def nlist_date(date, description):
+    ''' Obtain an integer date list [YYYY, MM}, DD] from an 8 digit string '''
+    try:
+        datelist = re.match(r'(\d{4})(\d{2})(\d{2})?(\d{2})?',
+                            str(date)).groups()
+    except AttributeError:
+        utils.log_msg('Namelist read error.  {} does not have at least 6'
+                      ' digits: "{}"'.format(description, date), level='FAIL')
+
+    datelist = [int(x) for x in datelist if x]
+    if len(datelist) < 3:
+        datelist.append(1)
+    return datelist
+
+
+class ArchivedFiles(object):
+    '''
+    Methods specific to determining filenames expected to be present
+    in the archive.
+    '''
+    def __init__(self, startdate, enddate, prefix, model, naml):
+        ''' Initialise ArchiveFiles methods '''
+        self.sdate = nlist_date(startdate, 'Start date')
+        self.edate = nlist_date(enddate, 'End date')
+        self.prefix = prefix
+        self.model = model
+        self.naml = naml
+        self.finalcycle = utils.finalcycle()
+
+    def extract_date(self, filename, start=True):
+        '''
+        Extract integer year, month and day from filename.
+        '''
+
+        date_patterns = (r'\d{4}[a-z]{3}', r'\d{8}_\d{2}', r'\d{6,10}',
+                         r'\d{4}-\d{2}-\d{2}-\d{2}?-?')
+        for patt in date_patterns:
+            dates = re.findall(patt, filename)
+            if dates:
+                break
+        splits = []
+        for date in dates:
+            if '-' in date:
+                splits.append(date.split('-'))
+            else:
+                splits.append(re.match(r'(\d{4})(\d{2}|[a-z]{3})'
+                                       r'(\d{2})?(\d{2})?_?(\d{2})?',
+                                       date).groups())
+
+        date = splits[0] if start else splits[-1]
+        year, month = date[:2]
+        if re.match(r'([a-z]{3})', month):
+            # Special case for atmosphere monthly and seasonal files
+            try:
+                # Monthly files
+                month = MONTHS.keys()[MONTHS.values().index(month)]
+            except ValueError:
+                # Seasonal files
+                try:
+                    for mth, ssn in self.seasons(self.meanref):
+                        if month == ssn:
+                            month = mth
+                            break
+                except AttributeError:
+                    utils.log_msg('Mean reference date required for '
+                                  'seasonal mean date.', level='FAIL')
+                # Seasonal datestamp year is FINAL month
+                if month > 9:
+                    year = int(year) - 1
+                if not start:
+                    month += 3
+                    if month > 12:
+                        month -= 12
+                        year = int(year) + 1
+
+        day = date[2] if date[2] else 1
+        int_date = [int(year), int(month), int(day)]
+        for i in range(3, 6):
+            if len(date) > i:
+                if date[i]:
+                    int_date.append(int(date[i]))
+
+        return int_date
+
+    def seasons(self, meanref, shift=0):
+        '''
+        Return a list of tuples: (starting month, 3char descriptor) for
+        each season.
+        '''
+        seasons = []
+        while len(seasons) < 4:
+            seasons.append((meanref[1] + shift + (len(seasons) * 3)) % 12)
+        try:
+            seasons[seasons.index(0)] = 12
+        except ValueError:
+            pass
+        for i, ssn in enumerate(seasons):
+            # Modify to list of tuples [tuple(start month, descriptor)]
+            months = MONTHS[ssn][0]
+            for mth in [1, 2]:
+                months += MONTHS[ssn + mth if ssn + mth <= 12 else
+                                 ssn + mth - 12][0]
+            seasons[i] = (ssn, months)
+
+        return sorted(seasons)
+
+    def get_collection(self, period=None, stream=None):
+        '''
+        Return Moose collection name appropriate to stream.
+        '''
+        key, realm, component = self.get_fn_components(stream)
+        if component:
+            stream = period[-1]
+
+        collection = filenames.COLLECTIONS[key].format(R=realm, S=stream)
+        return collection
+
+    def get_fn_components(self, stream):
+        '''
+        Construct the dictionary key for filenames module.
+        '''
+        realm, component = filenames.model_components(self.model, stream)
+        if component:
+            # "component" is only relevant to the netCDF convention filenames
+            key = 'ncf_mean'
+        elif stream:
+            # Atmosphere fields/pp files
+            key = 'atmos_ff' if stream in self.naml.ff_streams else 'atmos_pp'
+        else:
+            key = 'rst'
+
+        return key, realm, component
+
+
+class RestartFiles(ArchivedFiles):
+    '''
+    Methods specific to determining restart filenames expected to be present
+    in the archive.
+    '''
+    def __init__(self, startdate, enddate, prefix, model, naml):
+        ''' Initialise ArchiveFiles methods '''
+        super(RestartFiles, self).__init__(startdate, enddate, prefix,
+                                           model, naml)
+        self.timestamps = self._timestamps()
+        self.rst_types = ['{}_rst'.format(model)]
+        for rst in [a for a in dir(naml) if a.endswith('_rst')]:
+            if getattr(self.naml, rst):
+                self.rst_types.append(rst)
+
+    def _timestamps(self):
+        ''' Return a list of timestamps '''
+        meanref = nlist_date(self.naml.mean_reference_date,
+                             'mean reference date')
+        seasons = [s[0] for s in self.seasons(meanref)]
+        if 'Monthly' in self.naml.archive_timestamps:
+            tstamps = [[x, meanref[2]] for x in range(1, 13)]
+        elif 'Seasonal' in self.naml.archive_timestamps:
+            tstamps = [[x, meanref[2]] for x in seasons]
+        elif 'Annual' in self.naml.archive_timestamps:
+            tstamps = [[meanref[1], meanref[2]]]
+        elif 'Biannual' in self.naml.archive_timestamps:
+            tstamps = [[max(seasons) - 6, meanref[2]],
+                       [max(seasons), meanref[2]]]
+        else:
+            nlist_stamps = utils.ensure_list(self.naml.archive_timestamps,
+                                             listnone=False)
+            try:
+                tstamps = [[int(x) for x in tstamp.split('-')]
+                           for tstamp in nlist_stamps]
+            except ValueError:
+                utils.log_msg('Restart Files - Format for archive_timestamps'
+                              ' should be "MM-DD"[, "MM-DD"]', level='FAIL')
+        return tstamps
+
+    def expected_files(self):
+        ''' Generate a list of expected restart files '''
+        restart_files = {}
+        try:
+            suffix = self.naml.restart_suffix
+        except AttributeError:
+            suffix = None
+
+        utils.log_msg('Restart files - expected files for {} at timestamps'
+                      ' {}:'.format(self.model, self.timestamps), level='INFO')
+        coll = self.get_collection()
+        for year in range(self.sdate[0], self.edate[0] + 1):
+            for tstamp in self.timestamps:
+                for rsttype in self.rst_types:
+                    newfile = self.get_filename(year, tstamp[0], tstamp[1],
+                                                suffix, rsttype)
+                    try:
+                        restart_files[coll].append(newfile)
+                    except KeyError:
+                        restart_files[coll] = [newfile]
+
+        restart_files[coll] = self.remove_invalid(restart_files[coll])
+
+        if self.finalcycle:
+            # Additionally archive the end date dump
+            year, month, day = self.edate
+            if 30 in self.timestamps[0]:
+                # Account for NEMO last-day datestamp
+                day = 30
+                month -= 1
+                if month == 0:
+                    month = 12
+                    year -= 1
+            for rsttype in self.rst_types:
+                final_rst = self.get_filename(year, month, day, suffix, rsttype)
+                if final_rst not in restart_files[coll]:
+                    restart_files[coll].append(final_rst)
+
+        for key in restart_files.keys():
+            # Call to keys() required as we are removing dictionary keys
+            if restart_files[key] == []:
+                del restart_files[key]
+
+        return restart_files
+
+    def remove_invalid(self, restart_files):
+        '''
+        Remove files with datestamps before or after the specified
+        start/end date.
+        '''
+        edate = self.edate[:]
+        if not self.finalcycle and hasattr(self.naml, 'buffer_restart'):
+            # Adjust for mean buffer
+            cycletime = '{}{}{}T{}{}Z'.format(*utils.cyclestring())
+            endtime = ''.join([str(x).zfill(2) for x in edate[:3]])
+            if len(edate) > 3:
+                endtime += 'T{}Z'.format(''.join([str(x).zfill(2) for
+                                                  x in edate[3:]]))
+            cmd = 'rose date {} {} --calendar {}'.format(endtime, cycletime,
+                                                         utils.calendar())
+            rcode, cyclefreq = utils.exec_subproc(cmd, verbose=False)
+            if rcode == 0:
+                rst_buffer = self.naml.buffer_restart
+                while rst_buffer and rst_buffer > 1:
+                    edate = utils.add_period_to_date(
+                        edate, cyclefreq.replace('P', '')
+                        )
+                    rst_buffer -= 1
+
+            else:
+                utils.log_msg('restart buffer - unable to calculate cycling '
+                              'period. Reverting to buffer_restart=1',
+                              level='WARN')
+
+        to_remove = []
+        for filename in restart_files:
+            filedate = self.extract_date(filename, start=True)
+            year, month, day = filedate[:3]
+
+            if year < self.sdate[0] or year > edate[0]:
+                to_remove.append(filename)
+            else:
+                if year == self.sdate[0]:
+                    # Remove files prior to and including the start date
+                    if month < self.sdate[1] or \
+                            (month == self.sdate[1] and day <= self.sdate[2]):
+                        to_remove.append(filename)
+
+                if year == edate[0]:
+                    # Remove files at and after the end date
+                    if month > edate[1] or \
+                            (month == edate[1] and day >= edate[2]):
+                        to_remove.append(filename)
+
+        # Remove duplicates from to_remove before thinning restart_files list
+        for filename in list(set(to_remove)):
+            restart_files.remove(filename)
+
+        return restart_files
+
+    def get_filename(self, year, month, day, suffix, rsttype):
+        '''
+        Return filename according to filenames.FNAMES regular expression.
+        Arguments:
+           year, month, day
+           suffix = required where an optional file suffix is present (CICE)
+        '''
+        return filenames.FNAMES[rsttype].format(P=self.prefix, Y1=year,
+                                                M1=month, D1=day, S=suffix)
+
+
+class DiagnosticFiles(ArchivedFiles):
+    '''
+    Methods specific to determining means filenames expected to be present
+    in the archive.
+    '''
+    def __init__(self, startdate, enddate, prefix, model, naml):
+        ''' Initialise MeansFiles methods '''
+        super(DiagnosticFiles, self).__init__(startdate, enddate,
+                                              prefix, model, naml)
+        fields = self.naml.fields if self.naml.fields else ''
+        self.fields = utils.ensure_list(fields)
+        self.meanref = nlist_date(self.naml.mean_reference_date,
+                                  'mean reference date')
+        self.tlim = self.time_limited_streams()
+
+    def gen_reinit_period(self, reinit_periods):
+        '''
+        Generator method to yield reinitialisation step and period
+        for each stream.
+        '''
+        for reinit in reinit_periods:
+            if reinit in dir(self.naml):
+                descript = 'instantaneous'
+                value = reinit.split('_')[1]
+                streams = utils.ensure_list(getattr(self.naml, reinit),
+                                            listnone=False)
+            else:
+                descript = 'mean'
+                value = reinit
+                if self.model == 'atmos':
+                    streams = [reinit[-1]]
+                else:
+                    streams = self.fields
+
+            if streams:
+                step, period = utils.get_frequency(value)
+                try:
+                    # Check for concatenated files
+                    concat = int(value.split('_')[1])
+                except IndexError:
+                    concat = 1
+                yield step, period, concat, streams, descript
+
+    def get_period_startdate(self, period):
+        '''
+        Return the date of the first file which should be produced
+        for the period provided according to the mean reference date.
+
+        Arguments:
+            period = single char from [hdmsyx]
+        '''
+        sdate = self.sdate[:]
+        while len(sdate) < 5:
+            sdate.append(0)
+
+        if period not in 'dh':
+            sdate[2] = self.meanref[2]
+            if self.sdate[2] > sdate[2]:
+                sdate[1] += 1
+                if sdate[1] > 12:
+                    sdate[1] -= 12
+                    sdate[0] += 1
+
+        if period == 's':
+            s_starts = [s[0] for s in self.seasons(self.meanref)]
+            while sdate[1] not in s_starts:
+                sdate[1] += 1
+                if sdate[1] > 12:
+                    sdate[1] -= 12
+                    sdate[0] += 1
+        elif period in 'yx':
+            sdate[1] = self.meanref[1]
+            if sdate[1] < self.sdate[1]:
+                sdate[0] += 1
+            if period == 'x':
+                sdate[0] = self.meanref[0]
+                while sdate[0] < self.sdate[0]:
+                    sdate[0] += 10
+
+        return sdate
+
+    def expected_diags(self):
+        ''' Generate a list of expected diagnostic output files '''
+        all_files = {}
+
+        # Dictionary value = tuple(date index, multiple)
+        diags = {'h': (3, 1), 'd': (2, 1), 'm': (1, 1),
+                 's': (1, 3), 'y': (0, 1), 'x': (0, 10)}
+
+        all_streams = utils.ensure_list(self.naml.meanstreams) + \
+            [a for a in dir(self.naml) if a.startswith('streams')]
+        for step, period, concat, streams, desc in \
+                self.gen_reinit_period(all_streams):
+            delta = [0]*5
+            delta[diags[period][0]] = step * concat * diags[period][1]
+            if concat > 1:
+                # Move forward one mean period for start of concatenated files
+                order = ['h', 'd', 'm', 's', 'y', 'x']
+                date = self.get_period_startdate(order[order.index(period) + 1])
+            else:
+                date = self.get_period_startdate(period)
+            edate = self.edate[:]
+            while len(edate) < 5:
+                edate.append(0)
+
+            if not self.finalcycle and hasattr(self.naml, 'buffer_mean'):
+                # Adjust for mean buffer
+                mean_buffer = self.naml.buffer_mean
+                while mean_buffer and mean_buffer > 0:
+                    edate = utils.add_period_to_date(
+                        edate, '-{}'.format(self.naml.base_mean)
+                        )
+                    mean_buffer -= 1
+
+            while date <= edate:
+                newdate = utils.add_period_to_date(date, delta)
+
+                add_file = True
+                if desc == 'instantaneous':
+                    # Atmos instantaneous streams not available at the edate
+                    # due to reinitialisation method.
+                    if date == edate:
+                        add_file = False
+                elif newdate > edate:
+                    # newdate is end of data so must fall before edate.
+                    add_file = False
+
+                if add_file:
+                    if self.model == 'atmos' and desc == 'mean':
+                        # Adjust year for atmosphere means - use end year
+                        if newdate[1:3] > [1, 1]:
+                            date[0] = newdate[0]
+                    for stream in streams:
+                        if stream in self.tlim and \
+                                (date < self.tlim[stream][0] or
+                                 date >= self.tlim[stream][1]):
+                            # Time limited stream - outside output dates
+                            continue
+                        coll = self.get_collection(
+                            period='{}{}'.format(step, period), stream=stream
+                            )
+                        newfile = self.get_filename('{}{}'.format(step, period),
+                                                    date, newdate, stream)
+                        try:
+                            all_files[coll].append(newfile)
+                        except KeyError:
+                            all_files[coll] = [newfile]
+                date = newdate
+
+        if not self.finalcycle:
+            for fileset in all_files:
+                try:
+                    if re.match(r'^ap([a-zA-Z0-9])\.', fileset).group(1) \
+                            not in 'msyx':
+                        if (fileset[2] in self.tlim) and \
+                                (self.tlim[fileset[2]][1] < self.edate):
+                            # Time limited period is over - no file waiting
+                            # for reinitialisation.
+                            pass
+                        else:
+                            all_files[fileset].remove(all_files[fileset][-1])
+                except AttributeError:
+                    all_files[fileset] = \
+                        self.remove_higher_mean_components(
+                            all_files[fileset], fileset[2]
+                            )
+
+        all_files.update(self.iceberg_trajectory())
+
+        for key in all_files.keys():
+            # Call to keys() required since we are removing dictionary keys
+            if all_files[key] == []:
+                del all_files[key]
+
+        return all_files
+
+    def remove_higher_mean_components(self, periodfiles, period):
+        '''
+        Where available means files can be used to create higher means they
+        will not be found in the archive until that higher mean has been
+        created.
+        '''
+        to_remove = []
+        season_starts = [m for m, _ in self.seasons(self.meanref)]
+        for fname in reversed(periodfiles):
+            month, day = self.extract_date(fname, start=False)[1:3]
+            if period == 'd' and day != self.meanref[2]:
+                to_remove.append(fname)
+            elif period == 'm' and month not in season_starts:
+                to_remove.append(fname)
+            elif period == 's' and month != self.meanref[1]:
+                to_remove.append(fname)
+            else:
+                break
+
+        for fname in to_remove:
+            periodfiles.remove(fname)
+
+        return periodfiles
+
+    def time_limited_streams(self):
+        '''
+        Return a dictionary of Atmosphere time-limited streams.
+           { stream_id (1Char) : tuple(
+                                       startdate (integer list [YYYY, MM, DD]),
+                                       enddate (integer list [YYYY, MM, DD])
+                                      )
+           }
+
+        Based on namelist variables:
+           bool     : timelimitedstreams
+           str list : tlim_streams (1char)
+           str list : tlim_starts (8char)
+           str list : tlim_ends (8char)
+        '''
+        time_limited = {}
+        try:
+            tlim = self.naml.timelimitedstreams
+        except AttributeError:
+            tlim = False
+
+        if tlim:
+            streams = utils.ensure_list(self.naml.tlim_streams, listnone=False)
+            if streams:
+                startdates = utils.ensure_list(self.naml.tlim_starts)
+                enddates = utils.ensure_list(self.naml.tlim_ends)
+
+                if (len(streams) != len(startdates)) or \
+                        (len(streams) != len(enddates)):
+                    utils.log_msg('Time-limited streams:  Please ensure start '
+                                  'and end dates are provided for each '
+                                  'time-limited stream.', level='FAIL')
+
+                for i, stream in enumerate(streams):
+                    start = nlist_date(startdates[i],
+                                       'time limited stream start date')
+                    end = nlist_date(enddates[i],
+                                     'time limited stream end date')
+                    time_limited[stream] = (start, end)
+
+        return time_limited
+
+    def iceberg_trajectory(self):
+        '''
+        Return list of expected nemo iceberg trajectory files
+        '''
+        fileset = 'oni.nc.file'
+        iceberg_traj = {fileset: []}
+        try:
+            iberg = self.naml.iberg_traj
+        except AttributeError:
+            iberg = False
+
+        if iberg:
+            freq = self.naml.iberg_traj_freq / self.naml.iberg_traj_ts_per_day
+            date = self.sdate + [0, 0]
+            edate = self.edate + [0, 0]
+            timestep = 0
+            while date < edate:
+                newdate = utils.add_period_to_date(date, [0, 0, freq])
+                timestep += self.naml.iberg_traj_freq
+                if newdate <= edate:
+                    iceberg_traj[fileset].append(
+                        filenames.FNAMES['nemo_ibergs_traj'].format(
+                            P=self.prefix, TS=timestep
+                            )
+                        )
+                date = newdate
+
+        return iceberg_traj
+
+    def get_filename(self, period, start, end, stream):
+        '''
+        Return filename according to filenames.FNAMES regular expression.
+        Arguments:
+            period = mean period from the set [dmsyx]
+            start = start date [year, month, day, hour]
+            end = end date [year, month, day, hour]
+
+        Inputs to filenames.FNAMES:
+            CM = component model (netCDF convention only)
+            P = filename prefix ($RUNID)
+            R = model realm [aoil]
+            F = data frequency
+            CF = custom field (includes atmos stream ID)
+            Y1, M1, D1 = start date
+            Y2, M2, D2 = end date
+        '''
+        start = [str(x).zfill(2) for x in start]
+        end = [str(x).zfill(2) for x in end]
+
+        key, realm, component = self.get_fn_components(stream)
+        if key.startswith('ncf') and stream:
+            stream = '_{}'.format(stream)
+        elif self.model == 'atmos':
+            if 'h' in period:
+                # Hourly files require "_HH" post-fix
+                start[3] = '_{}'.format(start[3])
+            else:
+                start[3] = end[3] = ''
+
+            if stream == 'm' or \
+                    stream in utils.ensure_list(self.naml.streams_30d):
+                start[2] = ''
+                start[1] = MONTHS[int(start[1])]
+            elif stream == 's':
+                start[2] = ''
+                for mth, ssn in self.seasons(self.meanref):
+                    if int(start[1]) in range(mth, mth + 3):
+                        start[1] = ssn
+                        break
+
+        return filenames.FNAMES[key].format(
+            CM=component, P=self.prefix, R=realm, F=period, CF=stream,
+            Y1=start[0], M1=start[1], D1=start[2], H1=start[3],
+            Y2=end[0], M2=end[1], D2=end[2], H2=end[3]
+            )

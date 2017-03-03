@@ -97,23 +97,14 @@ class NCFilename(object):
                      Used as a multiplier to self.base or target when
                      given without digit prefix.
         '''
-
-        target = target if target else self.base
-        try:
-            digit, char = re.match(r'(\d*)([hdmsyxHDMSYX]).*', target).groups()
-            target = str(freq) + char if not digit else target
-        except AttributeError:
-            msg = 'netcdf_filenames.calc_enddate: '
-            msg += 'Invalid target provided for end date: {}'.format(target)
-            utils.log_msg(msg, level='ERROR')
-
         indate = list(self.start_date)
         while len(indate) < 3:
             indate.append('01')
         while len(indate) < 5:
             indate.append('00')
 
-        rtndate = utils.add_period_to_date(indate, target)
+        digit, char = utils.get_frequency(target if target else self.base)
+        rtndate = utils.add_period_to_date(indate, str(freq * digit) + char)
         # Truncate rtndate at the same length as start_date
         rtndate = [str(i).zfill(2) for i in rtndate[0:len(self.start_date)]]
         return tuple(rtndate)
@@ -216,13 +207,8 @@ def month_end(fvars):
     Arguments:
        fvars - An object of <type NCFilename>
     '''
-    try:
-        freq, base = re.match(r'(\d+)([a-z]+)', fvars.base).groups()
-    except AttributeError:
-        freq = '1'
-        base = fvars.base[0].lower()
-
-    return NCF_REGEX.format(P=fvars.prefix, B=''.join([freq, base]),
+    freq, base = utils.get_frequency(fvars.base)
+    return NCF_REGEX.format(P=fvars.prefix, B=''.join([str(freq), base]),
                             S=r'\d{8,10}', E=r'\d{6}01(00)?',
                             C=fvars.custom)
 

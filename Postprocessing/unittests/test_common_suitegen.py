@@ -89,42 +89,6 @@ class SuiteTests(unittest.TestCase):
         # Cycle time (from runtime_environment) = 2000,1,21,0,0,0
         self.assertListEqual(self.mysuite.cycledt, [2000, 1, 21, 0, 0])
 
-    def test_specific_cycletime(self):
-        '''Test cycletime with given cycle'''
-        func.logtest('Assert calculation of given cycletime:')
-        self.assertTupleEqual(self.mysuite._cyclestring('11112233T4455Z'),
-                              ('1111', '22', '33', '44', '55'))
-
-    def test_bad_cycletime(self):
-        '''Test failure mode with incorrect format for
-        task cycle time environment variable'''
-        func.logtest('Failure mode of cycletime property:')
-        self.mysuite.envars.CYLC_TASK_CYCLE_POINT = 'Dummy'
-        with self.assertRaises(SystemExit):
-            print self.mysuite._cyclestring()
-
-    @mock.patch('suite.utils.loadEnv')
-    def test_final_cycle_cylc(self, mock_env):
-        '''Test assertion of final cycle - defined by Cylc environment'''
-        func.logtest('Assert final cycle time property - TRUE Cylc:')
-        mock_env.return_value.ARCHIVE_FINAL = None
-        mock_env.return_value.CYCLEPOINT_OVERRIDE = '12345678T0000Z'
-        mock_env.return_value.FINALCYCLE_OVERRIDE = '12345678T0000Z'
-        testfinal = suite.SuiteEnvironment(self.mypath, self.myfile)
-        self.assertTrue(testfinal.finalcycle)
-
-    def test_final_cycle_env(self):
-        '''Test assertion of final cycle in defined by ARCHIVE_FINAL'''
-        func.logtest('Assert final cycle time property - TRUE archive_final:')
-        with mock.patch.dict('suite.os.environ', {'ARCHIVE_FINAL': 'true'}):
-            testfinal = suite.SuiteEnvironment(self.mypath, self.myfile)
-        self.assertTrue(testfinal.finalcycle)
-
-    def test_not_final_cycle(self):
-        '''Test negative assertion of final cycle in Cylc6 environment'''
-        func.logtest('Assert final cycle time property - FALSE:')
-        self.assertFalse(self.mysuite.finalcycle)
-
     def test_log(self):
         '''Test creation of and access to property "logfile"'''
         func.logtest('Create a log file:')

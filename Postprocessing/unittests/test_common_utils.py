@@ -233,15 +233,36 @@ class DateCheckTests(unittest.TestCase):
         '''Test date input with short array'''
         func.logtest('Short array date input:')
         indate = self.indate[:2]
-        outdate = [2004, 2, 20, 0, 30]
+
+        outdate = [2004, 2, 21, 0, 30]
         date = utils.add_period_to_date(indate, self.delta)
         self.assertListEqual(date, outdate)
+
+        with mock.patch.dict('utils.os.environ',
+                             {'CYLC_CYCLING_MODE': 'gregorian'}):
+            date = utils.add_period_to_date(indate, self.delta)
+            self.assertListEqual(date, outdate)
 
     def test_zero_date(self):
         '''Test date input with zero date input'''
         func.logtest('All zeros date input:')
         date = utils.add_period_to_date([0]*5, self.delta)
         self.assertListEqual(date, self.delta)
+
+    def test_negative_delta(self):
+        '''Test new date with negative delta'''
+        func.logtest('Assert negative delta date calculation:')
+        delta = [0, -1, -20, 0, -30]
+        outdate = [2003, 12, 24, 23, 30]
+        date = utils.add_period_to_date(self.indate, delta)
+        self.assertListEqual(date, outdate)
+
+        delta = [0, -1, -20]
+        outdate = [2003, 12, 26, 0, 0]
+        with mock.patch.dict('utils.os.environ',
+                             {'CYLC_CYCLING_MODE': 'gregorian'}):
+            date = utils.add_period_to_date(self.indate, delta)
+            self.assertListEqual(date, outdate)
 
     def test_bad_date(self):
         '''Test date input with bad date input'''
@@ -493,3 +514,118 @@ class GetSubsetTests(unittest.TestCase):
         files = utils.get_subset(self.dir, None)
         # Code should catch exception: TypeError
         self.assertListEqual(files, [])
+
+
+class CycletimeTests(unittest.TestCase):
+    '''Unit tests for the SuiteEnvironment class'''
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def test_cyclestring(self):
+        '''Test calculation of property "cyclestring"'''
+        func.logtest('Assert cycletime as string array property:')
+        with mock.patch.dict('utils.os.environ',
+                             {'CYLC_TASK_CYCLE_POINT': '19810611T0000Z'}):
+            self.assertTupleEqual(utils.cyclestring(),
+                                  ('1981', '06', '11', '00', '00'))
+
+    def test_specific_cycletime(self):
+        '''Test cycletime with given cycle'''
+        func.logtest('Assert calculation of given cycletime:')
+        self.assertTupleEqual(
+            utils.cyclestring(specific_cycle='11112233T4455Z'),
+            ('1111', '22', '33', '44', '55')
+            )
+
+    def test_bad_cycletime(self):
+        '''Test failure mode with incorrect format for
+        task cycle time environment variable'''
+        func.logtest('Failure mode of cycletime property:')
+        with mock.patch.dict('utils.os.environ',
+                             {'CYLC_TASK_CYCLE_POINT': 'dummy'}):
+            with self.assertRaises(SystemExit):
+                utils.cyclestring()
+
+    @mock.patch('utils.loadEnv')
+    def test_finalcycle_cylc(self, mock_env):
+        '''Test assertion of final cycle - defined by Cylc environment'''
+        func.logtest('Assert final cycle time property - TRUE Cylc:')
+        mock_env.return_value.ARCHIVE_FINAL = None
+        mock_env.return_value.CYCLEPOINT_OVERRIDE = '12345678T0000Z'
+        mock_env.return_value.FINALCYCLE_OVERRIDE = '12345678T0000Z'
+        self.assertTrue(utils.finalcycle())
+
+    @mock.patch('utils.loadEnv')
+    def test_final_cycle_env(self, mock_env):
+        '''Test assertion of final cycle in defined by ARCHIVE_FINAL'''
+        func.logtest('Assert final cycle time property - TRUE archive_final:')
+        mock_env.return_value.ARCHIVE_FINAL = 'true'
+        self.assertTrue(utils.finalcycle())
+
+    def test_not_final_cycle(self):
+        '''Test negative assertion of final cycle'''
+        func.logtest('Assert final cycle time property - FALSE:')
+        with mock.patch.dict('utils.os.environ',
+                             {'CYLC_TASK_CYCLE_POINT': '19810611T0000Z'}):
+            self.assertFalse(utils.finalcycle())
+
+
+class SmallUtilsTests(unittest.TestCase):
+    '''Unit tests for small utility methods'''
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
+    def test_ensure_list(self):
+        ''' Assert return of a list for a given input '''
+        func.logtest('Assert return of a list for a given input:')
+        self.assertListEqual(utils.ensure_list(None), [None])
+        self.assertIsNone(utils.ensure_list(None, listnone=False))
+
+        self.assertListEqual(utils.ensure_list(''), [''])
+        self.assertEqual(utils.ensure_list('', listnone=False), '')
+
+        self.assertListEqual(utils.ensure_list('mystring'), ['mystring'])
+        self.assertListEqual(utils.ensure_list('mystring', listnone=False),
+                             ['mystring'])
+
+        self.assertListEqual(utils.ensure_list([1, 2]), [1, 2])
+        self.assertListEqual(utils.ensure_list([1, 2], listnone=False), [1, 2])
+
+    def test_get_frequency(self):
+        ''' Assert return of int frequency and base period from delta string '''
+        func.logtest('Assert return of freq and base from a delta string:')
+        self.assertListEqual(utils.get_frequency('3Hrs'), [3, 'h'])
+        self.assertListEqual(utils.get_frequency('10d'), [10, 'd'])
+        self.assertListEqual(utils.get_frequency('3months'), [3, 'm'])
+        self.assertListEqual(utils.get_frequency('2s'), [2, 's'])
+        self.assertListEqual(utils.get_frequency('YEAR'), [1, 'y'])
+        self.assertListEqual(utils.get_frequency('x'), [1, 'x'])
+
+    def test_get_frequency_deltalist(self):
+        ''' Assert return of a delta list from delta string '''
+        func.logtest('Assert return of delta list from a delta string:')
+        self.assertListEqual(utils.get_frequency('3Hrs', rtn_delta=True),
+                             [0, 0, 0, 3, 0])
+        self.assertListEqual(utils.get_frequency('10d', rtn_delta=True),
+                             [0, 0, 10, 0, 0])
+        self.assertListEqual(utils.get_frequency('3months', rtn_delta=True),
+                             [0, 3, 0, 0, 0])
+        self.assertListEqual(utils.get_frequency('2s', rtn_delta=True),
+                             [0, 6, 0, 0, 0])
+        self.assertListEqual(utils.get_frequency('YEAR', rtn_delta=True),
+                             [1, 0, 0, 0, 0])
+        self.assertListEqual(utils.get_frequency('x', rtn_delta=True),
+                             [10, 0, 0, 0, 0])
+
+    def test_get_frequency_fail(self):
+        ''' Assert SystemExit given an invalid delta string '''
+        func.logtest('Assert SystemExit given an invalid delta string:')
+        with self.assertRaises(SystemExit):
+            _ = utils.get_frequency('1F')
+        self.assertIn('Invalid target provided: 1F', func.capture('err'))

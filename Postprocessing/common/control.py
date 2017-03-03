@@ -19,6 +19,7 @@ DESCRIPTION
 '''
 
 import abc
+import sys
 import importlib
 
 import utils
@@ -68,7 +69,8 @@ class RunPostProc(object):
 
 NL = {}
 
-INPUT_MODS = ['suite', 'atmosNamelist', 'nemoNamelist', 'ciceNamelist', 'moo']
+INPUT_MODS = ['suite', 'atmosNamelist', 'nemoNamelist', 'ciceNamelist', 'moo',
+              'verify_namelist']
 
 for mod in INPUT_MODS:
     try:
@@ -76,9 +78,10 @@ for mod in INPUT_MODS:
         NL.update(name.NAMELISTS)
 
     except ImportError:
-        if mod == 'suite':
+        if any([(mod == 'suite' and 'main_pp' in sys.argv[0]),
+                ('verify' in mod and 'archive integrity' in sys.argv[0])]):
             utils.log_msg('Unable to find suite module', level='FAIL')
 
     except AttributeError:
-        utils.log_msg('Unable to determine default namelists for ' + mod,
-                      level='WARN')
+        utils.log_msg('Unable to determine default namelists for '
+                      '"{}" module'.format(mod), level='WARN')

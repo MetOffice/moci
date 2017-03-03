@@ -31,9 +31,12 @@ import importlib
 
 import timer
 import utils
-
-
-def main():
+try:
+    import archive_integrity
+except ImportError:
+    pass
+    
+def run_postproc():
     '''Main function for PostProcessing App'''
     timer.initialise_timer()
     # models dictionary:
@@ -83,6 +86,37 @@ def main():
         fails = [m for m, v in exit_check.items() if not v]
         msg = 'main_pp.py - PostProc complete. Exiting with errors in '
         utils.log_msg(msg + ', '.join(fails), level='FAIL')
+
+
+def run_archive_integrity():
+    '''Main function for Archive Verification App'''
+    try:
+        # For rose stem (testing) purposes - process archive log
+        testing_log = os.environ['PP_TESTING_LOG']
+        utils.exec_subproc(testing_log, verbose=False)
+    except KeyError:
+        pass
+
+    try:
+        run_verify = os.environ['VERIFY_ARCHIVE'].lower() == 'true'
+    except KeyError:
+        run_verify = False
+
+    if run_verify:
+        utils.log_msg('', level='INFO')
+        utils.log_msg(' *** Running archive integrity verification app ***',
+                      level='INFO')
+        utils.log_msg('', level='INFO')
+        archive_integrity.main()
+
+
+def main():
+    '''Main function'''
+    # Run main post processing app
+    run_postproc()
+
+    # Run verification app as required
+    run_archive_integrity()
 
 
 if __name__ == '__main__':

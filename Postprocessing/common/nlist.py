@@ -50,8 +50,9 @@ class ReadNamelist(object):
             line_array = [line_array]
 
         for line in line_array:
-            # Remove whitespace, newlines, and trailing comma
+            # Remove whitespace, newlines, and preceding/trailing comma
             key, val = line.split('=')
+            val = val.strip(',')
             if ',' in val:
                 val = map(self._test_val, val.split(','))
             else:
@@ -78,7 +79,7 @@ class ReadNamelist(object):
                     return float(valstring)
                 except ValueError:
                     # This is a string
-                    return os.path.expandvars(valstring)
+                    return os.path.expandvars(valstring).strip()
 
 
 def loadNamelist(*nl_files):

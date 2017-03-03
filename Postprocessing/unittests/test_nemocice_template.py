@@ -1235,7 +1235,6 @@ class MethodsTests(unittest.TestCase):
         '''Test return of timestamps method - archive single'''
         func.logtest('Assert return of timestamps method - archive single:')
         self.model.naml.archive_timestamps = '12-01'
-        print self.model.naml.archive_timestamps
         self.assertTrue(self.model.timestamps('12', '01'))
         self.assertFalse(self.model.timestamps('06', '01'))
 
@@ -1243,7 +1242,6 @@ class MethodsTests(unittest.TestCase):
         '''Test return of timestamps method - archive list'''
         func.logtest('Assert return of timestamps method - archive list:')
         self.model.naml.archive_timestamps = ['06-01', '12-01']
-        print self.model.naml.archive_timestamps
         self.assertTrue(self.model.timestamps('06', '01'))
         self.assertTrue(self.model.timestamps('12', '01'))
         self.assertFalse(self.model.timestamps('11', '01'))
@@ -1252,7 +1250,6 @@ class MethodsTests(unittest.TestCase):
         '''Test return of timestamps method - rebuild single'''
         func.logtest('Assert return of timestamps method - rebuild single:')
         self.model.naml.rebuild_timestamps = '12-01'
-        print self.model.naml.rebuild_timestamps
         self.assertTrue(self.model.timestamps('12', '01', process='rebuild'))
         self.assertFalse(self.model.timestamps('06', '01', process='rebuild'))
 
@@ -1260,7 +1257,6 @@ class MethodsTests(unittest.TestCase):
         '''Test return of timestamps method - rebuild list'''
         func.logtest('Assert return of timestamps method - rebuild list:')
         self.model.naml.rebuild_timestamps = ['06-01', '12-01']
-        print self.model.naml.rebuild_timestamps
         self.assertTrue(self.model.timestamps('06', '01', process='rebuild'))
         self.assertTrue(self.model.timestamps('12', '01', process='rebuild'))
         self.assertFalse(self.model.timestamps('11', '01', process='rebuild'))

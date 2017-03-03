@@ -62,8 +62,8 @@ class SuiteEnvironment(object):
                                     'FINALCYCLE_OVERRIDE')
 
         self.sourcedir = sourcedir
-        self.cyclestring = self._cyclestring()
-        self.finalcycle = self._finalcycle()
+        self.cyclestring = utils.cyclestring()
+        self.finalcycle = utils.finalcycle()
 
         # Monitoring attributes
         self.archive_ok = True
@@ -101,50 +101,10 @@ class SuiteEnvironment(object):
         '''
         return map(int, self.cyclestring)
 
-    def _cyclestring(self, specific_cycle=None):
-        '''
-        Creates a representation of the current cycletime in string format.
-        Return a list of strings: YYYY,MM,DD,mm,ss
-
-        Optional argument: specific_cycle
-            <type 'str'>, Format: '[YYYY][MM][DD]T[mm][hh]Z'
-            Required when the cycle string required is for a date other than
-            the current cycletime, for example the final cycle time.
-        '''
-        if specific_cycle:
-            cyclepoint = specific_cycle
-        else:
-            # Default to current cycle point
-            try:
-                # An override is required for Single Cycle suites
-                cyclepoint = self.envars.CYCLEPOINT_OVERRIDE
-            except AttributeError:
-                cyclepoint = self.envars.CYLC_TASK_CYCLE_POINT
-
-        match = re.search(r'(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})Z',
-                          cyclepoint)
-        if match:
-            cyclestring = match.groups()
-        else:
-            utils.log_msg('Unable to determine cycletime', level='FAIL')
-        return cyclestring
-
-    def _finalcycle(self):
-        '''
-        Determine whether this cycle is the final cycle for the running suite.
-        Returns True/False
-        '''
-        self.envars = utils.loadEnv('ARCHIVE_FINAL', append=self.envars)
-        try:
-            finalcycle = ('true' in self.envars.ARCHIVE_FINAL.lower())
-        except AttributeError:
-            try:
-                finalpoint = self.envars.FINALCYCLE_OVERRIDE
-            except AttributeError:
-                finalpoint = self.envars.CYLC_SUITE_FINAL_CYCLE_POINT
-            finalcycle = (self._cyclestring() ==
-                          self._cyclestring(specific_cycle=finalpoint))
-        return finalcycle
+    @property
+    def logfile(self):
+        '''Archiving log will be sent to the suite log directory'''
+        return self.envars.CYLC_TASK_LOG_ROOT + '-archive.log'
 
     def monthlength(self, month):
         '''Returns length of given month in days - calendar dependent'''

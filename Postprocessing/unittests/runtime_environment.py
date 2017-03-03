@@ -16,7 +16,7 @@
 import os
 
 RUNTIME_FILES = ['atmospp.nl', 'input.nl', 'monitorpp.nl',
-                 'nemocicepp.nl']
+                 'nemocicepp.nl', 'verify.nl']
 
 
 def setup_env():
