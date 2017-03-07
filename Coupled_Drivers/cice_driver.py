@@ -38,14 +38,44 @@ def __expand_array(short_array):
     long_array = ''
     for group in short_array.split(','):
         if '*' not in group:
-            long_array += '{},'.format(group)
+            long_array += '%s,' % group
         else:
             multiplier = int(group.split('*')[0])
             value = group.split('*')[1]
-            long_array += ('{},'.format(value)) * multiplier
+            long_array += ('%s,' % value) * multiplier
     if long_array[-1] == ',':
         long_array = long_array[:-1]
     return long_array
+
+def _verify_rst(pointerfile, cyclepoint):
+    '''
+    Verify the restart file for cice is at the cyclepoint for the start of
+    this cycle. The cyclepoint variable has form yyyymmddThhmmZ, pointerfile
+    contains a string of the path to the restart file
+    '''
+    cycle_date_string = cyclepoint.split('T')[0]
+    # deal with the pointer file
+    pointer_handle = common.open_text_file(pointerfile, 'r')
+    restart_path = pointer_handle.readlines()[0].strip()
+    if not os.path.isfile(restart_path):
+        sys.stderr.write('[INFO] The CICE restart file %s can not be found\n' %
+                         restart_path)
+        sys.exit(error.MISSING_MODEL_FILE_ERROR)
+    #grab the date from the restart file name. It has form yyyy-mm-dd, to
+    #match cyclepoint strip the -'s.
+    restartmatch = re.search(r'\d{4}-\d{2}-\d{2}',
+                             os.path.basename(restart_path))
+    restartdate = restartmatch.group(0).replace('-', '')
+
+    if restartdate != cycle_date_string:
+        sys.stderr.write('[INFO]The CICE restart data does not match the '
+                         ' current cycle time\n.'
+                         '   Cycle time is %s\n'
+                         '   NEMO restart time is %s\n' %
+                         (cycle_date_string, restartdate))
+        sys.exit(error.DATE_MISMATCH_ERROR)
+    else:
+        sys.stdout.write('[INFO] Validated CICE restart date\n')
 
 
 def _load_environment_variables(cice_envar):
@@ -250,6 +280,11 @@ def _setup_executable(common_envar):
             ice_ic = 'set_in_pointer_file'
         else:
             ice_ic = 'default'
+
+    # if this is a continuation verify the restart file date
+    if cice_runtype == 'continue' and \
+            common_envar['DRIVERS_VERIFY_RST'] == 'True':
+        _verify_rst(cice_restart, common_envar['CYLC_TASK_CYCLE_POINT'])
 
 
     #block of code to modify the main CICE namelist

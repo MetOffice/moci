@@ -65,6 +65,24 @@ def _get_nemorst(nemo_nl_file):
             nemo_rst = nemo_rst[:-1]
         return nemo_rst
 
+def _verify_rst(restartdate, cyclepoint):
+    '''
+    Verify that the restart file for nemo is at the cyclepoint for the
+    start of this cycle. The cyclepoint variable has form
+    yyyymmddThhmmZ, restart date yyyymmdd
+    '''
+    cycle_date_string = cyclepoint.split('T')[0]
+    if restartdate != cycle_date_string:
+        sys.stderr.write('[INFO] The NEMO restart data does not match the '
+                         ' current cycle time\n.'
+                         '   Cycle time is %s\n'
+                         '   NEMO restart time is %s\n' %
+                         (cycle_date_string, restartdate))
+        sys.exit(error.DATE_MISMATCH_ERROR)
+    else:
+        sys.stdout.write('[INFO] Validated NEMO restart date\n')
+
+
 def _load_environment_variables(nemo_envar):
     '''
     Load the NEMO environment variables required for the model run into the
@@ -296,8 +314,10 @@ def _setup_executable(common_envar):
 
     if os.path.isfile(latest_nemo_dump):
         nemo_dump_time = re.findall(r'_(\d*)_restart', latest_nemo_dump)[0]
-
-        # Link restart files no that the last output one becomes next input one
+        # Verify the dump time against cycle time if appropriate
+        if common_envar['DRIVERS_VERIFY_RST'] == 'True':
+            _verify_rst(nemo_dump_time, common_envar['CYLC_TASK_CYCLE_POINT'])
+        # link restart files no that the last output one becomes next input one
         if os.path.islink('restart.nc'):
             os.remove('restart.nc')
 

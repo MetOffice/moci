@@ -33,6 +33,9 @@ SUBPROC_ERROR = 102
 # Invalid environment variable
 INVALID_EVAR_ERROR = 103
 
+# Date matching error
+DATE_MISMATCH_ERROR = 104
+
 # Invalid local variable
 INVALID_LOCAL_ERROR = 110
 

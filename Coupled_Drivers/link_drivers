@@ -90,6 +90,30 @@ def _setup_common():
         sys.stderr.write('[FAIL] Environment variable ROSE_LAUNCHER is not '
                          'specified\n')
         sys.exit(error.MISSING_EVAR_ERROR)
+    # If available load cylc environment variables to allow for verification
+    # of restarts for cycling suites
+    _ = common_envars.load_envar('CYLC_CYCLING_MODE', 'unset')
+    if common_envars['CYLC_CYCLING_MODE'] in ('360day', '365day', 'gregorian'):
+        # This is a cycling suite using a calendar and as such it is possible
+        # to verify the start dumps at the start of a cycle
+        if common_envars.load_envar('CYLC_TASK_CYCLE_POINT') != 0:
+            sys.stderr.write('[FAIL] Environment variable CYLC_TASK_CYCLE_POINT'
+                             ' is not specified\n')
+            sys.exit(error.MISSING_EVAR_ERROR)
+        common_envars.add('DRIVERS_VERIFY_RST', 'True')
+    elif common_envars['CYLC_CYCLING_MODE'] == 'integer':
+        sys.stdout.write('[INFO] Using an integer cycling mode, therefore '
+                         'drivers are unable to verify restart files\n')
+        common_envars.add('DRIVERS_VERIFY_RST', 'False')
+    elif common_envars['CYLC_CYCLING_MODE'] == 'unset':
+        common_envars.add('DRIVERS_VERIFY_RST', 'False')
+    else:
+        sys.stdout.write('[FAIL] Cycling mode %s not permitted. The '
+                         ' environment variable CYLC_CYCLING_MODE must have '
+                         ' one of the following values:\n'
+                         '  360day\n  365day\n  greogrian\n  integer\n' %
+                          common_envars['CYLC_CYCLING_MODE'])
+        sys.exit(error.INVALID_EVAR_ERROR)
     return common_envars
 
 def _export_envar_str(envinsts):
