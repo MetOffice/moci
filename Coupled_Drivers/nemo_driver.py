@@ -249,6 +249,9 @@ def _setup_executable(common_envar):
             for file_path in glob.glob(ice_rst+'/*restart*'):
                 if os.path.isfile(file_path):
                     os.remove(file_path)
+            for file_path in glob.glob(nemo_rst+'/*trajectory*'):
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
     elif os.path.isfile(latest_nemo_dump):
         sys.stdout.write('[INFO] Restart data avaliable in NEMO restart '
                          'directory %s. Restarting from previous task output\n'
