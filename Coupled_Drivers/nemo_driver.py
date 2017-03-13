@@ -590,19 +590,16 @@ def _finalize_executable(_):
             os.path.isfile(nemo_envar_fin['NEMO_NL']):
         shutil.copy(nemo_envar_fin['NEMO_NL'], nemo_rst)
 
-    #append the ocean output and solver stat file to standard out
+    # append the ocean output and solver stat file to standard out. Use an
+    # iterator to read the files, incase they are too large to fit into
+    # memory
     nemo_stdout_file = 'ocean.output'
-    if os.path.isfile(nemo_stdout_file):
-        out_file = common.open_text_file(nemo_stdout_file, 'r')
-        for line in out_file.readlines():
-            sys.stdout.write(line)
-        out_file.close()
     nemo_solver_file = 'solver.stat'
-    if os.path.isfile(nemo_solver_file):
-        solver_file = common.open_text_file(nemo_solver_file, 'r')
-        for line in solver_file.readlines():
-            sys.stdout.write(line)
-        solver_file.close()
+    for nemo_output_file in (nemo_stdout_file, nemo_solver_file):
+        if os.path.isfile(nemo_output_file):
+            with open(nemo_output_file, 'r') as n_out:
+                for line in n_out:
+                    sys.stdout.write(line)
 
     _, error_count = common.__exec_subproc_true_shell([ \
             'grep "E R R O R" ocean.output | wc -l'])

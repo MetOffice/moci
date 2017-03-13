@@ -213,10 +213,10 @@ def _finalize_executable(_):
     else:
         # append the pe0 output to standard out
         sys.stdout.write('%PE0 OUTPUT%\n')
-        f_pe0 = common.open_text_file(um_pe0_stdout_file, 'r')
-        for line in f_pe0.readlines():
-            sys.stdout.write(line)
-        f_pe0.close()
+        # use an iterator to avoid loading the pe0 file into memory
+        with open(um_pe0_stdout_file, 'r') as f_pe0:
+            for line in f_pe0:
+                sys.stdout.write(line)
 
     # Remove output from other PEs unless requested otherwise
     if um_envar_fin['ATMOS_KEEP_MPP_STDOUT'] == 'false':
