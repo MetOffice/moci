@@ -196,7 +196,6 @@ def ncf_getdate(filename, enddate=False):
         rtndate = None
     else:
         rtndate = dates[-1] if len(dates) == 1 or enddate else dates[-2]
-
     return rtndate
 
 

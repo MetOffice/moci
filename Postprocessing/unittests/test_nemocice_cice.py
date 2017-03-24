@@ -95,6 +95,7 @@ class UtilityMethodTests(unittest.TestCase):
     '''Unit tests relating to the CICE utility methods'''
     def setUp(self):
         self.cice = cice.CicePostProc()
+        self.cice.suite = mock.Mock()
 
     def tearDown(self):
         try:
@@ -121,12 +122,12 @@ class UtilityMethodTests(unittest.TestCase):
         func.logtest('Testing file: ' + 'RUNIDi.6h.1982-11-01-05.nc')
         self.assertTupleEqual(
             self.cice.get_date('RUNIDi.6h.1982-11-01-05.nc', enddate=True),
-            ('1982', '11', '01', '06')
+            ('1982', '11', '01', '05')
             )
         func.logtest('Testing file: ' + 'RUNIDi.12h.1982-11-30-23.nc')
         self.assertTupleEqual(
             self.cice.get_date('RUNIDi.12h.1982-11-30-23.nc', enddate=True),
-            ('1982', '12', '01', '00')
+            ('1982', '11', '30', '23')
             )
 
     def test_get_date_yyyymmdd(self):
@@ -150,17 +151,12 @@ class UtilityMethodTests(unittest.TestCase):
         func.logtest('Testing file: ' + 'RUNIDi.1d.1982-11-10.nc')
         self.assertTupleEqual(
             self.cice.get_date('RUNIDi.1d.1982-11-10.nc', enddate=True),
-            ('1982', '11', '11')
+            ('1982', '11', '10')
             )
         func.logtest('Testing file: ' + 'RUNIDi.10d.1982-11-10.nc')
         self.assertTupleEqual(
             self.cice.get_date('RUNIDi.10d.1982-11-10.nc', enddate=True),
-            ('1982', '11', '11')
-            )
-        func.logtest('Testing file: ' + 'RUNIDi.10d.1982-12-30.nc')
-        self.assertTupleEqual(
-            self.cice.get_date('RUNIDi.10d.1982-12-30.nc', enddate=True),
-            ('1983', '01', '01')
+            ('1982', '11', '10')
             )
 
     def test_get_date_yyyymm(self):
@@ -176,15 +172,16 @@ class UtilityMethodTests(unittest.TestCase):
     def test_get_enddate_yyyymm(self):
         '''Test get_date method - YYYY-MM format - enddate'''
         func.logtest('Assert functionality of get_date (YYYY-MM) - end:')
+        self.cice.suite.monthlength.return_value = 25
         func.logtest('Testing file: ' + 'RUNIDi.1m.1982-06.nc')
         self.assertTupleEqual(
             self.cice.get_date('RUNIDi.1m.1982-06.nc', enddate=True),
-            ('1982', '07', '01')
+            ('1982', '06', '25')
             )
         func.logtest('Testing file: ' + 'RUNIDi.1m.1982-12.nc')
         self.assertTupleEqual(
             self.cice.get_date('RUNIDi.1m.1982-12.nc', enddate=True),
-            ('1983', '01', '01')
+            ('1982', '12', '25')
             )
 
     def test_get_date_failure(self):

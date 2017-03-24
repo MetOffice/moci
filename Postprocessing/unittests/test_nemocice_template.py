@@ -1014,6 +1014,7 @@ class MethodsTests(unittest.TestCase):
         mock_set.side_effect = [['WkFile1', 'WkFile2'],
                                 ['ShFile1', 'ShFile2']]
         self.model.filename_components = mock.Mock()
+        self.model.datestamp_period = mock.Mock(return_value='xd')
         self.model.move_to_share()
         mock_mv.assert_called_with(['WkFile1', 'WkFile2'], 'ShareDir',
                                    originpath='WorkDir')
@@ -1021,9 +1022,11 @@ class MethodsTests(unittest.TestCase):
                              [mock.call('WorkDir'), mock.call('ShareDir')])
         self.assertListEqual(self.model.filename_components.mock_calls,
                              [mock.call('ShFile1'),
-                              mock.call().rename_ncf('ShareDir/ShFile1'),
+                              mock.call().rename_ncf('ShareDir/ShFile1',
+                                                     target='xd'),
                               mock.call('ShFile2'),
-                              mock.call().rename_ncf('ShareDir/ShFile2')])
+                              mock.call().rename_ncf('ShareDir/ShFile2',
+                                                     target='xd')])
         self.assertTupleEqual(self.model.fields, ('',))
 
     @mock.patch('modeltemplate.ModelTemplate.get_raw_output')
@@ -1230,6 +1233,90 @@ class MethodsTests(unittest.TestCase):
             self.assertTrue(isinstance(ncf, netcdf_filenames.NCFilename))
         self.assertIn('unable to extract "component"', func.capture('err'))
         mock_ncf.assert_called_once_with('component', 'PREFIX', 'R')
+
+    def test_datastamp_period_cf(self):
+        '''Test datestamp_period extraction from filename - cf compliant'''
+        func.logtest('Assert data period from fname - cf compliant:')
+        target = self.model.datestamp_period(
+            'RUNIDx_1m_19901001_19910101_FIELD.nc'
+            )
+        self.assertEqual(target, '3m')
+
+        target = self.model.datestamp_period(
+            'RUNIDx_1d_19901001_19901006_FIELD.nc'
+            )
+        self.assertEqual(target, '5d')
+
+    def test_datastamp_period_cf_modify(self):
+        '''Test datestamp_period from filename - cf compliant, modified'''
+        func.logtest('Assert modified data period from fname - cf compliant:')
+        target = self.model.datestamp_period(
+            'RUNIDx_6h_1990010100_1990010200_FIELD.nc'
+            )
+        self.assertEqual(target, '1d')
+
+        self.model.suite.envars.CYLC_CYCLING_MODE = 'gregorian'
+        target = self.model.datestamp_period(
+            'RUNIDx_10d_19901001_19901101_FIELD.nc'
+            )
+        self.assertEqual(target, '30d')
+
+        self.model.suite.envars.CYLC_CYCLING_MODE = '360day'
+        target = self.model.datestamp_period(
+            'RUNIDx_10d_19901001_19901101_FIELD.nc'
+            )
+        self.assertEqual(target, '1m')
+
+    def test_dstamp_period_noncf_base(self):
+        '''Test datestamp_period from filename - non-cf, base target'''
+        func.logtest('Assert extraction of base from fname - non-cf:')
+
+        with mock.patch('modeltemplate.ModelTemplate.cfcompliant_output',
+                        new_callable=mock.PropertyMock,
+                        return_value=False):
+            target = self.model.datestamp_period(
+                'RUNIDx_1h_1990090112_1990090112_FIELD.nc'
+                )
+            self.assertEqual(target, '1h')
+
+            target = self.model.datestamp_period(
+                'RUNIDo_1d_19900901_19900930_FIELD_19900901-19900901.nc'
+                )
+            self.assertEqual(target, '1d')
+
+            target = self.model.datestamp_period(
+                'RUNIDx_1m_1990090101_1990090130_FIELD.nc'
+                )
+            self.assertEqual(target, '1m')
+
+    def test_datestamp_period_noncf_mod(self):
+        '''Test datestamp_period from filename - non-cf, new target'''
+        func.logtest('Assert extraction of target from fname - non-cf:')
+
+        with mock.patch('modeltemplate.ModelTemplate.cfcompliant_output',
+                        new_callable=mock.PropertyMock,
+                        return_value=False):
+            target = self.model.datestamp_period(
+                'RUNIDo_1d_19900901_19900910_FIELD.nc'
+                )
+            self.assertEqual(target, '10d')
+
+            target = self.model.datestamp_period(
+                'RUNIDx_6h_1990090100_1990090111_FIELD.nc'
+                )
+            self.assertEqual(target, '12h')
+
+    def test_datestamp_period_shortdate(self):
+        '''Test datestamp_period from filename - non-cf, new target'''
+        func.logtest('Assert extraction of target from fname - non-cf:')
+
+        with mock.patch('modeltemplate.ModelTemplate.cfcompliant_output',
+                        new_callable=mock.PropertyMock,
+                        return_value=False):
+            target = self.model.datestamp_period(
+                'RUNIDo_1d_19500901_19501230_FIELD_195011-195011.nc'
+                )
+            self.assertEqual(target, '1m')
 
     def test_archive_timetamps_single(self):
         '''Test return of timestamps method - archive single'''

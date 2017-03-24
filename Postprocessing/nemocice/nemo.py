@@ -67,6 +67,14 @@ class NemoPostProc(mt.ModelTemplate):
         return 'o'
 
     @property
+    def cfcompliant_output(self):
+        '''
+        Return "True" if the raw model output datestamp is CF-compliant.
+        NEMO output data end-date is NOT CF-compliant.
+        '''
+        return False
+
+    @property
     def set_stencil(self):
         '''
         Returns a dictionary of regular expressions to match files belonging

@@ -151,6 +151,11 @@ class ModelTemplate(control.RunPostProc):
         return self.suite.prefix
 
     @property
+    def cfcompliant_output(self):
+        ''' Return "True" if the raw model output datestamp is CF-compliant '''
+        return True
+
+    @property
     def month_base(self):
         '''Base component used to create the monthly mean file'''
         return self.naml.base_component
@@ -268,7 +273,8 @@ class ModelTemplate(control.RunPostProc):
             # enforce netCDF filename convention for standard means
             for fname in self.get_raw_output(self.share):
                 ncfile = self.filename_components(fname)
-                ncfile.rename_ncf(os.path.join(self.share, fname))
+                ncfile.rename_ncf(os.path.join(self.share, fname),
+                                  target=self.datestamp_period(fname))
             self.fields = tuple([f.replace('_', '-') for f in self.fields])
 
     def timestamps(self, month, day, process='archive'):
@@ -282,14 +288,22 @@ class ModelTemplate(control.RunPostProc):
         return bool([ts for ts in nlvar if [month, day] == ts.split('-')] or
                     not nlvar)
 
-    @staticmethod
-    def get_date(filename, enddate=False):
+    def get_date(self, filename, enddate=False):
         '''
         Returns a tuple representing the date extracted from a filename.
         Overriding method in the calling model is required.
         By default the date returned is the first (start) date in the filename.
+        Arguments:
+           filename - <type str>
+        Optional arugments:
+           enddate  - <type bool> Return the end date from the datestamp
         '''
-        return netcdf_filenames.ncf_getdate(filename, enddate=enddate)
+        rtndate = list(netcdf_filenames.ncf_getdate(filename, enddate=enddate))
+        if len(rtndate) == 2:
+            rtndate.append('01')
+            if enddate and not self.cfcompliant_output:
+                rtndate[2] = self.suite.monthlength(rtndate[1])
+        return tuple(rtndate)
 
     def periodset(self, inputs, datadir=None, archive=False):
         '''
@@ -391,6 +405,44 @@ class ModelTemplate(control.RunPostProc):
             ncf = netcdf_filenames.NCFilename('component', 'PREFIX', 'R')
 
         return ncf
+
+    def datestamp_period(self, fname):
+        '''
+        Return period of data contained in a file according to the
+        filename datestamp.
+        '''
+        date = [int(x) for x in self.get_date(fname)]
+        enddate = [int(x) for x in self.get_date(fname, enddate=True)]
+
+        try:
+            namebase = re.match(r'.*[_.](\d+[hdm])', fname).group(1)
+        except IndexError:
+            utils.log_msg('file_date_period - Invalid filename:' + fname,
+                          level='ERROR')
+            # Set default value for debug mode
+            namebase = '1d'
+
+        frequency, base = utils.get_frequency(namebase)
+        delta = utils.get_frequency(namebase, rtn_delta=True)
+        multiplier = 0 if self.cfcompliant_output else frequency
+        data_period = None
+        while not data_period:
+            multiplier += frequency
+            date = utils.add_period_to_date(date, delta)
+
+            if date[:len(enddate)] == enddate:
+                data_period = str(multiplier) + base
+            elif date[:len(enddate)] > enddate:
+                data_period = str(multiplier - frequency) + base
+
+        if data_period == '30d' and \
+                any([self.suite.envars.CYLC_CYCLING_MODE == '360day',
+                     self.suite.envars.CYLC_CYCLING_MODE == 'integer']):
+            data_period = '1m'
+        elif data_period == '24h':
+            data_period = '1d'
+
+        return data_period
 
     def loop_inputs(self, fields):
         '''

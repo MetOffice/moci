@@ -78,6 +78,14 @@ class CicePostProc(mt.ModelTemplate):
         return 'i'
 
     @property
+    def cfcompliant_output(self):
+        '''
+        Return "True" if the raw model output datestamp is CF-compliant.
+        CICE produces a single datestamp which is NOT CF-compliant.
+        '''
+        return False
+
+    @property
     def rsttypes(self):
         ''' Returns a tuple of restart file types available '''
         return ('', r'.age')
@@ -91,8 +99,7 @@ class CicePostProc(mt.ModelTemplate):
         '''
         return [('concat_daily_means', self.naml.cat_daily_means)]
 
-    @staticmethod
-    def get_date(fname, enddate=False, base=None):
+    def get_date(self, fname, enddate=False, base=None):
         '''
         Returns the date extracted from the filename provided.
         By default, the start date for the data is returned
@@ -113,23 +120,17 @@ class CicePostProc(mt.ModelTemplate):
             else:
                 rtndate = datestrings[-1].strip('.').split('-')
                 if len(rtndate) == 2:
-                    rtndate.append('01')
+                    rtndate.append(str(self.suite.monthlength(rtndate[1]))
+                                   if enddate else '01')
+
                 if 'restart' in fname:
                     # No change required.
                     pass
-                else:
+                elif not enddate:
                     digits, char = re.match(r'(\d+)(\w+)', base if base else
                                             fname.split('.')[1]).groups()
-                    if enddate:
-                        # CICE data is datestamped with the end date
-                        # (non CF compliant).
-                        freq = '1' + char
-                    else:
-                        # Calculate start date based on the frequency
-                        freq = '-' + str(int(digits) - 1) + char
 
-                    if len(rtndate) == 2:
-                        rtndate.append('01')
+                    freq = '-' + str(int(digits) - 1) + char
                     indate = ['00']*5
                     for i, val in enumerate(rtndate):
                         indate[i] = val
