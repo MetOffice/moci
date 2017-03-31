@@ -338,6 +338,36 @@ class ArchiveDeleteTests(unittest.TestCase):
                                          'MY_NCF', 5)
 
     @mock.patch('atmos.AtmosPostProc.diags_to_process')
+    @mock.patch('atmos.housekeeping.extract_to_netcdf', return_value=0)
+    def test_transform_netcdf_nostreams(self, mock_ncf, mock_getfiles):
+        '''Test do_transform - collect netCDF files - no streams'''
+        func.logtest('Assert netCDF files list for do_tranform - no streams:')
+        self.atmos.naml.atmospp.convert_pp = False
+        self.atmos.netcdf_streams = None
+        mock_getfiles.return_value = self.ffiles
+
+        self.atmos.do_transform()
+        mock_getfiles.assert_called_once_with(False)
+
+        self.atmos.netcdf_streams = ''
+        self.atmos.do_transform()
+        self.assertEqual(mock_ncf.call_count, 0)
+
+    @mock.patch('atmos.AtmosPostProc.diags_to_process')
+    @mock.patch('atmos.housekeeping.extract_to_netcdf', return_value=0)
+    def test_transform_netcdf_nofields(self, mock_ncf, mock_getfiles):
+        '''Test do_transform - collect netCDF files - no streams'''
+        func.logtest('Assert netCDF files list for do_tranform - no streams:')
+        self.atmos.naml.atmospp.convert_pp = False
+        self.atmos.netcdf_streams = 'b'
+        self.atmos.naml.atmospp.fields_to_netcdf = None
+        mock_getfiles.return_value = self.ffiles
+
+        self.atmos.do_transform()
+        mock_getfiles.assert_called_once_with(False)
+        mock_ncf.assert_called_once_with(self.ffiles[1], {}, 'NETCDF4', None)
+
+    @mock.patch('atmos.AtmosPostProc.diags_to_process')
     @mock.patch('atmos.housekeeping.extract_to_netcdf', return_value=1)
     def test_transform_netcdf_fail(self, mock_ncf, mock_getfiles):
         '''Test do_transform - collect netCDF files'''

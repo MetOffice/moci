@@ -283,8 +283,9 @@ class AtmosPostProc(control.RunPostProc):
                         finalcycle is True
                         )
 
-            if re.match(self.ff_pattern.format(self.netcdf_streams),
-                        basename):
+            if self.netcdf_streams and re.match(
+                    self.ff_pattern.format(self.netcdf_streams), basename
+                ):
                 icode = housekeeping.extract_to_netcdf(
                     fname, self.netcdf_fields,
                     self.naml.atmospp.netcdf_filetype,
