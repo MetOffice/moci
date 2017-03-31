@@ -200,6 +200,23 @@ class pp12_t198(rose.upgrade.MacroUpgrade):
                             ["namelist:atmospp", "process_streams"])
 
         return config, self.reports
+        
+class pp20_t206(rose.upgrade.MacroUpgrade):
+
+    """Upgrade macro for ticket #206 by Erica Neininger."""
+    BEFORE_TAG = "pp20_t198"
+    AFTER_TAG = "pp20_t206"
+
+    def upgrade(self, config, meta_config=None):
+        """Upgrade a Postproc make app configuration."""
+        self.add_setting(config,
+                         ["namelist:nemoverify", "iberg_traj_tstamp",], "Timestep")
+        self.add_setting(config,
+                         ["namelist:nemoverify", "iberg_traj_freq",], "")
+        self.add_setting(config,
+                         ["namelist:nemoverify", "iberg_traj_ts_per_day",], "")
+        return config, self.reports
+        
 
 
 class pp12_tXXX(rose.upgrade.MacroUpgrade):

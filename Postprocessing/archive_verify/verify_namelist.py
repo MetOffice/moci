@@ -70,7 +70,8 @@ class NemoVerify(object):
     mean_reference_date = '10001201'
     meanstreams = ['1m', '1s', '1y']
     iberg_traj = False
-    iberg_traj_freq = 720
+    iberg_traj_tstamp = 'Timestep'
+    iberg_traj_freq = '10d'
     iberg_traj_ts_per_day = 72
 
 

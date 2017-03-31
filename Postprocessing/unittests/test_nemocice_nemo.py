@@ -757,8 +757,13 @@ class AdditionalArchiveTests(unittest.TestCase):
         self.nemo.share = 'THERE'
         with mock.patch('nemo.utils.get_subset'):
             self.nemo.archive_general()
-        mock_mv.assert_called_once_with(
-            pattern=r'trajectory_icebergs_\d{6}_\d{4}\.nc'
+        iberg_pattern = r'trajectory_icebergs_\d{6,8}(-\d{8})?_\d{4}\.nc'
+        mock_mv.assert_called_once_with(pattern=iberg_pattern)
+        self.assertIsNotNone(re.match(iberg_pattern,
+                                      'trajectory_icebergs_000720_0000.nc'))
+        self.assertIsNotNone(
+            re.match(iberg_pattern,
+                     'trajectory_icebergs_11112233-44445566_0000.nc')
             )
 
     @mock.patch('nemo.utils.remove_files')

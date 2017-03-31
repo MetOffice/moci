@@ -366,7 +366,7 @@ class NemoPostProc(mt.ModelTemplate):
     @timer.run_timer
     def archive_iceberg_trajectory(self):
         '''Rebuild and archive iceberg trajectory (diagnostic) files'''
-        fn_stub = r'trajectory_icebergs_\d{6}'
+        fn_stub = r'trajectory_icebergs_\d{6,8}(-\d{8})?'
         # Move to share if necessary
         if self.work != self.share:
             self.move_to_share(pattern=fn_stub + self.rebuild_suffix['REGEX'])

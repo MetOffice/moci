@@ -603,10 +603,11 @@ class DiagnosticFilesTests(unittest.TestCase):
 
     def test_nemo_iberg_traj(self):
         ''' Assert return of dictionary containing iberg trajectory files '''
-        func.logtest('Assert return of iber trajectoy dictionary:')
+        func.logtest('Assert return of iberg trajectory dictionary:')
         self.files.edate = [1995, 11, 1]
         # startdate=19950811 --> total length=80 days (8 files produced)
         self.files.naml.iberg_traj = True
+        self.files.naml.iberg_traj_tstamp = 'Timestep'
         ibergs = self.files.iceberg_trajectory()
         outlist = ['PREFIXo_trajectory_icebergs_000720.nc',
                    'PREFIXo_trajectory_icebergs_001440.nc', # To 19950901
@@ -620,20 +621,49 @@ class DiagnosticFilesTests(unittest.TestCase):
 
     def test_nemo_iberg_traj_30days(self):
         ''' Assert return of dictionary containing iberg trajectory files '''
-        func.logtest('Assert return of iber trajectoy dictionary:')
+        func.logtest('Assert return of iberg trajectory dictionary:')
         self.files.edate = [1995, 11, 1]
         # startdate=19950811 --> total length=80 days (2 files produced)
         self.files.naml.iberg_traj = True
-        self.files.naml.iberg_traj_freq = 3000
+        self.files.naml.iberg_traj_tstamp = 'Timestep'
+        self.files.naml.iberg_traj_freq = '30d'
         self.files.naml.iberg_traj_ts_per_day = 100
         ibergs = self.files.iceberg_trajectory()
-        outlist = ['PREFIXo_trajectory_icebergs_003000.nc', # To 19951011
-                   'PREFIXo_trajectory_icebergs_006000.nc'] # To 19951111
+        outlist = ['PREFIXo_trajectory_icebergs_003000.nc', # To 19950911
+                   'PREFIXo_trajectory_icebergs_006000.nc'] # To 19951011
+        self.assertEqual(ibergs, {'oni.nc.file': outlist})
+
+    def test_nemo_iberg_traj_cal_fail(self):
+        ''' Assert return of dictionary containing iberg trajectory files '''
+        func.logtest('Assert failure mode with non-360day calendar:')
+        self.files.edate = [1995, 11, 1]
+        self.files.naml.iberg_traj = True
+        self.files.naml.iberg_traj_tstamp = 'Timestep'
+        self.files.naml.iberg_traj_freq = '1m'
+        with mock.patch('expected_content.utils.calendar',
+                        return_value='SomeCalendar'):
+            with self.assertRaises(SystemExit):
+                _ = self.files.iceberg_trajectory()
+        self.assertIn('only be determined with frequency 1m',
+                      func.capture('err'))
+        self.assertIn('Please use hours or days', func.capture('err'))
+
+    def test_nemo_iberg_traj_datestamp(self):
+        ''' Assert return of dictionary containing iberg trajectory files '''
+        func.logtest('Assert return of datestamped iberg trajectory files:')
+        self.files.edate = [1995, 11, 1]
+        # startdate=19950811 --> total length=80 days (2 files produced)
+        self.files.naml.iberg_traj = True
+        self.files.naml.iberg_traj_tstamp = 'YYYYMMDD'
+        self.files.naml.iberg_traj_freq = '30d'
+        ibergs = self.files.iceberg_trajectory()
+        outlist = ['PREFIXo_trajectory_icebergs_19950811-19950911.nc',
+                   'PREFIXo_trajectory_icebergs_19950911-19951011.nc']
         self.assertEqual(ibergs, {'oni.nc.file': outlist})
 
     def test_nemo_iberg_traj_off(self):
         ''' Assert return of dictionary containing iberg trajectory files '''
-        func.logtest('Assert return of iber trajectoy dictionary (no files):')
+        func.logtest('Assert return of iberg trajectory dictionary (no files):')
         # Default setting: naml.iberg_traj=False
         self.assertEqual(self.files.iceberg_trajectory(), {'oni.nc.file': []})
 

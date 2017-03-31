@@ -261,11 +261,11 @@ class RestartFiles(ArchivedFiles):
         if not self.finalcycle and hasattr(self.naml, 'buffer_restart'):
             # Adjust for mean buffer
             cycletime = '{}{}{}T{}{}Z'.format(*utils.cyclestring())
-            endtime = [str(x).zfill(2) for x in edate]
-            while len(endtime) < 5:
-                endtime.append('00')
-            endstr = '{}T{}Z'.format(''.join(endtime[:3]), ''.join(endtime[3:]))
-            cmd = 'rose date {} {} --calendar {}'.format(endstr, cycletime,
+            edate_str = [str(x).zfill(2) for x in edate]
+            while len(edate_str) < 5:
+                edate_str.append('00')
+            endtime = '{}{}{}T{}{}Z'.format(*edate_str[:5])
+            cmd = 'rose date {} {} --calendar {}'.format(endtime, cycletime,
                                                          utils.calendar())
             rcode, cyclefreq = utils.exec_subproc(cmd, verbose=False)
             if rcode == 0:
@@ -592,17 +592,45 @@ class DiagnosticFiles(ArchivedFiles):
             iberg = False
 
         if iberg:
-            freq = self.naml.iberg_traj_freq / self.naml.iberg_traj_ts_per_day
+            freq = self.naml.iberg_traj_freq
             date = self.sdate + [0, 0]
             edate = self.edate + [0, 0]
-            timestep = 0
+
+            fmt = self.naml.iberg_traj_tstamp
+            if fmt == 'Timestep':
+                # Timestep format time stamp
+                if utils.calendar() == '360day' or freq[-1] in 'hd':
+                    per_day = {'h': 1.0 / 24, 'd': 1, 'm': 30, 'y': 360}
+                    freq = int(int(freq[:-1]) * per_day[freq[-1]])
+                    delta = [0, 0, freq]
+                    step = freq * self.naml.iberg_traj_ts_per_day
+                    timestamp = '0'
+                else:
+                    utils.log_msg(
+                        'Expected Iceberg Trajectory files can only be '
+                        'determined with frequency {} when using the 360day '
+                        'calendar.  Please use hours or days.'.format(freq),
+                        level='FAIL'
+                        )
+            else:
+                # YYYYMMDD-YYYYMMDD format time stamp
+                delta = freq
+                timestamp = ''
+
             while date < edate:
-                newdate = utils.add_period_to_date(date, [0, 0, freq])
-                timestep += self.naml.iberg_traj_freq
+                newdate = utils.add_period_to_date(date, delta)
+                if fmt == 'Timestep':
+                    timestamp = str(int(timestamp) + step).zfill(6)
+                else:
+                    timestamp = '{}-{}'.format(
+                        ''.join(str(x).zfill(2) for x in date[:3]),
+                        ''.join(str(x).zfill(2) for x in newdate[:3])
+                        )
+
                 if newdate <= edate:
                     iceberg_traj[fileset].append(
                         filenames.FNAMES['nemo_ibergs_traj'].format(
-                            P=self.prefix, TS=timestep
+                            P=self.prefix, TS=timestamp
                             )
                         )
                 date = newdate
