@@ -238,7 +238,7 @@ def extract_to_netcdf(fieldsfile, fields, ncftype, complevel):
     except AttributeError:
         msg = 'PP/Fieldsfile name does not match expected format: '
         utils.log_msg(msg + os.path.basename(fieldsfile), level='WARN')
-        suite_id = os.environ['CYLC_SUITE_REG_NAME']
+        suite_id = os.environ['CYLC_SUITE_NAME']
         stream_id = 'p9'
     ncf_prefix = 'atmos_{}a'.format(suite_id)
     try:

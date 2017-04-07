@@ -339,7 +339,7 @@ class CommandExec(object):
 
 class MooseArch(object):
     '''Default namelist for Moose archiving'''
-    archive_set = os.environ['CYLC_SUITE_REG_NAME']
+    archive_set = os.environ['CYLC_SUITE_NAME']
     non_duplexed_set = False
     dataclass = 'crum'
     ensembleid = ''

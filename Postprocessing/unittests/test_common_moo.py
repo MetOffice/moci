@@ -19,7 +19,7 @@ import mock
 import testing_functions as func
 import runtime_environment
 
-# Import of moo requires 'CYLC_SUITE_REG_NAME' from runtime environment
+# Import of moo requires 'CYLC_SUITE_NAME' from runtime environment
 runtime_environment.setup_env()
 import moo
 
