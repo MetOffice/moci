@@ -263,9 +263,16 @@ def move_files(mvfiles, destination, originpath=None, fail_on_err=False):
         except IOError:
             log_msg('move_files: File does not exist: ' + fname, level=msglevel)
         except shutil.Error:
-            msg = 'move_files: Attempted to overwrite original file?: ' + fname
-            log_msg(msg, level=msglevel)
-
+            if os.path.dirname(fname) == destination:
+                msg = 'move_files: Attempted to overwrite original file: '
+                log_msg(msg + fname, level=msglevel)
+            else:
+                dest_file = os.path.join(destination, os.path.basename(fname))
+                remove_files(dest_file)
+                msg = 'move_files: Deleted pre-existing file with same name ' \
+                    'prior to move: ' + dest_file
+                log_msg(msg, level='WARN')
+                shutil.move(fname, destination)
 
 def calendar():
     ''' Return the calendar based on the suite environment '''
