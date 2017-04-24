@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2016 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2017 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -75,36 +75,6 @@ class NemoPostProc(mt.ModelTemplate):
         return False
 
     @property
-    def set_stencil(self):
-        '''
-        Returns a dictionary of regular expressions to match files belonging
-        to each period (keyword) set
-
-        The same 4 arguments (year, month, season and field) are required to
-        access any indivdual regular expression regardless of the need to use
-        them.  This is a consequence of the @property nature of the method
-        '''
-        set_stencil = super(NemoPostProc, self).set_stencil
-        set_stencil[mt.RR] = lambda rsttype: \
-            r'^{P}o_{T1}_?\d{{8}}_restart{T2}(\.nc)?$'.\
-            format(P=self.prefix, T1=rsttype[0], T2=rsttype[1])
-        return set_stencil
-
-    @property
-    def mean_stencil(self):
-        '''
-        Returns a dictionary of regular expressions to match files belonging
-        to each period (keyword) mean
-        '''
-        mean_stencil = super(NemoPostProc, self).mean_stencil
-        mean_stencil[mt.XX] = lambda field, base=None: \
-            r'^{P}o_{B}(_\d{{8,10}}){{2}}_{F}(([_\-]\d{{6,10}}){{2}})?' \
-            r'(_\d{{4}})?(\.nc)?$'.format(P=self.prefix,
-                                          B=base if base else r'\d+[hdmsy]',
-                                          F=field)
-        return mean_stencil
-
-    @property
     def rebuild_suffix(self):
         '''
         Returns dictionary with two keys, profiding the suffix for components
@@ -138,6 +108,26 @@ class NemoPostProc(mt.ModelTemplate):
         '''
         return [('iceberg_trajectory', self.naml.archive_iceberg_trajectory)]
 
+    def rst_set_stencil(self, rsttype):
+        '''
+        Return a regular expression to match means filenames output
+        directly by the model.
+        '''
+        return r'^{P}o_{T1}_?\d{{8}}_restart{T2}(\.nc)?$'.format(P=self.prefix,
+                                                                 T1=rsttype[0],
+                                                                 T2=rsttype[1])
+
+    def general_mean_stencil(self, field, base=None):
+        '''
+        Return a regular expression to match means filenames output
+        directly by the model.
+        '''
+        return \
+            r'^{P}o_{B}(_\d{{8,10}}){{2}}_{F}(([_\-]\d{{6,10}}){{2}})?' \
+            r'(_\d{{4}})?(\.nc)?$'.format(P=self.prefix,
+                                          B=base if base else r'\d+[hdmsy]',
+                                          F=field)
+
     def buffer_rebuild(self, filetype):
         '''Returns the rebuild buffer for the given filetype'''
         if self.suite.finalcycle:
@@ -160,20 +150,20 @@ class NemoPostProc(mt.ModelTemplate):
     def rebuild_restarts(self):
         '''Rebuild partial restart files'''
         for rst in self.rsttypes:
-            pattern = self.set_stencil[mt.RR](rst).rstrip('$').lstrip('^')
+            pattern = self.rst_set_stencil(rst).rstrip('$').lstrip('^')
             self.rebuild_fileset(self.share, pattern)
 
     @timer.run_timer
     def rebuild_means(self):
         '''Rebuild partial means files'''
-        rebuildmeans = self.additional_means + [self.month_base]
+        rebuildmeans = self.additional_means + [self.naml.base_component]
         ncfname = netcdf_filenames.NCFilename('[a-z]*', self.suite.prefix,
                                               self.model_realm)
         for field in self.fields:
             ncfname.custom = '_' + field
             for mean in set(rebuildmeans):
                 ncfname.base = mean
-                pattern = self.mean_stencil['All'](ncfname).rstrip('.nc')
+                pattern = self.mean_stencil(ncfname).rstrip('.nc')
                 self.rebuild_fileset(self.share, pattern, rebuildall=True)
 
     @timer.run_timer

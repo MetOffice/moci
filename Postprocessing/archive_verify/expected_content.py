@@ -32,11 +32,12 @@ MONTHS = {
 
 def nlist_date(date, description):
     ''' Obtain an integer date list [YYYY, MM}, DD] from an 8 digit string '''
+    date = str(date).zfill(8)
     try:
-        datelist = re.match(r'(\d{4})(\d{2})(\d{2})?(\d{2})?',
+        datelist = re.match(r'(\d{4})(\d{2})(\d{2})(\d{2})?',
                             str(date)).groups()
     except AttributeError:
-        utils.log_msg('Namelist read error.  {} does not have at least 6'
+        utils.log_msg('Namelist read error.  {} should consist of 8'
                       ' digits: "{}"'.format(description, date), level='FAIL')
 
     datelist = [int(x) for x in datelist if x]
@@ -361,19 +362,21 @@ class DiagnosticFiles(ArchivedFiles):
                     concat = 1
                 yield step, period, concat, streams, descript
 
-    def get_period_startdate(self, period):
+    def get_period_startdate(self, period, refday=True):
         '''
         Return the date of the first file which should be produced
         for the period provided according to the mean reference date.
 
         Arguments:
             period = single char from [hdmsyx]
+        Optional arguments:
+            refday <type bool> = Use the mean reference day for the period start
         '''
         sdate = self.sdate[:]
         while len(sdate) < 5:
             sdate.append(0)
 
-        if period not in 'dh':
+        if period not in 'dh' and refday:
             sdate[2] = self.meanref[2]
             if self.sdate[2] > sdate[2]:
                 sdate[1] += 1
@@ -407,8 +410,9 @@ class DiagnosticFiles(ArchivedFiles):
         diags = {'h': (3, 1), 'd': (2, 1), 'm': (1, 1),
                  's': (1, 3), 'y': (0, 1), 'x': (0, 10)}
 
-        all_streams = utils.ensure_list(self.naml.meanstreams) + \
-            [a for a in dir(self.naml) if a.startswith('streams')]
+        all_streams = [a for a in dir(self.naml) if a.startswith('streams')]
+        if self.naml.meanstreams:
+            all_streams += utils.ensure_list(self.naml.meanstreams)
         try:
             spawn_ncf = utils.ensure_list(self.naml.spawn_netcdf_streams)
         except AttributeError:
@@ -421,7 +425,8 @@ class DiagnosticFiles(ArchivedFiles):
             if concat > 1:
                 # Move forward one mean period for start of concatenated files
                 order = ['h', 'd', 'm', 's', 'y', 'x']
-                date = self.get_period_startdate(order[order.index(period) + 1])
+                date = self.get_period_startdate(order[order.index(period) + 1],
+                                                 refday=False)
             else:
                 date = self.get_period_startdate(period)
             edate = self.edate[:]
@@ -520,18 +525,43 @@ class DiagnosticFiles(ArchivedFiles):
         will not be found in the archive until that higher mean has been
         created.
         '''
+        meanstreams = utils.ensure_list(self.naml.meanstreams)
+        skip = ''
+        meanperiods = 'xysmd'
+        period_id = meanperiods.index(period)
+        topmean = True
+        for mean in meanperiods[:period_id]:
+            if '1' + mean in meanstreams:
+                topmean = False
+            else:
+                skip += mean
+
+        period_condition = meanperiods[period_id]
+        if skip:
+            shift = 1
+            try:
+                while meanperiods[period_id - shift] in skip:
+                    period_condition = meanperiods[period_id - shift]
+                    shift += 1
+            except IndexError:
+                # No further periods
+                pass
+
         to_remove = []
         season_starts = [m for m, _ in self.seasons(self.meanref)]
         for fname in reversed(periodfiles):
-            month, day = self.extract_date(fname, start=False)[1:3]
-            if period == 'd' and day != self.meanref[2]:
-                to_remove.append(fname)
-            elif period == 'm' and month not in season_starts:
-                to_remove.append(fname)
-            elif period == 's' and month != self.meanref[1]:
-                to_remove.append(fname)
-            else:
+            year, month, day = self.extract_date(fname, start=False)[:3]
+            conditions = {
+                'd': day == self.meanref[2],
+                'm': month in season_starts and day == self.meanref[2],
+                's': [month, day] == self.meanref[1:3],
+                'y': [year, month, day] == self.meanref[:3],
+                'x': True,
+                }
+            if period == topmean or conditions[period_condition]:
                 break
+            else:
+                to_remove.append(fname)
 
         for fname in to_remove:
             periodfiles.remove(fname)

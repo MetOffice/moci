@@ -43,6 +43,8 @@
 #   MOCI #150 - Added processing of 10hr a.pe stream.
 #                - "archive_as_fieldsfile" stream changed from a.pj to a.pe
 #                - Atmosphere archiving frequency changed to seasonal
+#   MOCI #184 - Changed the mean reference time for NEMOCICE means to Jan 1st
+#               Turned off NEMO monthly and annual means production
 #
 ###############################################################################
 
@@ -1353,13 +1355,19 @@ cice_hg3esi_1m_19821101-19821201.nc
 cice_hg3esi_1m_19821201-19830101.nc
 cice_hg3esi_1m_19830101-19830201.nc"
 
+# ips="  <-- Files produced when mean ref time is Dec 1st
+# cice_hg3esi_1s_19811201-19820301.nc
+# cice_hg3esi_1s_19820301-19820601.nc
+# cice_hg3esi_1s_19820601-19820901.nc
+# cice_hg3esi_1s_19820901-19821201.nc"
 ips="
-cice_hg3esi_1s_19811201-19820301.nc
-cice_hg3esi_1s_19820301-19820601.nc
-cice_hg3esi_1s_19820601-19820901.nc
-cice_hg3esi_1s_19820901-19821201.nc"
+cice_hg3esi_1s_19811001-19820101.nc
+cice_hg3esi_1s_19820101-19820401.nc
+cice_hg3esi_1s_19820401-19820701.nc
+cice_hg3esi_1s_19820701-19821001.nc"
 
-ipy="cice_hg3esi_1y_19811201-19821201.nc"
+# ipy="cice_hg3esi_1y_19811201-19821201.nc"  <-- Files produced when mean ref time is Dec 1st
+ipy="cice_hg3esi_1y_19820101-19830101.nc"
 
 idumps="
 hg3esi.restart.1981-12-01-00000
@@ -1367,39 +1375,55 @@ hg3esi.restart.1982-06-01-00000
 hg3esi.restart.1982-12-01-00000
 hg3esi.restart.1983-02-01-00000"
 
+# ifinal="  <-- Files produced when mean ref time is Dec 1st
+# cice_hg3esi_1m_19821201-19830101.nc
+# cice_hg3esi_1m_19830101-19830201.nc
+# hg3esi.restart.1983-02-01-00000"
 ifinal="
-cice_hg3esi_1m_19821201-19830101.nc
 cice_hg3esi_1m_19830101-19830201.nc
 hg3esi.restart.1983-02-01-00000"
 
 opd=""
 
-opm="
-nemo_hg3eso_1m_19811001-19811101_grid-V.nc
-nemo_hg3eso_1m_19811101-19811201_grid-V.nc
-nemo_hg3eso_1m_19811201-19820101_grid-V.nc
-nemo_hg3eso_1m_19820101-19820201_grid-V.nc
-nemo_hg3eso_1m_19820201-19820301_grid-V.nc
-nemo_hg3eso_1m_19820301-19820401_grid-V.nc
-nemo_hg3eso_1m_19820401-19820501_grid-V.nc
-nemo_hg3eso_1m_19820501-19820601_grid-V.nc
-nemo_hg3eso_1m_19820601-19820701_grid-V.nc
-nemo_hg3eso_1m_19820701-19820801_grid-V.nc
-nemo_hg3eso_1m_19820801-19820901_grid-V.nc
-nemo_hg3eso_1m_19820901-19821001_grid-V.nc
-nemo_hg3eso_1m_19821001-19821101_grid-V.nc
-nemo_hg3eso_1m_19821101-19821201_grid-V.nc
-nemo_hg3eso_1m_19821201-19830101_grid-V.nc
-nemo_hg3eso_1m_19830101-19830201_grid-V.nc"
+# opm="  <-- Files produced when mean monthly mean production is active
+# nemo_hg3eso_1m_19811001-19811101_grid-V.nc
+# nemo_hg3eso_1m_19811101-19811201_grid-V.nc
+# nemo_hg3eso_1m_19811201-19820101_grid-V.nc
+# nemo_hg3eso_1m_19820101-19820201_grid-V.nc
+# nemo_hg3eso_1m_19820201-19820301_grid-V.nc
+# nemo_hg3eso_1m_19820301-19820401_grid-V.nc
+# nemo_hg3eso_1m_19820401-19820501_grid-V.nc
+# nemo_hg3eso_1m_19820501-19820601_grid-V.nc
+# nemo_hg3eso_1m_19820601-19820701_grid-V.nc
+# nemo_hg3eso_1m_19820701-19820801_grid-V.nc
+# nemo_hg3eso_1m_19820801-19820901_grid-V.nc
+# nemo_hg3eso_1m_19820901-19821001_grid-V.nc
+# nemo_hg3eso_1m_19821001-19821101_grid-V.nc
+# nemo_hg3eso_1m_19821101-19821201_grid-V.nc
+# nemo_hg3eso_1m_19821201-19830101_grid-V.nc
+# nemo_hg3eso_1m_19830101-19830201_grid-V.nc"
+
+# ops="  <-- Files produced when mean ref time is Dec 1st
+# nemo_hg3eso_1s_19811201-19820301_grid-V.nc 
+# nemo_hg3eso_1s_19820301-19820601_grid-V.nc
+# nemo_hg3eso_1s_19820601-19820901_grid-V.nc
+# nemo_hg3eso_1s_19820901-19821201_grid-V.nc"
 
 ops="
-nemo_hg3eso_1s_19811201-19820301_grid-V.nc 
-nemo_hg3eso_1s_19820301-19820601_grid-V.nc
-nemo_hg3eso_1s_19820601-19820901_grid-V.nc
-nemo_hg3eso_1s_19820901-19821201_grid-V.nc"
+nemo_hg3eso_1s_19811001-19820101_grid-V.nc 
+nemo_hg3eso_1s_19820101-19820401_grid-V.nc
+nemo_hg3eso_1s_19820401-19820701_grid-V.nc
+nemo_hg3eso_1s_19820701-19821001_grid-V.nc"
 
-opy="
-nemo_hg3eso_1y_19811201-19821201_grid-V.nc"
+# opy="  <-- Files produced when mean ref time is Dec 1st
+# nemo_hg3eso_1s_19811201-19820301_grid-V.nc 
+# nemo_hg3eso_1s_19820301-19820601_grid-V.nc
+# nemo_hg3eso_1s_19820601-19820901_grid-V.nc
+# nemo_hg3eso_1s_19820901-19821201_grid-V.nc
+# nemo_hg3eso_1y_19811201-19821201_grid-V.nc"
+
+# opy="  <-- Files produced when mean annual mean production is active (mean ref: Jan 1st)
+# nemo_hg3eso_1y_19820101-19830101_grid-V.nc"
 
 odumps="
 hg3eso_19811130_restart.nc
@@ -1407,9 +1431,16 @@ hg3eso_19820530_restart.nc
 hg3eso_19821130_restart.nc
 hg3eso_19830130_restart.nc"
 
+# ofinal="  <-- Files produced when mean ref time is Dec 1st
+# nemo_hg3eso_1m_19821201-19830101_grid-V.nc
+# nemo_hg3eso_1m_19830101-19830201_grid-V.nc
+# hg3eso_19830130_restart.nc
+# hg3eso_19830130_restart_0000.nc
+# hg3eso_19830130_restart_0001.nc
+# hg3eso_19830130_restart_0002.nc"
+
+# nemo_hg3eso_1m_19830101-19830201_grid-V.nc  <-- addition to ofinal when monthly mean production is active
 ofinal="
-nemo_hg3eso_1m_19821201-19830101_grid-V.nc
-nemo_hg3eso_1m_19830101-19830201_grid-V.nc
 hg3eso_19830130_restart.nc
 hg3eso_19830130_restart_0000.nc
 hg3eso_19830130_restart_0001.nc

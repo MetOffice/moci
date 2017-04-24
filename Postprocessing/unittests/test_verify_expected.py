@@ -31,10 +31,10 @@ class DateTests(unittest.TestCase):
     def test_nlist_date(self):
         '''Assert correct conversion to list from 8char string'''
         func.logtest('Assert correct conversion to list from 8char string:')
-        self.assertEqual(expected_content.nlist_date('198108', 'my date'),
-                         [1981, 8, 1])
+        self.assertEqual(expected_content.nlist_date(801, 'my date'),
+                         [0, 8, 1])
 
-        self.assertEqual(expected_content.nlist_date('19810821', 'my date'),
+        self.assertEqual(expected_content.nlist_date(19810821, 'my date'),
                          [1981, 8, 21])
 
         self.assertEqual(expected_content.nlist_date('1981081106', 'my date'),
@@ -44,8 +44,8 @@ class DateTests(unittest.TestCase):
         '''Assert failure mode of date conversion method'''
         func.logtest('Assert exit on failure of date conversion:')
         with self.assertRaises(SystemExit):
-            _ = expected_content.nlist_date('1111', 'my date')
-        self.assertIn('my date does not have at least 6 digits: "1111"',
+            _ = expected_content.nlist_date('YY1111', 'my date')
+        self.assertIn('my date should consist of 8 digits: "00YY1111"',
                       func.capture('err'))
 
 class ArchivedFilesTests(unittest.TestCase):
@@ -545,6 +545,8 @@ class DiagnosticFilesTests(unittest.TestCase):
                              [1995, 12, 11, 0, 0])
         self.assertListEqual(self.files.get_period_startdate('m'),
                              [1995, 12, 15, 0, 0])
+        self.assertListEqual(self.files.get_period_startdate('m', refday=False),
+                             [1995, 12, 11, 0, 0])
         self.assertListEqual(self.files.get_period_startdate('s'),
                              [1996, 1, 15, 0, 0])
         self.assertListEqual(self.files.get_period_startdate('y'),
@@ -697,6 +699,29 @@ class DiagnosticFilesTests(unittest.TestCase):
         outfiles = self.files.remove_higher_mean_components(infiles[:], 's')
         self.assertListEqual(outfiles, infiles)
 
+    def test_rm_component_ds_only(self):
+        ''' Assert correct removal of higher mean components (d,s only) '''
+        func.logtest('Assert correct removal of higher mean components:')
+        dfiles = ['file_19900101-19900111.nc', 'file_19900111-19900121.nc',
+                  'file_19900121-19900201.nc', 'file_19900201-19900211.nc',
+                  'file_19900211-19900221.nc', 'file_19900221-19900301.nc',
+                  'file_19900301-19900311.nc', 'file_19900311-19900321.nc',
+                  'file_19900321-19900401.nc', 'file_19900201-19900411.nc',
+                  'file_19900411-19900421.nc', 'file_19900421-19900501.nc']
+        sfiles = ['file_19900301-19900601.nc', 'file_19900601-19900901.nc',
+                  'file_19900901-19901201.nc', 'file_19901201-19910301.nc',
+                  'file_19910301-19910601.nc', 'file_19910601-19910901.nc']
+
+        self.files.meanref = [1000, 12, 1]
+        self.files.naml.meanstreams = ['10d', '1s']
+        # Monthly mean is missing. Shift output condition for daily files
+        outfiles = self.files.remove_higher_mean_components(dfiles[:], 'd')
+        self.assertListEqual(outfiles, dfiles[:-6])
+
+        # Seasonal mean is the top mean - all files archived
+        outfiles = self.files.remove_higher_mean_components(sfiles[:], 's')
+        self.assertListEqual(outfiles, sfiles)
+
     def test_expected_atmos(self):
         ''' Assert correct list of expected atmos files '''
         func.logtest('Assert correct return of atmos files:')
@@ -802,7 +827,6 @@ class DiagnosticFilesTests(unittest.TestCase):
     def test_expected_nemo(self):
         ''' Assert correct list of expected nemo files'''
         func.logtest('Assert correct return of expected nemo files:')
-        self.files.naml.meanstreams = '1m'
         self.files.fields = ['grid-W', 'diad-T']
         self.files.edate = [1996, 1, 1]
         outfiles = {
@@ -814,10 +838,35 @@ class DiagnosticFilesTests(unittest.TestCase):
                             'medusa_prefixo_1m_19951101-19951201_diad-T.nc',
                             'nemo_prefixo_1m_19951201-19960101_grid-W.nc',
                             'medusa_prefixo_1m_19951201-19960101_diad-T.nc'],
+            'ons.nc.file': ['nemo_prefixo_1s_19950901-19951201_grid-W.nc',
+                            'medusa_prefixo_1s_19950901-19951201_diad-T.nc']
             }
         expected = self.files.expected_diags()
+        self.assertListEqual(expected['onm.nc.file'],
+                             outfiles['onm.nc.file'][:-2])
+        self.assertListEqual(expected['ons.nc.file'], outfiles['ons.nc.file'])
+
+        self.files.finalcycle = True
+        expected = self.files.expected_diags()
         for key in outfiles:
-            self.assertListEqual(expected[key], outfiles[key][:-2])
+            self.assertListEqual(expected[key], outfiles[key])
+
+        self.assertListEqual(sorted(expected.keys()), sorted(outfiles.keys()))
+
+    def test_expected_nemo_topmean(self):
+        ''' Assert correct list of expected nemo files - topmean = 1s'''
+        func.logtest('Assert correct return of expected nemo files - top=1s:')
+        self.files.naml.meanstreams = '1s'
+        self.files.fields = ['grid-W', 'diad-T']
+        self.files.edate = [1996, 3, 1]
+        outfiles = {
+            'ons.nc.file': ['nemo_prefixo_1s_19950901-19951201_grid-W.nc',
+                            'medusa_prefixo_1s_19950901-19951201_diad-T.nc',
+                            'nemo_prefixo_1s_19951201-19960301_grid-W.nc',
+                            'medusa_prefixo_1s_19951201-19960301_diad-T.nc']
+            }
+        expected = self.files.expected_diags()
+        self.assertListEqual(expected['ons.nc.file'], outfiles['ons.nc.file'])
 
         self.files.finalcycle = True
         expected = self.files.expected_diags()
@@ -879,6 +928,7 @@ class DiagnosticFilesTests(unittest.TestCase):
         ''' Assert correct list of expected cice files - concatenated means'''
         func.logtest('Assert correct return of expected cice concat means:')
         self.files.naml.meanstreams = ['1d_30']
+        self.files.sdate = [1995, 9, 1]
         self.files.finalcycle = True
         outfiles = {
             'ind.nc.file': ['cice_prefixi_1d_19950901-19951001.nc',

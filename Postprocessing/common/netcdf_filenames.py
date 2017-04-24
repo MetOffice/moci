@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016 Met Office. All rights reserved.
+ (C) Crown copyright 2016-2017 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -25,9 +25,6 @@ import utils
 
 NCF_REGEX = r'^{P}_{B}_{S}-{E}{C}\.nc$'
 NCF_TEMPLATE = NCF_REGEX.lstrip('^').rstrip(r'\.nc$') + '.nc'
-
-SEASONEND = ('0301', '0601', '0901', '1201')
-YEAREND = '1201'
 
 
 class NCFilename(object):
@@ -80,34 +77,16 @@ class NCFilename(object):
                                    S=suitename.lower(),
                                    R=realm.lower())
 
-    def calc_enddate(self, target=None, freq=1):
-        r'''
-        Return the end date given a start_date and a target period.
-        Default end date calculated is self.base ahead of self.start_date.
-        Optional arguments:
-            target - Given when the end date to be calculated is not self.base
-                     ahead of the start_date - for example one month's worth
-                     of daily means concatenated into a single file.
-                     A valid target should match r'[\d]*[hdmsyxHDMSYX].*' to
-                     give one of [hour(s), day(s), month(s), season(s),
-                                  year(s), decade(s)].
-                     The valid target string may be prefixed with a frequency
-                     digit.
-            freq   - Default=1.
-                     Used as a multiplier to self.base or target when
-                     given without digit prefix.
+    def calc_enddate(self, target=None):
         '''
-        indate = list(self.start_date)
-        while len(indate) < 3:
-            indate.append('01')
-        while len(indate) < 5:
-            indate.append('00')
-
-        digit, char = utils.get_frequency(target if target else self.base)
-        rtndate = utils.add_period_to_date(indate, str(freq * digit) + char)
-        # Truncate rtndate at the same length as start_date
-        rtndate = [str(i).zfill(2) for i in rtndate[0:len(self.start_date)]]
-        return tuple(rtndate)
+        Return the end date of the filename object.
+        Optional argument:
+           target = Given when the end date to be calculated is not self.base
+                    ahead of the start_date - for example one month's worth
+                    of daily means concatenated into a single file.
+        '''
+        target = target if target else self.base
+        return calc_enddate(self.start_date, target)
 
     @staticmethod
     def nc_match(fname):
@@ -199,95 +178,150 @@ def ncf_getdate(filename, enddate=False):
     return rtndate
 
 
-def month_end(fvars):
-    '''
-    Return a regular expr to match last file in a set for a 1 month mean.
-    fvars.base should either be a base frequency (eg 6h, 10d, 1m) or 'Monthly'
+def calc_enddate(startdate, target, freq=1):
+    r'''
+    Return the end date given a start_date and a target period.
+    Default end date calculated is self.base ahead of self.start_date.
     Arguments:
-       fvars - An object of <type NCFilename>
+        startdate - Tuple or list: (YYYY, MM, DD, [mm], [hh])
+        target    - Target period from startdate.
+                    A valid target should match r'-?\d*[hdmsyxHDMSYX].*' to
+                    give one of [hour(s), day(s), month(s), season(s),
+                                 year(s), decade(s)].
+                    The valid target string may be prefixed with a frequency
+                    digit.
+    Optional arguments:
+        freq      - Default=1.
+                    Used as a multiplier to self.base or target when
+                    given without digit prefix.
     '''
-    freq, base = utils.get_frequency(fvars.base)
-    return NCF_REGEX.format(P=fvars.prefix, B=''.join([str(freq), base]),
-                            S=r'\d{8,10}', E=r'\d{6}01(00)?',
+    indate = list(startdate)
+    while len(indate) < 3:
+        indate.append('01')
+    while len(indate) < 5:
+        indate.append('00')
+
+    digit, char = utils.get_frequency(target)
+    rtndate = utils.add_period_to_date(indate,
+                                       '{}{}'.format(digit * freq, char))
+    # Truncate rtndate at the same length as start_date
+    rtndate = [str(i).zfill(2) for i in rtndate[0:len(startdate)]]
+    return tuple(rtndate)
+
+
+def seasonend(meanref):
+    '''
+    Return a tuple of 4 string MMDD representations for the season ends.
+    '''
+    seasons = []
+    while len(seasons) < 4:
+        seasons.append((meanref[1] + (len(seasons) * 3)) % 12)
+    try:
+        # Replace any instance of '0' with '12' for December
+        seasons[seasons.index(0)] = 12
+    except ValueError:
+        pass
+    for i, _ in enumerate(seasons):
+        # Modify to return tuple of strings
+        seasons[i] = str(seasons[i]).zfill(2) + str(meanref[2]).zfill(2)
+    return tuple(sorted(seasons))
+
+
+def period_end(period, fvars, meanref):
+    '''
+    Return a regular expression to match the last file in set for a given
+    period mean.
+    Date stamps will be calculated based on the mean reference date
+    and the base component of the period mean (fn_vars.base)
+
+    The presence of the "end" file indicates that all components of the
+    period mean must logically exist.
+
+    Arguments:
+        period <type str>       - Target period. One of ['1m', '1s', '1y']
+        fvars <type NCFilename> - fvars.base should either be a base frequency
+                                  (e.g. 6h, 10d, 1m)
+        meanref <type list>     - Mean reference date
+    '''
+    try:
+        freq, base = re.match(r'(\d+)([a-z]+)', fvars.base).groups()
+    except AttributeError:
+        freq = '1'
+        base = fvars.base[0].lower()
+
+    if period == '1m':
+        end_mmdd = r'\d{{2}}{:02}'.format(meanref[2])
+    elif period == '1s':
+        end_mmdd = '|'.join(seasonend(meanref))
+    elif period == '1y':
+        end_mmdd = str(meanref[1]).zfill(2) + str(meanref[2]).zfill(2)
+    else:
+        # Period not recognised
+        end_mmdd = 'MMDD'
+        msg = 'netcdf_filenames: period_end - Mean period {} not recognised.'
+        msg += '  Defaulting to start date "MMDD"'
+        utils.log_msg(msg.format(period), level='WARN')
+
+    return NCF_REGEX.format(P=fvars.prefix, B=''.join([freq, base]),
+                            S=r'\d{8,10}',
+                            E=r'\d{{4}}({})(00)?'.format(end_mmdd),
                             C=fvars.custom)
 
 
-def season_end(fvars, end_season=SEASONEND):
+def period_set(period, fvars):
     '''
-    Return a regular expr to match last file in a set for seasonal mean
+    Return a regular expression to match any file in a given mean set.
+
+    The start and end dates of the set are defined by the
+    start date and base frequency attributes of end-of-period file.
+
     Arguments:
-       fvars - An object of <type NCFilename>
+        period <type str>       - One of '1m', '1s', '1y'
+        fvars <type NCFilename> - The representation of the end-of-period file
+                                  in the mean set.
+                                  fvars.base should be a base frequency
+                                  (e.g. 6h, 10d, 1m)
     '''
-    return NCF_REGEX.format(P=fvars.prefix, B='1m', S=r'\d{6}01',
-                            E=r'\d{{4}}({})'.format('|'.join(end_season)),
-                            C=fvars.custom)
+    end_yyyymmdd = calc_enddate(fvars.start_date, fvars.base)
+    # Calculate the startdate for the period
+    start_yyyymmdd = [calc_enddate(end_yyyymmdd, '-' + period)]
 
+    while ''.join(start_yyyymmdd[-1]) < ''.join(end_yyyymmdd):
+        # Calculate all start date options stepping through from
+        # start to end date of the period, with step length = fvars.base
+        start_yyyymmdd.append(calc_enddate(start_yyyymmdd[-1], fvars.base))
+        if len(start_yyyymmdd) > 50:
+            # Catch too many date options - break out of loop
+            msg = 'netcdf_filenames: period_set - Too many start date options: '
+            msg += '{} set with {} base component.'.format(period, fvars.base)
+            utils.log_msg(msg, level='WARN')
+            break
 
-def year_end(fvars, end_year=YEAREND):
-    '''
-    Return a regular expr to match last file in a set for a year mean
-    Arguments:
-       fvars - An object of <type NCFilename>
-    '''
-    return NCF_REGEX.format(P=fvars.prefix, B='1s', S=r'\d{6}01',
-                            E=r'\d{4}' + end_year, C=fvars.custom)
-
-
-def month_set(fvars):
-    '''
-    Return a regular expr to match the set of files in a 1 month mean.
-    Calls fvars.calc_enddate(target='1m') since incoming fvars.base may
-    be any of r'1[hdm]', so target is required to ensure full month is
-    captured.
-    Arguments:
-       fvars - An object of <type NCFilename>
-    '''
-    start_yyyymm = ''.join(fvars.start_date[0:2])
-    enddate = r'({D1}\d{{2}}|{D2}01)'.format(
-        D1=start_yyyymm, D2=''.join(fvars.calc_enddate(target='1m')[0:2])
-        )
+    start_set = '|'.join([''.join(d) for d in start_yyyymmdd[:-1]])
     return NCF_REGEX.format(P=fvars.prefix, B=fvars.base,
-                            S=start_yyyymm + r'\d{2}', E=enddate,
-                            C=fvars.custom)
-
-
-def season_set(fvars):
-    '''
-    Return a regular expr to match the set of files in a seasonal mean
-    Arguments:
-       fvars - An object of <type NCFilename>
-    '''
-    enddate = fvars.calc_enddate(target='1m')
-    end_mm = [sum(i) for i in zip([int(enddate[1])]*3, [-2, -1, 0])]
-    end_mm = '|'.join([str(i).zfill(2) for i in end_mm])
-    return NCF_REGEX.format(P=fvars.prefix, B='1m', S=r'\d{6}01',
-                            E=r'{}({})01'.format(enddate[0], end_mm),
-                            C=fvars.custom)
-
-
-def year_set(fvars):
-    '''
-    Return a regular expr to match the set of files in an annual mean
-    Arguments:
-       fvars - An object of <type NCFilename>
-    '''
-    return NCF_REGEX.format(P=fvars.prefix, B='1s', S=r'\d{6}01',
-                            E=fvars.start_date[0] + r'\d{2}01',
-                            C=fvars.custom)
+                            S=r'({})(\d{{2}})?'.format(start_set),
+                            E=r'\d{8,10}', C=fvars.custom)
 
 
 def mean_stencil(fvars, target=None):
-    '''
-    Return a stencil for the creation of a given mean
+    r'''
+    Return a stencil for the creation of a given mean filename.
+
+    The end date for the mean filename is calculated based on the
+    start date and base frequency attributes of the fvars object argument.
+
     Arguments:
        fvars - An object of <type NCFilename>
+             - Where fvars.start_date = ('\d{4}')*3 a regular expression
+               to match all dates will be returned
     '''
     startdate = fvars.start_date
     # For "all files" stencil, startdate will be ('\d{4}', '\d{2}', '\d{2}')
     if startdate[0] == r'\d{4}':
         enddate = startdate
     else:
-        enddate = fvars.calc_enddate(target=target if target else fvars.base)
+        target = target if target else fvars.base
+        enddate = calc_enddate(fvars.start_date, target)
 
     return NCF_TEMPLATE.format(P=fvars.prefix, B=fvars.base,
                                S=''.join(startdate), E=''.join(enddate),

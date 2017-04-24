@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016 Met Office. All rights reserved.
+ (C) Crown copyright 2016-2017 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -41,95 +41,15 @@ class NCFilenameTests(unittest.TestCase):
         self.assertEqual(self.ncf.start_date, ('2000', '12', '11'))
         self.assertEqual(self.ncf.custom, '')
 
-    def test_calc_enddate_12h(self):
-        '''Test calc_enddate method with 12h period'''
-        func.logtest('Assert return from calc_enddate with 12h:')
-        self.ncf.start_date = ('2000', '12', '11', '12')
-        dates = [self.ncf.calc_enddate(target='hour', freq=12)]
-        dates.append(self.ncf.calc_enddate(target='12h'))
-
-        for date in dates:
-            self.assertEqual(date, ('2000', '12', '12', '00'))
-
-    def test_calc_enddate_1d(self):
-        '''Test calc_enddate method with 1d period'''
-        func.logtest('Assert return from calc_enddate with 1d:')
-        self.ncf.start_date = ('2000', '12', '11', '12')
-        self.ncf.base = 'daily'
-        dates = [self.ncf.calc_enddate(target='hour', freq=24)]
-        dates.append(self.ncf.calc_enddate(target='24h'))
-        dates.append(self.ncf.calc_enddate(target='day'))
-        dates.append(self.ncf.calc_enddate())
-        for date in dates:
-            self.assertEqual(date, ('2000', '12', '12', '12'))
-
-    def test_calc_enddate_10d(self):
-        '''Test calc_enddate method with 10d period'''
-        func.logtest('Assert return from calc_enddate with 10d:')
-        self.ncf.base = 'daily'
-        dates = [self.ncf.calc_enddate(target='Day', freq=10)]
-        dates.append(self.ncf.calc_enddate(target='10d'))
-        dates.append(self.ncf.calc_enddate(freq=10))
-        for date in dates:
-            self.assertEqual(date, ('2000', '12', '21'))
-
-    def test_calc_enddate_1m(self):
-        '''Test get_enddate method with 1m period'''
-        func.logtest('Assert return from calc_enddate with 1m:')
-        self.ncf.base = 'Monthly'
-        dates = [self.ncf.calc_enddate(target='Day', freq=30)]
-        dates.append(self.ncf.calc_enddate(target='1M'))
-        dates.append(self.ncf.calc_enddate())
-        for date in dates:
-            self.assertEqual(date, ('2001', '01', '11'))
-
-    def test_calc_enddate_1m_shortdate(self):
-        '''Test get_enddate method with 1m period - shortdate format'''
-        func.logtest('Assert return from calc_enddate with 1m - shortdate:')
-        self.ncf.base = 'Monthly'
-        self.ncf.start_date = ('2000', '12')
-        dates = [self.ncf.calc_enddate(target='Day', freq=30)]
-        dates.append(self.ncf.calc_enddate(target='1M'))
-        dates.append(self.ncf.calc_enddate())
-        for date in dates:
-            self.assertEqual(date, ('2001', '01'))
-
-    def test_calc_enddate_1s(self):
-        '''Test calc_enddate method with 1s period'''
-        func.logtest('Assert return from calc_enddate with 1s:')
-        self.ncf.base = 'Seasonal'
-        dates = [self.ncf.calc_enddate(target='mth', freq=3)]
-        dates.append(self.ncf.calc_enddate(target='1s'))
-        dates.append(self.ncf.calc_enddate())
-        for date in dates:
-            self.assertEqual(date, ('2001', '03', '11'))
-
-    def test_calc_enddate_1y(self):
-        '''Test calc_enddate method with 1y period'''
-        func.logtest('Assert return from calc_enddate with 1y:')
-        self.ncf.base = 'Year'
-        dates = [self.ncf.calc_enddate(target='ssn', freq=4)]
-        dates.append(self.ncf.calc_enddate(target='1y'))
-        dates.append(self.ncf.calc_enddate())
-        for date in dates:
-            self.assertEqual(date, ('2001', '12', '11'))
-
-    def test_calc_enddate_10y(self):
-        '''Test calc_enddate method with 10y period'''
-        func.logtest('Assert return from calc_enddate with 10y:')
-        self.ncf.base = 'Year'
-        dates = [self.ncf.calc_enddate(target='yr', freq=10)]
-        dates.append(self.ncf.calc_enddate(target='10yrs'))
-        dates.append(self.ncf.calc_enddate(freq=10))
-        for date in dates:
-            self.assertEqual(date, ('2010', '12', '11'))
-
-    def test_calc_enddate_fail(self):
-        '''Test calc_enddate method with invalid period'''
-        func.logtest('Assert return from calc_enddate with ?:')
-        with self.assertRaises(SystemExit):
-            _ = self.ncf.calc_enddate('period')
-        self.assertIn('Invalid target provided', func.capture('err'))
+    @mock.patch('netcdf_filenames.calc_enddate')
+    def test_calc_enddate_ncf(self, mock_calc):
+        '''Test calc_enddate method from NCfilename object'''
+        func.logtest('Assert call to external calc_enddate method:')
+        _ = self.ncf.calc_enddate()
+        _ = self.ncf.calc_enddate(target='BASE')
+        self.assertListEqual(mock_calc.mock_calls,
+                             [mock.call(self.ncf.start_date, self.ncf.base),
+                              mock.call(self.ncf.start_date, 'BASE')])
 
     def test_ncmatch_true(self):
         '''Test netCDF filename regular expression - positive match'''
@@ -244,105 +164,123 @@ class StencilTests(unittest.TestCase):
         pass
 
     def test_month_end(self):
-        '''Test month_end method'''
-        func.logtest('Assert return from month_end method:')
-        regex = netcdf_filenames.month_end(self.ncf)
-        stencil = '^model_suitex_1x_\\d{8,10}-\\d{6}01(00)?\\.nc$'
+        '''Test period_end method - Month'''
+        func.logtest('Assert return from period_end method - Month:')
+        self.ncf.base = '10d'
+        regex = netcdf_filenames.period_end('1m', self.ncf, [0, 12, 1])
+        stencil = '^model_suitex_10d_\\d{8,10}-\\d{4}(\\d{2}01)(00)?\\.nc$'
+
+        self.ncf.base = '12h'
+        regex = netcdf_filenames.period_end('1m', self.ncf, [0, 12, 15])
+        stencil = '^model_suitex_12h_\\d{8,10}-\\d{4}(\\d{2}15)(00)?\\.nc$'
         self.assertEqual(regex, stencil)
 
     def test_month_end_custom(self):
-        '''Test month_end method with custom field'''
-        func.logtest('Assert return from month_end method - custom field:')
+        '''Test period_end method with custom field - Month'''
+        func.logtest('Assert return from period_end method - Month, custom:')
         self.ncf.custom = '_field'
-        regex = netcdf_filenames.month_end(self.ncf)
-        stencil = '^model_suitex_1x_\\d{8,10}-\\d{6}01(00)?_field\\.nc$'
+        regex = netcdf_filenames.period_end('1m', self.ncf, [0, 12, 1])
+        stencil = '^model_suitex_1x_\\d{8,10}-\\d{4}(\\d{2}01)(00)?_field\\.nc$'
         self.assertEqual(regex, stencil)
 
     def test_season_end(self):
-        '''Test season_end method'''
-        func.logtest('Assert return from season_end method:')
-        regex = netcdf_filenames.season_end(self.ncf)
-        stencil = '^model_suitex_1m_\\d{6}01-\\d{4}(0301|0601|0901|1201)\\.nc$'
+        '''Test period_end method - Season'''
+        func.logtest('Assert return from period_end method - Season:')
+        self.ncf.base = '1m'
+        regex = netcdf_filenames.period_end('1s', self.ncf, [0, 12, 1])
+        stencil = '^model_suitex_1m_\\d{8,10}-\\d{4}' \
+            '(0301|0601|0901|1201)(00)?\\.nc$'
         self.assertEqual(regex, stencil)
 
     def test_season_end_custom(self):
-        '''Test season_end method with custom field'''
-        func.logtest('Assert return from season_end method - custom field:')
+        '''Test period_end method - Season with custom field'''
+        func.logtest('Assert return from period_end method - Season, custom:')
+        self.ncf.base = '10d'
         self.ncf.custom = '_field'
-        regex = netcdf_filenames.season_end(self.ncf)
-        stencil = '^model_suitex_1m_\\d{6}01-\\d{4}(0301|0601|0901|1201)' \
-            '_field\\.nc$'
+        regex = netcdf_filenames.period_end('1s', self.ncf, [0, 1, 15])
+        stencil = '^model_suitex_10d_\\d{8,10}-\\d{4}' \
+            '(0115|0415|0715|1015)(00)?_field\\.nc$'
         self.assertEqual(regex, stencil)
 
     def test_year_end(self):
-        '''Test year_end method'''
-        func.logtest('Assert return from year_end method:')
-        regex = netcdf_filenames.year_end(self.ncf)
-        stencil = '^model_suitex_1s_\\d{6}01-\\d{4}1201\\.nc$'
+        '''Test period_end method - Year'''
+        func.logtest('Assert return from period_end method - Year:')
+        self.ncf.base = '1s'
+        regex = netcdf_filenames.period_end('1y', self.ncf, [0, 12, 1])
+        stencil = '^model_suitex_1s_\\d{8,10}-\\d{4}(1201)(00)?\\.nc$'
         self.assertEqual(regex, stencil)
 
     def test_year_end_custom(self):
-        '''Test year_end method with custom field'''
-        func.logtest('Assert return from year_end method - custom field:')
+        '''Test period_end method - Year with custom field'''
+        func.logtest('Assert return from period_end method - Year, custom:')
+        self.ncf.base = '1m'
         self.ncf.custom = '_field'
-        regex = netcdf_filenames.year_end(self.ncf)
-        stencil = '^model_suitex_1s_\\d{6}01-\\d{4}1201_field\\.nc$'
+        regex = netcdf_filenames.period_end('1y', self.ncf, [0, 1, 15])
+        stencil = '^model_suitex_1m_\\d{8,10}-\\d{4}(0115)(00)?_field\\.nc$'
         self.assertEqual(regex, stencil)
 
     def test_month_set(self):
-        '''Test month_set method'''
-        func.logtest('Assert return from month_end method:')
+        '''Test period_set method - Month'''
+        func.logtest('Assert return from period_end method - Month:')
         self.ncf.start_date = ('2000', '12', '01')
-        regex = netcdf_filenames.month_set(self.ncf)
-        stencil = '^model_suitex_1x_200012\\d{2}-(200012\\d{2}|20010101)\\.nc$'
+        self.ncf.base = '10d'
+        regex = netcdf_filenames.period_set('1m', self.ncf)
+        stencil = '^model_suitex_10d_(20001111|20001121|20001201)(\\d{2})?' \
+            '-\\d{8,10}\\.nc$'
         self.assertEqual(regex, stencil)
 
     def test_month_set_custom(self):
-        '''Test month_set method with custom field'''
-        func.logtest('Assert return from month_set method - custom field:')
+        '''Test period_set method - Month with custom field'''
+        func.logtest('Assert return from period_end method - Month:')
+        self.ncf.start_date = ('2000', '01', '16')
+        self.ncf.base = '15d'
         self.ncf.custom = '_field'
-        self.ncf.start_date = ('2000', '12', '01')
-        regex = netcdf_filenames.month_set(self.ncf)
-        stencil = '^model_suitex_1x_200012\\d{2}-(200012\\d{2}|20010101)' \
-            '_field\\.nc$'
+        regex = netcdf_filenames.period_set('1m', self.ncf)
+        stencil = '^model_suitex_15d_(20000101|20000116)(\\d{2})?' \
+            '-\\d{8,10}_field\\.nc$'
         self.assertEqual(regex, stencil)
 
     def test_season_set(self):
-        '''Test season_set method'''
-        func.logtest('Assert return from season_set method:')
-        # ncf.start_date is start date of periodend - month=[02|05|08|11]
-        self.ncf.start_date = ('2000', '02', '01')
-        regex = netcdf_filenames.season_set(self.ncf)
-        stencil = '^model_suitex_1m_\\d{6}01-2000(01|02|03)01\\.nc$'
+        '''Test period_set method - Season'''
+        func.logtest('Assert return from period_end method - Season:')
+        self.ncf.start_date = ('2000', '12', '01')
+        self.ncf.base = '1m'
+        regex = netcdf_filenames.period_set('1s', self.ncf)
+        stencil = '^model_suitex_1m_(20001001|20001101|20001201)(\\d{2})?' \
+            '-\\d{8,10}\\.nc$'
         self.assertEqual(regex, stencil)
 
     def test_season_set_custom(self):
-        '''Test season_set method with custom field'''
-        func.logtest('Assert return from season_set method - custom field:')
-        # ncf.start_date is start date of periodend - month=[02|05|08|11]
-        self.ncf.start_date = ('2000', '08', '01')
+        '''Test period_set method - Season with custom field'''
+        func.logtest('Assert return from period_end method - Season:')
+        self.ncf.start_date = ('2000', '01', '16')
+        self.ncf.base = '15d'
         self.ncf.custom = '_field'
-        regex = netcdf_filenames.season_set(self.ncf)
-        stencil = '^model_suitex_1m_\\d{6}01-2000(07|08|09)01_field\\.nc$'
+        regex = netcdf_filenames.period_set('1s', self.ncf)
+        stencil = '^model_suitex_15d_(19991101|19991116|19991201|19991216|' \
+            '20000101|20000116)(\\d{2})?-\\d{8,10}_field\\.nc$'
         self.assertEqual(regex, stencil)
 
     def test_year_set(self):
-        '''Test year_set method'''
-        func.logtest('Assert return from year_set method:')
-        # ncf.start_date is start date of periodend - Set files end in start_yr
-        self.ncf.start_date = ('2000', 'XX', 'XX')
-        regex = netcdf_filenames.year_set(self.ncf)
-        stencil = '^model_suitex_1s_\\d{6}01-2000\\d{2}01\\.nc$'
+        '''Test period_set method - Year'''
+        func.logtest('Assert return from period_end method - Year:')
+        self.ncf.start_date = ('2000', '12', '01')
+        self.ncf.base = '1s'
+        regex = netcdf_filenames.period_set('1y', self.ncf)
+        stencil = '^model_suitex_1s_(20000301|20000601|20000901|20001201)' \
+            '(\\d{2})?-\\d{8,10}\\.nc$'
         self.assertEqual(regex, stencil)
 
     def test_year_set_custom(self):
-        '''Test year_set method with custom field'''
-        func.logtest('Assert return from year_set method - custom field:')
-        # ncf.start_date is start date of periodend - Set files end in start_yr
-        self.ncf.start_date = ('2000', 'XX', 'XX')
+        '''Test period_set method - Year with custom field'''
+        func.logtest('Assert return from period_end method - Year:')
+        self.ncf.start_date = ('2000', '01', '16')
+        self.ncf.base = '1m'
         self.ncf.custom = '_field'
-        regex = netcdf_filenames.year_set(self.ncf)
-        stencil = '^model_suitex_1s_\\d{6}01-2000\\d{2}01_field\\.nc$'
+        regex = netcdf_filenames.period_set('1y', self.ncf)
+        stencil = '^model_suitex_1m_(19990216|19990316|19990416|19990516|' \
+            '19990616|19990716|19990816|19990916|19991016|19991116|19991216|' \
+            '20000116)(\\d{2})?-\\d{8,10}_field\\.nc$'
         self.assertEqual(regex, stencil)
 
     def test_10d_stencil(self):
@@ -408,6 +346,15 @@ class StencilTests(unittest.TestCase):
         stencil = 'model_suitex_1x_20001201-20010101.nc'
         self.assertEqual(regex, stencil)
 
+
+class DateTests(unittest.TestCase):
+    ''' Unit tests for mean reference date manipulation '''
+    def setUp(self):
+        pass
+
+    def tearDown(self):
+        pass
+
     def test_ncf_getdate(self):
         '''Test ncf_getdate method'''
         func.logtest('Assert return from ncf_getdate method:')
@@ -462,3 +409,103 @@ class StencilTests(unittest.TestCase):
         func.logtest('Assert return from ncf_getdate method - none:')
         rdate = netcdf_filenames.ncf_getdate('model_suitea_12h_0000.nc')
         self.assertEqual(rdate, None)
+
+    def test_calc_enddate_12h(self):
+        '''Test calc_enddate method with 12h period'''
+        func.logtest('Assert return from calc_enddate with 12h:')
+        startdate = ('2000', '12', '11', '12')
+        dates = [netcdf_filenames.calc_enddate(startdate, 'hour', freq=12)]
+        dates.append(netcdf_filenames.calc_enddate(startdate, '12h'))
+
+        for date in dates:
+            self.assertEqual(date, ('2000', '12', '12', '00'))
+
+    def test_calc_enddate_1d(self):
+        '''Test calc_enddate method with 1d period'''
+        func.logtest('Assert return from calc_enddate with 1d:')
+        startdate = ('2000', '12', '11', '12')
+        dates = [netcdf_filenames.calc_enddate(startdate, 'hour', freq=24)]
+        dates.append(netcdf_filenames.calc_enddate(startdate, '24h'))
+        dates.append(netcdf_filenames.calc_enddate(startdate, 'day'))
+        dates.append(netcdf_filenames.calc_enddate(startdate, 'daily'))
+        for date in dates:
+            self.assertEqual(date, ('2000', '12', '12', '12'))
+
+    def test_calc_enddate_10d(self):
+        '''Test calc_enddate method with 10d period'''
+        func.logtest('Assert return from calc_enddate with 10d:')
+        startdate = ('2000', '12', '11')
+        dates = [netcdf_filenames.calc_enddate(startdate, 'Day', freq=10)]
+        dates.append(netcdf_filenames.calc_enddate(startdate, '10d'))
+        dates.append(netcdf_filenames.calc_enddate(startdate, 'daily', freq=10))
+        for date in dates:
+            self.assertEqual(date, ('2000', '12', '21'))
+
+    def test_calc_enddate_1m(self):
+        '''Test get_enddate method with 1m period'''
+        func.logtest('Assert return from calc_enddate with 1m:')
+        startdate = ('2000', '12', '11')
+        dates = [netcdf_filenames.calc_enddate(startdate, 'Day', freq=30)]
+        dates.append(netcdf_filenames.calc_enddate(startdate, '1M'))
+        dates.append(netcdf_filenames.calc_enddate(startdate, 'Monthly'))
+        for date in dates:
+            self.assertEqual(date, ('2001', '01', '11'))
+
+    def test_calc_enddate_1m_shortdate(self):
+        '''Test get_enddate method with 1m period - shortdate format'''
+        func.logtest('Assert return from calc_enddate with 1m - shortdate:')
+        startdate = ('2000', '12')
+        dates = [netcdf_filenames.calc_enddate(startdate, 'Day', freq=30)]
+        dates.append(netcdf_filenames.calc_enddate(startdate, '1M'))
+        dates.append(netcdf_filenames.calc_enddate(startdate, 'Monthly'))
+        for date in dates:
+            self.assertEqual(date, ('2001', '01'))
+
+    def test_calc_enddate_1s(self):
+        '''Test calc_enddate method with 1s period'''
+        func.logtest('Assert return from calc_enddate with 1s:')
+        startdate = ('2000', '12', '11')
+        dates = [netcdf_filenames.calc_enddate(startdate, 'mth', freq=3)]
+        dates.append(netcdf_filenames.calc_enddate(startdate, '1s'))
+        dates.append(netcdf_filenames.calc_enddate(startdate, 'Seasonal'))
+        for date in dates:
+            self.assertEqual(date, ('2001', '03', '11'))
+
+    def test_calc_enddate_1y(self):
+        '''Test calc_enddate method with 1y period'''
+        func.logtest('Assert return from calc_enddate with 1y:')
+        startdate = ('2000', '12', '11')
+        dates = [netcdf_filenames.calc_enddate(startdate, 'ssn', freq=4)]
+        dates.append(netcdf_filenames.calc_enddate(startdate, '1y'))
+        dates.append(netcdf_filenames.calc_enddate(startdate, 'Year'))
+        for date in dates:
+            self.assertEqual(date, ('2001', '12', '11'))
+
+    def test_calc_enddate_10y(self):
+        '''Test calc_enddate method with 10y period'''
+        func.logtest('Assert return from calc_enddate with 10y:')
+        startdate = ('2000', '12', '11')
+        dates = [netcdf_filenames.calc_enddate(startdate, 'yr', freq=10)]
+        dates.append(netcdf_filenames.calc_enddate(startdate, '10yrs'))
+        dates.append(netcdf_filenames.calc_enddate(startdate, 'Year', freq=10))
+        for date in dates:
+            self.assertEqual(date, ('2010', '12', '11'))
+
+    def test_calc_enddate_fail(self):
+        '''Test calc_enddate method with invalid period'''
+        func.logtest('Assert return from calc_enddate with ?:')
+        with self.assertRaises(SystemExit):
+            _ = netcdf_filenames.calc_enddate('startdate', 'period')
+        self.assertIn('Invalid target provided', func.capture('err'))
+
+    def test_seasonend(self):
+        '''Test seasonend for various mean_ref_dates'''
+        func.logtest('Assert creation of season ends for mean_ref_dates:')
+        self.assertEqual(netcdf_filenames.seasonend([0, 12, 1]),
+                         ('0301', '0601', '0901', '1201'))
+
+        self.assertEqual(netcdf_filenames.seasonend([0, 1, 1]),
+                         ('0101', '0401', '0701', '1001'))
+
+        self.assertEqual(netcdf_filenames.seasonend([0, 6, 15]),
+                         ('0315', '0615', '0915', '1215'))

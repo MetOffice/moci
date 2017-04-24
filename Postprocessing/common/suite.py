@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2017 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -27,7 +27,6 @@ ENVIRONMENT VARIABLES
     ARCHIVE FINAL - Suite defined: Logical to indicate final cycle
                     -> Default: False
 '''
-import re
 import os
 
 import timer
@@ -87,6 +86,11 @@ class SuiteEnvironment(object):
         return self.envars.CYLC_TASK_LOG_ROOT + '-archive.log'
 
     @property
+    def meanref(self):
+        '''Return mean reference date for creation of means'''
+        return self.naml.mean_reference_date
+
+    @property
     def cycleperiod(self):
         '''Returns the cycling period for the suite.
         Provided via  &suitegen namelist
@@ -100,11 +104,6 @@ class SuiteEnvironment(object):
         Returns a list of integers: YYYY,MM,DD,mm,ss
         '''
         return map(int, self.cyclestring)
-
-    @property
-    def logfile(self):
-        '''Archiving log will be sent to the suite log directory'''
-        return self.envars.CYLC_TASK_LOG_ROOT + '-archive.log'
 
     def monthlength(self, month):
         '''Returns length of given month in days - calendar dependent'''
@@ -294,6 +293,7 @@ class SuitePostProc(object):
     nccopy_path = ''
     ncdump_path = ''
     ncrcat_path = ''
+    mean_reference_date = [0, 12, 1]
 
 
 class TimerInfo(object):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2016 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2017 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -31,42 +31,6 @@ class CicePostProc(mt.ModelTemplate):
     '''
     Methods and properties specific to the CICE post processing application.
     '''
-    @property
-    def set_stencil(self):
-        '''
-        Returns a dictionary of regular expressions to match files belonging
-        to each period (keyword) set
-
-        The same 4 arguments (year, month, season and field) are required to
-        access any indivdual regular expression regardless of the need to use
-        them.  This is a consequence of the @property nature of the method
-        '''
-        set_stencil = super(CicePostProc, self).set_stencil
-        set_stencil[mt.RR] = lambda rsttype: \
-            r'^{P}i\.restart{T}\.\d{{4}}-[-\d]*(\.nc)?$'.\
-            format(P=self.prefix, T=rsttype)
-        return set_stencil
-
-    @property
-    def mean_stencil(self):
-        '''
-        Returns a dictionary of regular expressions to match files belonging
-        to each period (keyword) mean.
-
-        XX stencil for '1m' with no base is defined separately because the
-        Gregorian calendar model produces daily component files in addition to
-        a complete monthly file.
-        These are are not required for creating higher means.
-        '''
-        mean_stencil = super(CicePostProc, self).mean_stencil
-        mean_stencil[mt.XX] = lambda field, base=None: \
-            r'^{P}i\.({B}\.\d{{4}}-\d{{2}}(-\d{{2}})?(-\d{{2}})?{M}).nc$'.\
-            format(P=self.prefix,
-                   B=base if base else r'\d+[hdsy]',
-                   M='' if base else r'|1m.\d{4}-\d{2}')
-
-        return mean_stencil
-
     @property
     def model_components(self):
         '''Name of model component, to be used as a prefix to archived files '''
@@ -98,6 +62,26 @@ class CicePostProc(mt.ModelTemplate):
         Returns a list of tuples: (method_name, bool)
         '''
         return [('concat_daily_means', self.naml.cat_daily_means)]
+
+    def rst_set_stencil(self, rsttype):
+        '''
+        Return a regular expression to match means filenames output
+        directly by the model.
+        '''
+        return \
+            r'^{P}i\.restart{T}\.\d{{4}}-[-\d]*(\.nc)?$'.format(P=self.prefix,
+                                                                T=rsttype)
+
+    def general_mean_stencil(self, field, base=None):
+        '''
+        Return a regular expression to match means filenames output
+        directly by the model.
+        '''
+        return \
+            r'^{P}i\.({B}\.\d{{4}}-\d{{2}}(-\d{{2}})?(-\d{{2}})?{M}).nc$'.\
+            format(P=self.prefix,
+                   B=base if base else r'\d+[hdsy]',
+                   M='' if base else r'|1m.\d{4}-\d{2}')
 
     def get_date(self, fname, enddate=False, base=None):
         '''

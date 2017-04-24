@@ -200,6 +200,7 @@ class pp12_t198(rose.upgrade.MacroUpgrade):
                             ["namelist:atmospp", "process_streams"])
 
         return config, self.reports
+
         
 class pp20_t206(rose.upgrade.MacroUpgrade):
 
@@ -218,6 +219,29 @@ class pp20_t206(rose.upgrade.MacroUpgrade):
         return config, self.reports
         
 
+class pp20_t184(rose.upgrade.MacroUpgrade):
+
+    """Upgrade macro for ticket #184 by Erica Neininger."""
+    BEFORE_TAG = "pp20_t206"
+    AFTER_TAG = "pp20_t184"
+
+    def upgrade(self, config, meta_config=None):
+        """Upgrade a Postproc make app configuration."""
+        self.add_setting(config, ["namelist:suitegen", "mean_reference_date"],
+                         "0,12,1")
+        for model in ["nemo", "cice"]:
+              print 'MODEL:', model
+              self.add_setting(config, ["namelist:%spostproc" % model,
+                                        "create_monthly_mean"], "true")
+              self.add_setting(config, ["namelist:%spostproc" % model,
+                                        "create_seasonal_mean"], "true")
+              self.add_setting(config, ["namelist:%spostproc" % model,
+                                        "create_annual_mean"], "true")
+              self.add_setting(config, ["namelist:%spostproc" % model,
+                                        "mean_reference_date"], "1201")
+        
+        return config, self.reports
+
 
 class pp12_tXXX(rose.upgrade.MacroUpgrade):
 
@@ -229,3 +253,4 @@ class pp12_tXXX(rose.upgrade.MacroUpgrade):
         """Upgrade a Postproc make app configuration."""
         # Input your macro commands here
         return config, self.reports
+

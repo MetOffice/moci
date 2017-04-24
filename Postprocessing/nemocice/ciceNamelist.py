@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2017 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -35,6 +35,10 @@ class CiceNamelist:
     means_cmd = \
         '/projects/ocean/hadgem3/nco/nco-3.9.5_clean/bin/ncra --64bit -O'
     create_means = False
+    create_monthly_mean = False
+    create_seasonal_mean = False
+    create_annual_mean = False
+    create_decadal_mean = False
     base_component = '10d'
     archive_means = False
     means_to_archive = None

@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2016 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2017 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -48,44 +48,43 @@ class StencilTests(unittest.TestCase):
             except OSError:
                 pass
 
-    def test_set_stencil_restarts(self):
-        '''Test the regular expressions of the set_stencil method - restarts'''
+    def test_rst_set_stencil(self):
+        '''Test the regular expressions of the rst_set_stencil method'''
         func.logtest('Assert restart pattern matching of set_stencil:')
-        patt = re.compile(self.cice.set_stencil['Restarts'](''))
+        patt = re.compile(self.cice.rst_set_stencil(''))
         cice_rst = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(cice_rst,
                          [fname for fname in self.files if 'restart' in fname])
 
-    def test_mean_stencil_general(self):
-        '''Test the regular expressions of the mean_stencil method - general'''
+    def test_general_mean_stencil(self):
+        '''Test the regular expressions of the general_mean_stencil method'''
         func.logtest('Assert general pattern matching of mean_stencil:')
-        patt = re.compile(self.cice.mean_stencil['General']('FIELD'))
+        patt = re.compile(self.cice.general_mean_stencil('FIELD'))
         gen_set = [fname for fname in self.files if patt.search(fname)]
         expected_set = [fname for fname in self.files if not
                         re.match(r'.*(1m|restart)\.\d{4}-\d{2}-\d{2}.*', fname)]
         self.assertEqual(gen_set, expected_set)
 
-    def test_mean_stencil_general_6hr(self):
-        '''Test the regular expressions of the mean_stencil method - hourly'''
-        func.logtest('Assert hourly pattern matching of mean_stencil:')
-        patt = re.compile(self.cice.mean_stencil['General']('FIELD', base='6h'))
+    def test_general_mean_stencil_6hr(self):
+        '''Test the regular expressions of general_mean_stencil - hourly'''
+        func.logtest('Assert hourly pattern matching of general_mean_stencil:')
+        patt = re.compile(self.cice.mean_stencil('FIELD', base='6h'))
         sixhr_set = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(sixhr_set,
                          [fname for fname in self.files if '.6h.' in fname])
 
-    def test_mean_stencil_general_10d(self):
-        '''Test the regular expressions of the mean_stencil method - daily'''
-        func.logtest('Assert daily pattern matching of mean_stencil:')
-        patt = re.compile(self.cice.mean_stencil['General']('FIELD',
-                                                            base='10d'))
+    def test_general_mean_stencil_10d(self):
+        '''Test the regular expressions of general_mean_stencil - daily'''
+        func.logtest('Assert daily pattern matching of general_mean_stencil:')
+        patt = re.compile(self.cice.general_mean_stencil('FIELD', base='10d'))
         tenday_set = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(tenday_set,
                          [fname for fname in self.files if '.10d.' in fname])
 
-    def test_mean_stencil_general_1m(self):
-        '''Test the regular expressions of the mean_stencil method - monthly'''
-        func.logtest('Assert general monthly pattern matching of mean_stencil:')
-        patt = re.compile(self.cice.mean_stencil['General']('FIELD', base='1m'))
+    def test_general_mean_stencil_1m(self):
+        '''Test the regular expressions of t general_mean_stencil - monthly'''
+        func.logtest('Assert monthly pattern matching of general_mean_stencil:')
+        patt = re.compile(self.cice.general_mean_stencil('FIELD', base='1m'))
         month_set = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(month_set,
                          [fname for fname in self.files if '.1m.' in fname])

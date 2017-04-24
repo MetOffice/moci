@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2016 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2017 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -51,46 +51,44 @@ class StencilTests(unittest.TestCase):
             except OSError:
                 pass
 
-    def test_set_stencil_restarts(self):
-        '''Test the regular expressions of the set_stencil method - restarts'''
-        func.logtest('Assert restart pattern matching of set_stencil:')
-        patt = re.compile(self.nemo.set_stencil['Restarts'](('', '')))
+    def test_rst_set_stencil(self):
+        '''Test the regular expressions of the rst_set_stencil method'''
+        func.logtest('Assert pattern matching of rst_set_stencil:')
+        patt = re.compile(self.nemo.rst_set_stencil(('', '')))
         nemo_rst = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(nemo_rst,
                          [fname for fname in self.files if 'restart' in fname
                           and 'iceberg' not in fname and '_trc' not in fname])
 
-    def test_set_stencil_iceberg_rsts(self):
-        '''Test the regex of the set_stencil method - iceberg restarts'''
-        func.logtest('Assert iceberg restart pattern matching of set_stencil:')
-        patt = re.compile(self.nemo.set_stencil['Restarts']
-                          (self.nemo.rsttypes[1]))
+    def test_rst_set_stencil_iceberg(self):
+        '''Test the regex of the rst_set_stencil method - iceberg restarts'''
+        func.logtest('Assert iceberg pattern matching of rst_set_stencil:')
+        patt = re.compile(self.nemo.rst_set_stencil(self.nemo.rsttypes[1]))
         ice_rst = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(ice_rst,
                          [fname for fname in self.files if 'iceberg' in fname])
 
-    def test_set_stencil_tracer_rsts(self):
-        '''Test the regex of the set_stencil method - tracer restarts'''
-        func.logtest('Assert tracer restart pattern matching of set_stencil:')
-        patt = re.compile(self.nemo.set_stencil['Restarts']
-                          (self.nemo.rsttypes[2]))
+    def test_rst_set_stencil_tracer(self):
+        '''Test the regex of the rst_set_stencil method - tracer restarts'''
+        func.logtest('Assert tracer pattern matching of rst_set_stencil:')
+        patt = re.compile(self.nemo.rst_set_stencil(self.nemo.rsttypes[2]))
         ice_rst = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(ice_rst,
                          [fname for fname in self.files if '_trc' in fname])
 
-    def test_mean_stencil_general(self):
-        '''Test the regular expressions of the mean_stencil method - general'''
-        func.logtest('Assert general pattern matching of mean_stencil:')
-        patt = re.compile(self.nemo.mean_stencil['General']('FIELD'))
+    def test_general_mean_stencil(self):
+        '''Test the regular expressions of the general_mean_stencil method'''
+        func.logtest('Assert pattern matching of general_mean_stencil:')
+        patt = re.compile(self.nemo.general_mean_stencil('FIELD'))
         sixhr_set = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(sixhr_set,
                          [fname for fname in self.files if
                           'restart' not in fname])
 
-    def test_mean_stencil_general_6hr(self):
-        '''Test the regular expressions of the mean_stencil method - 6 hourly'''
-        func.logtest('Assert hourly pattern matching of mean_stencil - hourly:')
-        patt = re.compile(self.nemo.mean_stencil['General']('FIELD', base='6h'))
+    def test_general_mean_stencil_6hr(self):
+        '''Test the regular expressions of general_mean_stencil - 6 hourly'''
+        func.logtest('Assert hourly pattern matching of general_mean_stencil:')
+        patt = re.compile(self.nemo.general_mean_stencil('FIELD', base='6h'))
         sixhr_set = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(sixhr_set,
                          [fname for fname in self.files if '6h_' in fname])
