@@ -4,20 +4,13 @@
 {% set PP_CYCLES = range(110,113)|list + range(201,213)|list + [301,]|list %}
 
 {% macro format_wallclock(time_list) -%}
-    {{'%02d' % (time_list[0])}}:{{'%02d' % (time_list[1])}}:{{'%02d' % (time_list[2])}}
+    PT{{'%02d' % (time_list[0])}}H{{'%02d' % (time_list[1])}}M{{'%02d' % (time_list[2])}}S
 {%- endmacro %}
-
-[cylc]
-    [[event hooks]]
-        timeout handler = "rose suite-hook --shutdown"
-        timeout = 180
 
 # This links a name specified on the command in rose-stem with a
 # set of cylc task dependencies
 {# name_graphs contains test_option-dependency key-value pairs -#}
 {%- set name_graphs = {
-    "build_ocean34_safe" : "fcm_make_ocean_34_16x32_safe => fcm_make2_ocean_34_16x32_safe => nemo_cice_34_16x32_safe => rose_ana_nemo_cice_34_16x32_safe => housekeep_nemo_cice_34_safe",
-    "build_ocean34_high" : "fcm_make_ocean_34_16x32_high => fcm_make2_ocean_34_16x32_high => nemo_cice_34_16x32_high => rose_ana_nemo_cice_34_16x32_high => housekeep_nemo_cice_34_high",
     "XBS_base_build" : "fcm_make_xiosScript_remote => fcm_make2_xiosScript_remote => xbs_unitTests => buildOasis
          fcm_make_oasis => buildOasis & xbs_unitTests
          fcm_make_xios => buildXios & xbs_unitTests
@@ -64,10 +57,11 @@
 {# groups contains group_option-trigger_list key-value pairs. -#}
 {# If a group option is set, each group or task in the trigger list will be set. -#}
 {%- set groups = {
-    "NEMO_BUILD"        : ["build_ocean34_safe","build_ocean34_high"],
     "XBS_ALL"           : ["XBS_coupled", "XBS_xios_and_nemo"],
     "XBS_coupled"       : ["XBS_base_build", "test_oasis", "test_xios",  "test_nemo_gyre","test_xios_nemo_noOasis"],
     "XBS_xios_and_nemo" : ["XBS_base_build", "test_xios_nemo_noOasis"],
+    "postproc"          : ["test_postproc"],
+    "ALL"               : ["XBS_ALL","postproc"]
     }
 %}
 
@@ -98,27 +92,21 @@
 
 [runtime]
     [[root]]
-        initial scripting = """
+        init-script = """
 export CYLC_VERSION={{CYLC_VERSION}}
 export ROSE_VERSION={{ROSE_VERSION}}
 export FCM_VERSION={{FCM_VERSION}}
 """
-        command scripting = "{{TASK_RUN}}"
-        [[[event hooks]]]
-            succeeded handler = "rose suite-hook"
-            failed handler = "rose suite-hook"
-            retry handler = "rose suite-hook"
-            submission failed handler = "rose suite-hook"
-            submission timeout = 720 # 12 hours
-            submission timeout handler = "rose suite-hook"
-            execution timeout  =  180 # 3 hours
-            execution timeout handler = "rose suite-hook"
+        script = "{{TASK_RUN}}"
+        [[[events]]]
+            submission timeout = PT12H # 12 hours
+            execution timeout  =  PT3H # 3 hours
         [[[environment]]]
-	    SOURCE_MOCI_BASE = {{ SOURCE_MOCI_BASE }}
-	    SOURCE_MOCI_REV = {{ SOURCE_MOCI_REV }}
+            SOURCE_MOCI_BASE = {{ SOURCE_MOCI_BASE }}
+            SOURCE_MOCI_REV = {{ SOURCE_MOCI_REV }}
     [[LINUX]]
-        [[[job submission]]]
-            method = at
+        [[[job]]]
+            batch system = background
         [[[remote]]]
             host = $(rose host-select {{EXTRACT_HOST}})
 
@@ -135,96 +123,21 @@ export FCM_VERSION={{FCM_VERSION}}
             CICE_NPROC = 512
     [[default_task]]
         inherit = LINUX
-        command scripting = "echo [ERROR] Please select a valid group within the test suite to test the component that has been modified >&2; exit 1"
+        script = "echo [ERROR] Please select a valid group within the test suite to test the component that has been modified >&2; exit 1"
     [[HOUSEKEEPING]]
 {%- if HOUSEKEEPING == true %}
-        command scripting = "rose task-run --verbose"
+        script = "rose task-run --verbose"
 {%- else %}
-        command scripting = "echo Not deleting $RUNDIR"
+        script = "echo Not deleting $RUNDIR"
 {%- endif %}
         [[[environment]]]
             ROSE_TASK_APP = housekeeping
-    [[fcm_make_ocean_34_16x32_safe]]
-        inherit = LINUX,NEMO_16x32
-        [[[environment]]]
-            ROSE_TASK_APP = fcm_make_ocean_34_16x32
-            ROSE_APP_OPT_CONF_KEYS=safe
-    [[fcm_make_ocean_34_16x32_high]]
-        inherit = LINUX,NEMO_16x32
-        [[[environment]]]
-            ROSE_TASK_APP = fcm_make_ocean_34_16x32
-            ROSE_APP_OPT_CONF_KEYS=high
-    [[fcm_make2_ocean_34_16x32_safe]]
-        inherit = XC40,NEMO_16x32
-        pre-command scripting = "module load cray-netcdf"
-        [[[environment]]]
-            ROSE_TASK_APP = fcm_make_ocean_34_16x32
-            ROSE_APP_OPT_CONF_KEYS=safe
-            ROSE_TASK_N_JOBS  = 6
-        [[[directives]]]
-            -l walltime=00:10:00
-            -l ncpus=6
-            -q = shared
-    [[fcm_make2_ocean_34_16x32_high]]
-        inherit = XC40,NEMO_16x32
-        pre-command scripting = "module load cray-netcdf"
-        [[[environment]]]
-            ROSE_TASK_APP = fcm_make_ocean_34_16x32
-            ROSE_APP_OPT_CONF_KEYS=high
-            ROSE_TASK_N_JOBS  = 6
-        [[[directives]]]
-            -l walltime=00:10:00
-            -l ncpus=6
-            -q = shared
+    
     [[fcm_make_pp]]
         inherit = LINUX
-    [[NEMO_CICE_34_16x32]]
-        inherit = XC40,NEMO_16x32
-        pre-command scripting = "module load cray-netcdf"
-        [[[environment]]]
-            MODELBASIS=1976,1,1,0,0,0
-            TASKSTART=1976,1,1,0,0,0
-            TASKLENGTH=0,0,1,0,0,0
-            ROSE_TASK_APP = nemo_cice_34
-            OMP_NUM_THREADS = 1
-            DATAW=$CYLC_TASK_WORK_PATH
-            DATAM=$CYLC_TASK_WORK_PATH
-            NEMO_DATA=$CYLC_TASK_WORK_PATH/NEMOhist
-            CICE_DATA=$CYLC_TASK_WORK_PATH/CICEhist
-            CALENDAR='365day'
-            CICE_IN=$CYLC_TASK_WORK_PATH/ice_in
-            CONTINUE=
-        [[[directives]]]
-            -q = parallel
-            -l select = 16
-            -l walltime = 00:30:00
-    [[nemo_cice_34_16x32_safe]]
-        inherit = NEMO_CICE_34_16x32
-        [[[environment]]]
-            OCEAN_EXEC=$CYLC_SUITE_SHARE_DIR/fcm_make_ocean_34_16x32_safe/build-ocean/bin/nemo-cice.exe
-    [[nemo_cice_34_16x32_high]]
-        inherit = NEMO_CICE_34_16x32
-        [[[environment]]]
-            OCEAN_EXEC=$CYLC_SUITE_SHARE_DIR/fcm_make_ocean_34_16x32_high/build-ocean/bin/nemo-cice.exe
-    [[rose_ana_nemo_cice_34_16x32_safe]]
-        inherit = XC40_serial
-        [[[environment]]]
-            ROSE_TASK_APP = rose_ana_nemo_cice_34_16x32_safe
-    [[rose_ana_nemo_cice_34_16x32_high]]
-        inherit = XC40_serial
-        [[[environment]]]
-            ROSE_TASK_APP = rose_ana_nemo_cice_34_16x32_high
-    [[housekeep_nemo_cice_34_safe]]
-        inherit = XC40_serial,HOUSEKEEPING
-        [[[environment]]]
-            RUNDIR=../nemo_cice_34_16x32_safe
-    [[housekeep_nemo_cice_34_high]]
-        inherit = XC40_serial,HOUSEKEEPING
-        [[[environment]]]
-            RUNDIR=../nemo_cice_34_16x32_high
             
     [[XBS]]
-        environment scripting = "eval $(rose task-env)"
+        env-script = "eval $(rose task-env)"
         
         [[[environment]]]
             SYSTEM_NAME={{SYSTEM_NAME}} 
@@ -523,7 +436,7 @@ export FCM_VERSION={{FCM_VERSION}}
 
     [[housekeeping_XBS]]
         inherit=None, XBS, XC40_serial, MODULE_DEPLOYMENT_APP
-        command scripting = '''
+        script = '''
 {% for dir1 in XBS_CLEANUP_DIRS %}
 rm -rf {{dir1}}
 {% endfor %}
