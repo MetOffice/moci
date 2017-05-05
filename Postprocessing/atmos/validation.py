@@ -25,6 +25,15 @@ import re
 import timer
 import utils
 
+try:
+    # Mule is not part of the standard Python package
+    import mule
+    MULE_AVAIL = True
+except ImportError:
+    utils.log_msg('Mule Module is not available. um-pumf will be used.',
+                  level='WARN')
+    MULE_AVAIL = False
+
 
 def identify_filedate(fname):
     '''
@@ -76,10 +85,13 @@ def verify_header(atmospp, fname, logdir, logfile=None):
     Returns True/False dependent on whether the (year, month, day) of the
     filename matches the validity time in the UM fixed header
     '''
-    pumfout = logdir + '-pumfhead.out'
-    pumfexe = os.path.join(atmospp.um_utils, 'um-pumf')
-    headers = {int(k): str(v).zfill(2) for k, v in genlist(fname, pumfout,
-                                                           pumfexe)}
+    headers, empty_file = mule_headers(fname)
+    if not headers:
+        # Mule not available, or else failed to extract the headers. Try pumf
+        pumfout = logdir + '-pumfhead.out'
+        pumfexe = os.path.join(atmospp.um_utils, 'um-pumf')
+        headers = {int(k): str(v).zfill(2) for k, v in genlist(fname, pumfout,
+                                                               pumfexe)}
     try:
         valid_date = tuple([headers[hd] for hd in range(28, 34)])
     except KeyError:
@@ -88,9 +100,15 @@ def verify_header(atmospp, fname, logdir, logfile=None):
 
     filedate = identify_filedate(fname)
 
-    validfile = (filedate == valid_date[:len(filedate)])
+    validfile = (filedate == valid_date[:len(filedate)] and not empty_file)
     if validfile:
         utils.log_msg('Validation OK.  File will be archived: ' + fname)
+    elif empty_file:
+        msg = 'No valid fields found in file {}.'.format(fname)
+        msg += ' Archive not required'
+        if logfile:
+            logfile.write(fname + ' FILE NOT ARCHIVED. Empty file \n')
+        utils.log_msg(msg, level='INFO')
     else:
         msg = 'Validity time mismatch in file {} to be archived'.format(fname)
         if logfile:
@@ -143,6 +161,27 @@ def genlist(ppfile, header, pumfpath):
     else:
         msg = 'pumf: Failed to extract header information from file {}'
         utils.log_msg(msg.format(ppfile), level='ERROR')
+
+
+@timer.run_timer
+def mule_headers(filename):
+    '''
+    Generate a dictionary of key-value pairs from the fixed-length
+    header of a given UM fieldsfile using Mule
+    '''
+    if MULE_AVAIL:
+        ffile = mule.FieldsFile.from_file(filename, remove_empty_lookups=True)
+
+        # Extract first 40 values only
+        headers = {h: str(ffile.fixed_length_header.raw[h]).zfill(2)
+                   for h in range(1, 40)}
+        empty_file = len(ffile.fields) == 0
+
+    else:
+        headers = None
+        empty_file = False
+
+    return headers, empty_file
 
 
 @timer.run_timer

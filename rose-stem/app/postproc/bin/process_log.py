@@ -17,7 +17,8 @@ try:
     for line in open(logfile, 'r').readlines():
         fname = os.path.basename(line.split()[0])
         collection = ''
-        if 'WOULD BE ARCHIVED' in line and '_ARCHIVED' not in line:
+        if ('WOULD BE ARCHIVED' in line or 'NOT ARCHIVED. Empty' in line) \
+                and '_ARCHIVED' not in line:
             if re.match(r'.*a\.da.*', fname):
                 # Atmos dump file
                 collection = 'ada.file'

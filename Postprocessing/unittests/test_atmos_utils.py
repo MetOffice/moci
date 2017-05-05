@@ -284,7 +284,7 @@ class HousekeepTests(unittest.TestCase):
         func.logtest('Assert creation of marked files list:')
         marked = housekeeping.get_marked_files('TestDir', 'pattern', '.sfx')
         self.assertListEqual(marked, ['File1', 'File2'])
-        mock_getfiles.assert_caleld_once_with('TestDir', 'pattern')
+        mock_getfiles.assert_called_once_with('TestDir', 'pattern')
 
     @mock.patch('housekeeping.utils.get_subset',
                 return_value=['File1.sfx', 'File2.sfx'])
@@ -293,7 +293,7 @@ class HousekeepTests(unittest.TestCase):
         func.logtest('Assert creation of marked files list - no suffix:')
         marked = housekeeping.get_marked_files('TestDir', 'pattern', '')
         self.assertListEqual(marked, ['File1.sfx', 'File2.sfx'])
-        mock_getfiles.assert_caleld_once_with('TestDir', 'pattern')
+        mock_getfiles.assert_called_once_with('TestDir', 'pattern')
 
     @mock.patch('housekeeping.utils.get_subset', return_value=[])
     def test_get_marked_files_none(self, mock_getfiles):
@@ -301,7 +301,7 @@ class HousekeepTests(unittest.TestCase):
         func.logtest('Assert creation of marked files list - empty list:')
         marked = housekeeping.get_marked_files('TestDir', 'pattern', '.sfx')
         self.assertListEqual(marked, [])
-        mock_getfiles.assert_caleld_once_with('TestDir', 'pattern')
+        mock_getfiles.assert_called_once_with('TestDir', 'pattern')
 
 
 class HeaderTests(unittest.TestCase):
@@ -312,7 +312,9 @@ class HeaderTests(unittest.TestCase):
         self.fixhd = [('27', 'xx'), ('28', 'YY'), ('29', 'MM'),
                       ('30', 'DD'), ('31', 'xx'), ('32', 'xx'),
                       ('33', 'xx'), ('34', 'xx'), ('35', 'xx')]
+        self.headers = {int(k): str(v).zfill(2) for k, v in self.fixhd}
         self.logfile = open('logfile', 'w')
+        self.mule_avail = validation.MULE_AVAIL
 
     def tearDown(self):
         for fname in ['logfile'] + runtime_environment.RUNTIME_FILES:
@@ -320,17 +322,55 @@ class HeaderTests(unittest.TestCase):
                 os.remove(fname)
             except OSError:
                 pass
+        validation.MULE_AVAIL = self.mule_avail
 
-    def test_verify_header(self):
+    @mock.patch('validation.mule_headers')
+    @mock.patch('validation.genlist')
+    @mock.patch('validation.identify_filedate', return_value=('YY', 'MM', 'DD'))
+    def test_verify_header(self, mock_date, mock_pumf, mock_mule):
         '''Test verify_header functionality'''
+        func.logtest('Assert functinality of the verify_header method:')
+        mock_mule.return_value = (self.headers, False)
+        validfile = validation.verify_header(self.atmos.naml.atmospp,
+                                             'Filename',
+                                             'LogDir/job',
+                                             logfile=self.logfile)
+        self.assertTrue(validfile)
+        mock_date.assert_called_with('Filename')
+        mock_mule.assert_called_once_with('Filename')
+        self.assertListEqual(mock_pumf.mock_calls, [])
+
+        self.logfile.close()
+        self.assertEqual('', open('logfile', 'r').read())
+
+    @mock.patch('validation.mule_headers')
+    @mock.patch('validation.identify_filedate', return_value=('YY', 'MM', 'DD'))
+    def test_verify_header_empty(self, mock_date, mock_mule):
+        '''Test verify_header functionality - no valid fields'''
+        func.logtest('Assert functinality of the verify_header method:')
+        mock_mule.return_value = (self.headers, True)
+        validfile = validation.verify_header(self.atmos.naml.atmospp,
+                                             'Filename',
+                                             'LogDir/job',
+                                             logfile=self.logfile)
+        self.assertFalse(validfile)
+        mock_date.assert_called_with('Filename')
+        mock_mule.assert_called_once_with('Filename')
+
+        self.logfile.close()
+        self.assertIn('FILE NOT ARCHIVED. Empty file',
+                      open('logfile', 'r').read())
+
+    @mock.patch('validation.genlist')
+    @mock.patch('validation.identify_filedate', return_value=('YY', 'MM', 'DD'))
+    def test_verify_header_pumf(self, mock_date, mock_gen):
+        '''Test verify_header functionality - pumf'''
         func.logtest('Assert functionality of the verify_header method:')
-        with mock.patch('validation.genlist') as mock_gen:
-            mock_gen.return_value = self.fixhd
-            with mock.patch('validation.identify_filedate') as mock_date:
-                mock_date.return_value = ('YY', 'MM', 'DD')
-                valid = validation.verify_header(self.atmos.naml.atmospp,
-                                                 'Filename', 'LogDir/job',
-                                                 logfile=self.logfile)
+        mock_gen.return_value = self.fixhd
+        with mock.patch('validation.mule_headers', return_value=(None, False)):
+            valid = validation.verify_header(self.atmos.naml.atmospp,
+                                             'Filename', 'LogDir/job',
+                                             logfile=self.logfile)
         self.assertTrue(valid)
         mock_date.assert_called_with('Filename')
         mock_gen.assert_called_with('Filename', 'LogDir/job-pumfhead.out',
@@ -338,33 +378,32 @@ class HeaderTests(unittest.TestCase):
         self.logfile.close()
         self.assertEqual('', open('logfile', 'r').read())
 
-    def test_verify_header_mismatch(self):
-        '''Test verify_header functionality - mismatch'''
+    @mock.patch('validation.mule_headers')
+    def test_verify_header_mismatch(self, mock_mule):
+        '''Test verify_header functionality - pumf ismatch'''
         func.logtest('Assert mismatch date in the verify_header method:')
-        with mock.patch('validation.genlist') as mock_gen:
-            mock_gen.return_value = self.fixhd
-            with mock.patch('validation.identify_filedate') as mock_date:
-                mock_date.return_value = ('YY', 'MM', 'DD1')
-                with self.assertRaises(SystemExit):
-                    _ = validation.verify_header(self.atmos.naml.atmospp,
-                                                 'Filename', 'LogDir/job',
-                                                 logfile=self.logfile)
+        mock_mule.return_value = (self.headers, False)
+        with mock.patch('validation.identify_filedate',
+                        return_value=('YY', 'MM', 'D1')):
+            with self.assertRaises(SystemExit):
+                _ = validation.verify_header(self.atmos.naml.atmospp,
+                                             'Filename', 'LogDir/job',
+                                             logfile=self.logfile)
         self.assertIn('Validity time mismatch', func.capture('err'))
         self.logfile.close()
         self.assertIn('ARCHIVE FAILED', open('logfile', 'r').read())
 
-    def test_verify_hdr_mismatch_debug(self):
-        '''Test verify_header functionality - mismatch (debug)'''
+    @mock.patch('validation.mule_headers')
+    def test_verify_hdr_mismatch_debug(self, mock_mule):
+        '''Test verify_header functionality - mismatch pumf (debug)'''
         func.logtest('Assert mismatch date in the verify_header method:')
-        with mock.patch('validation.genlist') as mock_gen:
-            mock_gen.return_value = self.fixhd
-            with mock.patch('validation.identify_filedate') as mock_date:
-                mock_date.return_value = ('YY', 'MM', 'DD1')
-                with mock.patch('validation.utils.get_debugmode',
-                                return_value=True):
-                    valid = validation.verify_header(self.atmos.naml.atmospp,
-                                                     'Filename', 'LogDir/job',
-                                                     logfile=self.logfile)
+        mock_mule.return_value = (self.headers, False)
+        with mock.patch('validation.utils.get_debugmode', return_value=True):
+            with mock.patch('validation.identify_filedate',
+                            return_value=('YY', 'MM', 'D1')):
+                valid = validation.verify_header(self.atmos.naml.atmospp,
+                                                 'Filename', 'LogDir/job',
+                                                 logfile=self.logfile)
         self.assertFalse(valid)
         self.assertIn('Validity time mismatch', func.capture('err'))
         self.logfile.close()
@@ -373,11 +412,10 @@ class HeaderTests(unittest.TestCase):
     def test_verify_header_no_header(self):
         '''Test verify_header functionality - no header information'''
         func.logtest('Assert verify_header finding no header information:')
-        self.fixhd = self.fixhd[:2]
-        with mock.patch('validation.genlist') as mock_gen:
-            mock_gen.return_value = self.fixhd
-            with mock.patch('validation.identify_filedate') as mock_date:
-                mock_date.return_value = ('YY', 'MM', 'DD')
+        with mock.patch('validation.mule_headers',
+                        return_value=({1: 'a'}, False)):
+            with mock.patch('validation.identify_filedate',
+                            return_value=('YY', 'MM', 'DD')):
                 with self.assertRaises(SystemExit):
                     _ = validation.verify_header(self.atmos.naml.atmospp,
                                                  'Filename', 'LogDir/job',
@@ -385,6 +423,40 @@ class HeaderTests(unittest.TestCase):
         self.assertIn('No header information available', func.capture('err'))
         self.logfile.close()
         self.assertIn('ARCHIVE FAILED', open('logfile', 'r').read())
+
+    @mock.patch('validation.mule')
+    def test_mule_headers(self, mock_mule):
+        ''' Test mule_headers '''
+        func.logtest('Assert extraction of headers using Mule:')
+        mock_mule.FieldsFile.from_file().fixed_length_header.raw = range(50)
+        mock_mule.FieldsFile.from_file().fields = ['f1', 'f2', 'f3']
+        headers, empty_file = validation.mule_headers('Filename')
+        self.assertListEqual(headers.keys(), range(1, 40))
+        self.assertListEqual(headers.values(),
+                             [str(x).zfill(2) for x in range(1, 40)])
+        self.assertFalse(empty_file)
+
+    @mock.patch('validation.mule')
+    def test_mule_headers_empty_file(self, mock_mule):
+        ''' Test mule_headers - return an empty file'''
+        func.logtest('Assert extraction of headers using Mule - empty file:')
+        mock_mule.FieldsFile.from_file().fixed_length_header.raw = range(50)
+        mock_mule.FieldsFile.from_file().fields = []
+        headers, empty_file = validation.mule_headers('Filename')
+        self.assertListEqual(headers.keys(), range(1, 40))
+        self.assertListEqual(headers.values(),
+                             [str(x).zfill(2) for x in range(1, 40)])
+        self.assertTrue(empty_file)
+
+    @mock.patch('validation.mule')
+    def test_mule_headers_not_avail(self, mock_mule):
+        ''' Test mule_headers - Mule not available'''
+        func.logtest('Assert no headers using Mule - not available:')
+        validation.MULE_AVAIL = False
+        headers, empty_file = validation.mule_headers('Filename')
+        self.assertListEqual(mock_mule.mock_calls, [])
+        self.assertFalse(empty_file)
+        self.assertIsNone(headers)
 
 
 class DumpnameTests(unittest.TestCase):

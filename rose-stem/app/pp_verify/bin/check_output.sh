@@ -45,6 +45,11 @@
 #                - Atmosphere archiving frequency changed to seasonal
 #   MOCI #184 - Changed the mean reference time for NEMOCICE means to Jan 1st
 #               Turned off NEMO monthly and annual means production
+#   MOCI #138   - No attempt is being made to process (archive or convert) empty files when
+#                 using Mule to verify the header.  
+#                 In the interests of continuing to test functionality, we'll assume that
+#                 they've been archived based on presence of _ARCHIVED files, but conversion
+#                 to pp has been disabled.
 #
 ###############################################################################
 
@@ -1230,54 +1235,54 @@ hg3esa.pe19830130_14
 "
 
 aph="
-hg3esa.ph19811001.pp
-hg3esa.ph19811011.pp
-hg3esa.ph19811021.pp
-hg3esa.ph19811101.pp
-hg3esa.ph19811111.pp
-hg3esa.ph19811121.pp
-hg3esa.ph19811201.pp
-hg3esa.ph19811211.pp
-hg3esa.ph19811221.pp
-hg3esa.ph19820101.pp
-hg3esa.ph19820111.pp
-hg3esa.ph19820121.pp
-hg3esa.ph19820201.pp
-hg3esa.ph19820211.pp
-hg3esa.ph19820221.pp
-hg3esa.ph19820301.pp
-hg3esa.ph19820311.pp
-hg3esa.ph19820321.pp
-hg3esa.ph19820401.pp
-hg3esa.ph19820411.pp
-hg3esa.ph19820421.pp
-hg3esa.ph19820501.pp
-hg3esa.ph19820511.pp
-hg3esa.ph19820521.pp
-hg3esa.ph19820601.pp
-hg3esa.ph19820611.pp
-hg3esa.ph19820621.pp
-hg3esa.ph19820701.pp
-hg3esa.ph19820711.pp
-hg3esa.ph19820721.pp
-hg3esa.ph19820801.pp
-hg3esa.ph19820811.pp
-hg3esa.ph19820821.pp
-hg3esa.ph19820901.pp
-hg3esa.ph19820911.pp
-hg3esa.ph19820921.pp
-hg3esa.ph19821001.pp
-hg3esa.ph19821011.pp
-hg3esa.ph19821021.pp
-hg3esa.ph19821101.pp
-hg3esa.ph19821111.pp
-hg3esa.ph19821121.pp
-hg3esa.ph19821201.pp
-hg3esa.ph19821211.pp
-hg3esa.ph19821221.pp
-hg3esa.ph19830101.pp
-hg3esa.ph19830111.pp
-hg3esa.ph19830121.pp"
+hg3esa.ph19811001
+hg3esa.ph19811011
+hg3esa.ph19811021
+hg3esa.ph19811101
+hg3esa.ph19811111
+hg3esa.ph19811121
+hg3esa.ph19811201
+hg3esa.ph19811211
+hg3esa.ph19811221
+hg3esa.ph19820101
+hg3esa.ph19820111
+hg3esa.ph19820121
+hg3esa.ph19820201
+hg3esa.ph19820211
+hg3esa.ph19820221
+hg3esa.ph19820301
+hg3esa.ph19820311
+hg3esa.ph19820321
+hg3esa.ph19820401
+hg3esa.ph19820411
+hg3esa.ph19820421
+hg3esa.ph19820501
+hg3esa.ph19820511
+hg3esa.ph19820521
+hg3esa.ph19820601
+hg3esa.ph19820611
+hg3esa.ph19820621
+hg3esa.ph19820701
+hg3esa.ph19820711
+hg3esa.ph19820721
+hg3esa.ph19820801
+hg3esa.ph19820811
+hg3esa.ph19820821
+hg3esa.ph19820901
+hg3esa.ph19820911
+hg3esa.ph19820921
+hg3esa.ph19821001
+hg3esa.ph19821011
+hg3esa.ph19821021
+hg3esa.ph19821101
+hg3esa.ph19821111
+hg3esa.ph19821121
+hg3esa.ph19821201
+hg3esa.ph19821211
+hg3esa.ph19821221
+hg3esa.ph19830101
+hg3esa.ph19830111
+hg3esa.ph19830121"
 
 apj="
 hg3esa.pj19820101.pp
@@ -1456,8 +1461,10 @@ RC=0
 
 echo "[INFO] Checking Atmosphere output all present and correct..."
 for fn in $adumps $ape $aph $apj $apm $apm $aps $apy; do
-    if [[ "$search" != *"$fn WOULD BE ARCHIVED"* ]] && [[ "$search" != *"$fn ARCHIVE OK"* ]] && \
-	[[ "$search" != *"$fn FILE NOT ARCHIVED. File contains no fields"* ]]; then 
+    if [[ "$search" != *"$fn WOULD BE ARCHIVED"* ]] && \
+        [[ "$search" != *"$fn ARCHIVE OK"* ]] && \
+	[[ "$search" != *"$fn FILE NOT ARCHIVED. File contains no fields"* ]] && \
+	[[ "$search" != *"$fn FILE NOT ARCHIVED. Empty file"* ]]; then 
         echo "[FAIL] File archive not logged: $fn"
         RC=$((RC + 1))
     fi
