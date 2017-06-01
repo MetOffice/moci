@@ -29,9 +29,10 @@ def main():
     for file_name1 in XiosTestSystem.XiosTestSystem.OUTPUT_FILE_LIST:
         print 'evaluating file {filename}'.format(filename=file_name1)
         try:
-            compare_utils.compare_cube_list_files(xios_kgo_dir,
-                                                  xios_result_dir,
-                                                  file_name1)
+            file_path1 = os.path.join(xios_kgo_dir, file_name1)
+            file_path2 = os.path.join(xios_result_dir, file_name1)
+            compare_utils.compare_cube_list_files(file_path1,
+                                                  file_path2)
         except Exception as except1:
             sys.stderr.write(str(except1))
             raise except1

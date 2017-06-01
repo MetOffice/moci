@@ -1,0 +1,206 @@
+#!/usr/bin/env python2.7
+#
+#*****************************COPYRIGHT******************************
+#(C) Crown copyright Met Office. All rights reserved.
+# For further details please refer to the file COPYRIGHT.txt
+# which you should have received as part of this distribution.
+#*****************************COPYRIGHT******************************
+"""
+ CODE OWNER
+   Stephen Haddad
+
+ NAME
+   compare_gc3_output
+
+ Main script for comparing GC3 output. Output compared includes UM norm values
+ in the corresponding pe0 output files, nemo solver.stat files, UM restart
+ dumps, NEMO restart files and CICE restart files.
+"""
+
+import sys
+import argparse
+
+import compare_utils
+import compare_nemo_solver_stat
+import compare_atmos_dump_files
+import compare_atmos_norms
+
+
+def get_command_line_arguments():
+    """
+    Get command line arguments
+    """
+    desc_msg = '''
+Main script for comparing GC3 output. Output compared includes UM norm values
+in the corresponding pe0 output files, nemo solver.stat files, UM restart
+dumps, NEMO restart files and CICE restart files.
+'''
+    parser = argparse.ArgumentParser(description=desc_msg)
+    parser.add_argument('--nemo-solver-file1',
+                        dest='nemo_solver_file1',
+                        required=True,
+                        help='Path to solver.stat file for first job')
+    parser.add_argument('--nemo-solver-file2',
+                        dest='nemo_solver_file2',
+                        required=True,
+                        help='Path to solver.stat file for second job')
+    solver_offset_msg = '''If the 2 jobs have different timestep numbers for
+the same point in model time, as offset must be
+provided to allow comparison. This typically happens
+when comparing NRUN and CRUN outputs. If for example
+P19780902T1200Z is timestep 720 in job 1 and
+timestep 360 in job 2, then an offset of 360 should
+be specified
+'''
+    parser.add_argument('--solver-file2-offset',
+                        dest='solver_offset2',
+                        help=solver_offset_msg,
+                        type=int,
+                        default=0)
+    parser.add_argument('--nemo-file1',
+                        dest='nemo_file1',
+                        help='Path to NEMO restart file output at end '
+                             'of first job')
+    parser.add_argument('--nemo-file2',
+                        dest='nemo_file2',
+                        help='Path to NEMO restart file output at end of'
+                             'second job')
+    parser.add_argument('--cice-file1',
+                        dest='cice_file1',
+                        help='Path to CICE restart file output at end of '
+                             'first job')
+    parser.add_argument('--cice-file2',
+                        dest='cice_file2',
+                        help='Path to CICE restart file output at end of '
+                             'second job')
+    parser.add_argument('--atmos-norm1',
+                        dest='atmos_norm1',
+                        required=True,
+                        help='Path to PE output file from UM for first job')
+    parser.add_argument('--atmos-norm2',
+                        dest='atmos_norm2',
+                        required=True,
+                        help='Path to PE output file from UM for second job')
+    parser.add_argument('--atmos-dump1',
+                        dest='atmos_dump1',
+                        help='Path to UM/atmos restart file '
+                             'output at end of first job')
+    parser.add_argument('--atmos-dump2',
+                        dest='atmos_dump2',
+                        help='Path to UM/atmos restart file '
+                             'output at end of second job')
+
+    parser.add_argument('--list-errors',
+                        dest='list_errors',
+                        action='store_true',
+                        help='If present, will exit as soon as error '
+                             'detected. Otherwise will continue to find all '
+                             'errors.')
+    parser.add_argument('--stop-on-error',
+                        dest='stop_on_error',
+                        action='store_true',
+                        help='Output list of errors if present.')
+
+    parser.add_argument('--ignore-variables',
+                        dest='ignore_variables',
+                        nargs='+',
+                        help='list of variables to be ignored in comparing '
+                             'NEMO and CICE files')
+
+    return parser.parse_args()
+
+def main():
+    """Main function for compare_gc3_output"""
+
+    input_args1 = get_command_line_arguments()
+
+    msg1 = 'comparing contents of atmosphere (UM) norm files:\n'
+    msg1 += 'file 1: {0}\nfile 2: {1}\n'
+    msg1 = msg1.format(input_args1.atmos_norm1, input_args1.atmos_norm2)
+    print msg1
+
+    atmos_retval = \
+        compare_atmos_norms.compare_norm_files(input_args1.atmos_norm1,
+                                               input_args1.atmos_norm2,
+                                               input_args1.stop_on_error,
+                                               input_args1.list_errors)
+
+    msg1 = 'Comparing the contents of the NEMO solver.stat files:\n'
+    msg1 += 'file 1: {f1}\nfile 2: {f2}'
+    msg1 = msg1.format(f1=input_args1.nemo_solver_file1,
+                       f2=input_args1.nemo_solver_file2)
+    print msg1
+    ret_val_nemo_solver = \
+        compare_nemo_solver_stat.compare_solver_stat_files(
+            input_args1.nemo_solver_file1,
+            input_args1.nemo_solver_file2,
+            input_args1.list_errors,
+            input_args1.stop_on_error,
+            input_args1.solver_offset2)
+
+    atmos_dump_code = 0
+    if input_args1.atmos_dump1 and input_args1.atmos_dump2:
+        msg1 = 'comparing UM (atmosphere) dump files:\n'
+        msg1 += 'file 1: {0}\nfile2: {1}\n'
+        msg1 = msg1.format(input_args1.atmos_dump1,
+                           input_args1.atmos_dump2)
+        print msg1
+
+        atmos_dump_code = \
+            compare_atmos_dump_files.compare_files(input_args1.atmos_dump1,
+                                                   input_args1.atmos_dump2,
+                                                   input_args1.stop_on_error)
+
+    error_list_cice = []
+    if input_args1.cice_file1 and input_args1.cice_file2:
+        msg1 = 'Comparing the contents of the CICE netcdf output files:\n'
+        msg1 += 'file 1: {f1}\nfile 2: {f2}'
+        msg1 = msg1.format(f1=input_args1.cice_file1,
+                           f2=input_args1.cice_file2)
+        print msg1
+
+        error_list_cice = \
+            compare_utils.compare_cube_list_files(input_args1.cice_file1,
+                                                  input_args1.cice_file2,
+                                                  input_args1.stop_on_error,
+                                                  False,
+                                                  0,
+                                                  input_args1.ignore_variables,
+                                                  True)
+        if input_args1.list_errors and len(error_list_cice) > 0:
+            sys.stderr.write('Mismatches found in CICE files\n')
+            compare_utils.print_cube_errors('CICE', error_list_cice)
+
+    error_list_nemo = []
+    if input_args1.nemo_file1 and input_args1.nemo_file2:
+        msg1 = 'Comparing the contents of the NEMO netcdf output files:\n'
+        msg1 += 'file 1: {f1}\nfile 2: {f2}'
+        msg1 = msg1.format(f1=input_args1.nemo_file1,
+                           f2=input_args1.nemo_file2)
+        print msg1
+        # For GO6 config, we want to ignore the Halo in NEMO restart files
+        error_list_nemo = \
+            compare_utils.compare_cube_list_files(input_args1.nemo_file1,
+                                                  input_args1.nemo_file2,
+                                                  input_args1.stop_on_error,
+                                                  True,
+                                                  1,
+                                                  input_args1.ignore_variables,
+                                                  True)
+        if input_args1.list_errors and len(error_list_nemo) > 0:
+            sys.stderr.write('Mismatches found in NEMO files\n')
+            compare_utils.print_cube_errors('NEMO', error_list_nemo)
+
+
+    if ret_val_nemo_solver > 0 or \
+        atmos_retval != 0 or \
+        atmos_dump_code != 0 or \
+        len(error_list_nemo) > 0 or \
+        len(error_list_cice) > 0:
+        print 'Mismatches found, outputs do not match!'
+        exit(1)
+    else:
+        print 'All outputs match!'
+
+if __name__ == '__main__':
+    main()

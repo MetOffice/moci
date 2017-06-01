@@ -192,7 +192,6 @@ export FCM_VERSION={{FCM_VERSION}}
             OASIS_MAKE_FILE_NAME = {{OASIS_MAKE_FILE_NAME}}
             OASIS_REPO_URL={{OASIS_REPO_URL}}
             OASIS_REV_NO={{OASIS_REV_NO}}
-            OASIS_MAKE_FILE_NAME={{OASIS_MAKE_FILE_NAME}}
             
             {% if OASIS_SRC_LOCATION_TYPE == "URL" %}
                 {% if OASIS_SEPARATE_EXTRACTION %}
@@ -248,12 +247,6 @@ export FCM_VERSION={{FCM_VERSION}}
         inherit = None, XC40_serial
 {% endif %}
 
-    [[fcm_make_xiosScript_remote]]
-        inherit = None, LOCAL_APP
-
-    [[fcm_make2_xiosScript_remote]]
-        inherit = None,REMOTE_APP, EXTRACT_RESOURCE
-
     [[XIOS_APP]]
         [[[environment]]]
 {% if XIOS_USE_PREBUILT_LIB %}
@@ -263,7 +256,7 @@ export FCM_VERSION={{FCM_VERSION}}
             XIOS_USE_PREBUILT_LIB=false
 {% endif %}
             BUILD_PATH=$CYLC_SUITE_SHARE_DIR
-     	    XIOS_SRC_LOCATION_TYPE = {{XIOS_SRC_LOCATION_TYPE}}
+     	    
             XIOS_REPO_URL={{XIOS_REPO_URL}}
             XIOS_REV={{XIOS_REV}}
             {% if XIOS_SRC_LOCATION_TYPE == "URL" %}
@@ -271,9 +264,11 @@ export FCM_VERSION={{FCM_VERSION}}
                     XIOS_SRC_LOCATION_TYPE = local
                     XIOS_SRC_CODE_DIR = $CYLC_SUITE_SHARE_DIR/fcm_make_xios/extract/xios/
                 {% else %}
+                    XIOS_SRC_LOCATION_TYPE = {{XIOS_SRC_LOCATION_TYPE}}
                 {% endif %}
             {% elif OASIS_SRC_LOCATION_TYPE == "local" %}
                 XIOS_SRC_CODE_DIR = {{XIOS_SRC_CODE_DIR}}
+                XIOS_SRC_LOCATION_TYPE = {{XIOS_SRC_LOCATION_TYPE}}
             {% endif %}
             XIOS_VERSION={{XIOS_VERSION}}
 

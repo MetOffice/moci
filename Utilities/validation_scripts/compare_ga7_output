@@ -12,36 +12,58 @@
  NAME
    compare_ga7_output
 """
+import sys
 import argparse
 
-import comp_norms
-import mule_compare_dump_files
+import compare_atmos_norms
+import compare_atmos_dump_files
 
-def get_cmd_args():
+def get_command_line_arguments():
     """Get command lines arguments"""
     desc_msg = 'Compare output from 2 GA7 tasks.'
     parser = argparse.ArgumentParser(description=desc_msg)
-    parser.add_argument('--norm-file1', dest='norm_path1')
-    parser.add_argument('--norm-file2', dest='norm_path2')
+    parser.add_argument('--norm-file1', dest='norm_path1', required=True)
+    parser.add_argument('--norm-file2', dest='norm_path2', required=True)
     parser.add_argument('--dump-file1', dest='dump_path1')
     parser.add_argument('--dump-file2', dest='dump_path2')
+    parser.add_argument('--stop-on-error',
+                        dest='stop_on_error',
+                        action='store_true')
+    parser.add_argument('--list-errors',
+                        dest='list_errors',
+                        action='store_true')
+
     return parser.parse_args()
 
 def main():
     """Main function for comapre_ga7_output script"""
-    cmd_args1 = get_cmd_args()
-    norm_path1 = cmd_args1.norm_path1
-    norm_path2 = cmd_args1.norm_path2
-    dump_path1 = cmd_args1.dump_path1
-    dump_path2 = cmd_args1.dump_path2
+    cmd_args1 = get_command_line_arguments()
 
-    print 'comparing norm files {0} and {1}'.format(norm_path1,
-                                                    norm_path2)
-    comp_norms.compare_norm_files(norm_path1, norm_path2)
+    print 'comparing norm files {0} and {1}'.format(cmd_args1.norm_path1,
+                                                    cmd_args1.norm_path2)
+    norm_ret_code = \
+        compare_atmos_norms.compare_norm_files(cmd_args1.norm_path1,
+                                               cmd_args1.norm_path2,
+                                               cmd_args1.stop_on_error,
+                                               cmd_args1.list_errors)
 
-    print 'comparing dump files {0} and {1}'.format(dump_path1,
-                                                    dump_path2)
-    mule_compare_dump_files.compare_files(dump_path1, dump_path2)
-
+    print 'comparing dump files {0} and {1}'.format(cmd_args1.dump_path1,
+                                                    cmd_args1.dump_path2)
+    dump_ret_code = \
+        compare_atmos_dump_files.compare_files(cmd_args1.dump_path1,
+                                               cmd_args1.dump_path2,
+                                               cmd_args1.stop_on_error)
+    exit_code = 0
+    if norm_ret_code !=0  or dump_ret_code != 0:
+        msg1 = 'GA7 outputs do not match!'
+        exit_code = 1
+    else:
+        msg1 = 'GA7 outputs match!'
+        
+    print msg1
+    sys.stderr.write(msg1 + '\n')
+    exit(exit_code)
+        
+        
 if __name__ == '__main__':
     main()

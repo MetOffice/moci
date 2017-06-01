@@ -7,6 +7,7 @@
 #
 # Code Owner: Please refer to the UM file CodeOwners.txt
 # This file belongs in section: Rose test suite
+
 """
  CODE OWNER
    Stephen Haddad
@@ -31,6 +32,22 @@ class InvalidArgumentsError(Exception):
     """Error when incorrect command line arguments are supplied."""
     pass
 
+class AtmosNormMismatchError(Exception):
+    """
+    Error triggered when matching timesteps in UM pe output
+    have different norm values.
+    """
+    def __init__(self):
+        Exception.__init__(self)
+        self.file_name1 = 'unknown'
+        self.file_name2 = 'unknown'
+
+    def __str__(self):
+        self.message = 'Values in the following PE output files do not '\
+                       'match:\n file 1 = {file_name1}\n file 2 = {file_name2}'
+        self.message = self.message.format(** self.__dict__)
+        return self.message
+
 def get_command_line_arguments():
     """
     filename1, filename2 = get_command_line_arguments()
@@ -39,9 +56,15 @@ def get_command_line_arguments():
     desc_msg = 'Compare 2 norm files from 2 UM atmosphere tasks.'
     parser = argparse.ArgumentParser(description=desc_msg)
     parser.add_argument('--filename1', dest='filename1')
-    parser.add_argument('--filename1', dest='filename1')
-    args1 = parser.parse_args()
-    return (args1.filename1, args1.filename2)
+    parser.add_argument('--filename2', dest='filename2')
+    parser.add_argument('--list-errors',
+                        dest='list_errors',
+                        action='store_true')
+    parser.add_argument('--stop-on-error',
+                        dest='stop_on_error',
+                        action='store_true')
+
+    return parser.parse_args()
 
 class Timestep(object):
     """
@@ -90,10 +113,19 @@ class Timestep(object):
         if len(self.norm_list) != len(other.norm_list):
             return False
         for norm1, norm2 in itertools.izip(self.norm_list, other.norm_list):
-            if norm1.norm != norm2.norm:
+            if norm1 != norm2:
                 return False
         return True
 
+    def max_norm_diff(self, other):
+        """Find the max difference in the norm values of 2 Norm objects."""
+        if len(self.norm_list) != len(other.norm_list):
+            return False
+        max_diff = 0.0
+        for norm1, norm2 in itertools.izip(self.norm_list, other.norm_list):
+            if abs(norm1.norm - norm2.norm) > max_diff:
+                max_diff = abs(norm1.norm - norm2.norm)
+        return max_diff
 class Norm(object):
     """
     Represents a norm value output by an UM EndGame run.
@@ -108,6 +140,9 @@ class Norm(object):
         self.iterations = iterations
         self.norm = norm
 
+    def __ne__(self, other):
+        return not self == other
+
     def __eq__(self, other):
         if self.outer != other.outer:
             return False
@@ -115,7 +150,7 @@ class Norm(object):
             return False
         if self.iterations != other.iterations:
             return False
-        if abs(self.norm  - other.norm) < self.TOLERANCE:
+        if abs(self.norm  - other.norm) > self.TOLERANCE:
             return False
         return True
 
@@ -244,7 +279,11 @@ def extract_norms(filename):
         current_timestep = None
         for line in result_file:
             if re.findall(TIMESTEP_HEADER_STRING, line):
-                if current_timestep != None:
+                if current_timestep != None and \
+                    len(current_timestep.norm_list) > 0:
+                    # we exclude timesteps with no norms. This is usually
+                    # the first timestep of a cycle, where no calculation
+                    # happens and so there is no associated norm in the output
                     timesteplist += [current_timestep]
                 current_timestep = \
                     process_timestep_string(line,
@@ -282,6 +321,9 @@ def compare_timestep_norms(ts_list1, ts_list2):
     num_comps = 0
     iter1 = ((ix1, ts1, ix2, ts2) for ix1, ts1 in enumerate(ts_list1) \
                                   for ix2, ts2 in enumerate(ts_list2))
+    max_error = 0.0
+    max_error_ix1 = -1
+    max_error_ix2 = -1
     for ix1, ts1, ix2, ts2 in iter1:
         # We are not comparing norms for timestep 0, because none are output
         # as no calculation has been done!
@@ -289,9 +331,21 @@ def compare_timestep_norms(ts_list1, ts_list2):
             num_comps += 1
             if not ts1.compare_norms(ts2):
                 mismatches += [(ix1, ix2)]
-    return mismatches, num_comps
+                max_ts_diff = ts1.max_norm_diff(ts2)
+                if max_ts_diff > max_error:
+                    max_error = max_ts_diff
+                    max_error_ix1 = ix1
+                    max_error_ix2 = ix2
+    return (mismatches,
+            num_comps,
+            max_error,
+            max_error_ix1,
+            max_error_ix2)
 
-def compare_norm_files(filename1, filename2):
+def compare_norm_files(filename1,
+                       filename2,
+                       stop_on_error,
+                       list_errors):
     """
     Main function for comparing the norms for each matching timestep in
     2 UM PE output files"
@@ -308,32 +362,64 @@ def compare_norm_files(filename1, filename2):
     print '{0} time steps found in input 1'.format(len(timestep_list1))
     print '{0} time steps found in input 2'.format(len(timestep_list2))
 
-    mismatches, num_comps = compare_timestep_norms(timestep_list1,
-                                                   timestep_list2)
-
+    print 'comparing UM norms with tolerance {0:g}'.format(Norm.TOLERANCE)
+    (mismatches,
+     num_comps,
+     max_error,
+     max_error_ix1,
+     max_error_ix2) = compare_timestep_norms(timestep_list1,
+                                             timestep_list2)
+    return_value = 0
+    msg1 = ''
     if num_comps == 0:
-        sys.stderr.write('no timesteps have matching dates/times.\n')
-        exit(0)
+        msg1 += 'no timesteps have matching dates/times.\n'
     elif len(mismatches) > 0:
-        sys.stderr.write('Compared {0} time steps present in both input '\
-                         'files.\n'.format(num_comps))
-        sys.stderr.write('The following timesteps have different norms:\n')
-        for ix1, ix2 in mismatches:
-            ts_msg = 'Model time: {0}\n'.format(str(timestep_list1[ix1]))
-            sys.stderr.write(ts_msg)
-        sys.stderr.write('\n')
-        exit(1)
+        msg1 += 'Compared {0} time steps present in both input '\
+               'files.\n'.format(num_comps)
 
+        max_err_msg = 'max difference in norms {0:g} at time step {1}'
+        max_err_msg = max_err_msg.format(max_error,
+                                         str(timestep_list1[max_error_ix1]))
+        msg1 += max_err_msg + '\n'
+
+        if list_errors:
+            msg1 += 'The following timesteps have different norms:\n'
+            for ix1, _ in mismatches:
+                ts_msg = 'Model time: {0}\n'.format(str(timestep_list1[ix1]))
+                msg1 += ts_msg + '\n'
+            msg1 += '\n'
+        else:
+            msg1 += '{0} mismatches found\n'.format(len(mismatches))
+        return_value = 1
+        if stop_on_error:
+            error1 = AtmosNormMismatchError()
+            error1.file_name1 = filename1
+            error1.file_name2 = filename2
+            raise error1
+    else:
+        msg1 = 'All {0} matching timesteps have equal norms.'.format(num_comps)
+
+    print msg1
+    sys.stderr.write(msg1)
     # if we reach here, all matching timesteps  have equal norms
     # so the match is a success
-    print 'All {0} matching timesteps have equal norms.'.format(num_comps)
+    return return_value
 
 def main():
     """
     Main function for com_norms.py script.
     """
-    filename1, filename2 = get_command_line_arguments()
-    compare_norm_files(filename1, filename2)
+    input_args = get_command_line_arguments()
+
+    msg1 = 'comparing contents of atmosphere (UM) norm files:\n'
+    msg1 += 'file 1: {0}\nfile 2: {1}\n'
+    msg1 = msg1.format(input_args.filename1,
+                       input_args.filename2)
+    print msg1
+
+    exit_code = compare_norm_files(**input_args.__dict__)
+    if exit_code != 0:
+        exit(exit_code)
 
 if __name__ == '__main__':
     main()

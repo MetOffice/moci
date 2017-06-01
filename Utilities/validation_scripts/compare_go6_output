@@ -1,0 +1,141 @@
+#!/usr/bin/env python2.7
+#
+#*****************************COPYRIGHT******************************
+#(C) Crown copyright Met Office. All rights reserved.
+# For further details please refer to the file COPYRIGHT.txt
+# which you should have received as part of this distribution.
+#*****************************COPYRIGHT******************************
+"""
+ CODE OWNER
+   Stephen Haddad
+
+ NAME
+   compare_go6_output
+
+   Compare restart and norm files output from a GO6 job. Outputs compared
+   include:
+
+   * NEMO solver.stat files
+   * NEMO restart files (must be rebuilt if restart output is multiple file)
+   * CICE restart files
+"""
+import argparse
+import sys
+
+import compare_nemo_solver_stat
+import compare_utils
+
+def get_command_line_arguments():
+    """
+    Get command line arguments
+    """
+    desc_msg = 'Compare output from 2 GO6 tasks.'
+    parser = argparse.ArgumentParser(description=desc_msg)
+    parser.add_argument('--solver-file1',
+                        dest='solver_path1',
+                        required=True)
+    parser.add_argument('--solver-file2',
+                        dest='solver_path2',
+                        required=True)
+    parser.add_argument('--solver-file2-offset',
+                        dest='solver_offset2',
+                        help='add an offset to the timestep values in second '
+                             'solver file. This allows you to compare to runs'
+                             'with different timestep values.',
+                        type=int,
+                        default=0)
+    parser.add_argument('--nemo-file1', dest='nemo_path1')
+    parser.add_argument('--nemo-file2', dest='nemo_path2')
+    parser.add_argument('--cice-file1', dest='cice_path1')
+    parser.add_argument('--cice-file2', dest='cice_path2')
+    parser.add_argument('--list-errors',
+                        dest='list_errors',
+                        action='store_true')
+    parser.add_argument('--stop-on-error',
+                        dest='stop_on_error',
+                        action='store_true')
+
+    parser.add_argument('--ignore-variables',
+                        dest='ignore_variables')
+
+    return parser.parse_args()
+
+def main():
+    """
+    Main function for compare_go6_ouput
+    """
+    cmd_args1 = get_command_line_arguments()
+
+    ignore_variables = [iv1 for iv1 in cmd_args1.ignore_variables.split(',')
+                        if len(iv1) > 0]
+
+    # solver files are required, so will always be checked
+    msg1 = 'Comparing the contents of the NEMO solver.stat files:\n'
+    msg1 += 'file 1: {f1}\nfile 2: {f2}'
+    msg1 = msg1.format(f1=cmd_args1.solver_path1,
+                       f2=cmd_args1.solver_path2)
+    print msg1
+    ret_val_solver = \
+        compare_nemo_solver_stat.compare_solver_stat_files(
+            cmd_args1.solver_path1,
+            cmd_args1.solver_path2,
+            cmd_args1.list_errors,
+            cmd_args1.stop_on_error,
+            cmd_args1.solver_offset2)
+
+    #if CICE pathes are input, compare CICE restart files
+    error_list_cice = []
+    if cmd_args1.cice_path1 and cmd_args1.cice_path2:
+        msg1 = 'Comparing the contents of the CICE netcdf output files:\n'
+        msg1 += 'file 1: {f1}\nfile 2: {f2}'
+        msg1 = msg1.format(f1=cmd_args1.cice_path1,
+                           f2=cmd_args1.cice_path2)
+        print msg1
+
+        error_list_cice = compare_utils.compare_cube_list_files(
+            cmd_args1.cice_path1,
+            cmd_args1.cice_path2,
+            cmd_args1.stop_on_error,
+            False,
+            0,
+            ignore_variables,
+            True)
+    else:
+        print 'CICE restart files not supplied, skipping comparison.'
+
+    #if NEMO pathes are input, compare NEMO restart files
+    error_list_nemo = []
+    if cmd_args1.nemo_path1 and cmd_args1.nemo_path2:
+
+        msg1 = 'Comparing the contents of the NEMO netcdf output files:\n'
+        msg1 += 'file 1: {f1}\nfile 2: {f2}'
+        msg1 = msg1.format(f1=cmd_args1.nemo_path1,
+                           f2=cmd_args1.nemo_path2)
+        print msg1
+        # For GO6 config, we want to ignore the Halo in NEMO restart files
+        error_list_nemo = compare_utils.compare_cube_list_files(
+            cmd_args1.nemo_path1,
+            cmd_args1.nemo_path2,
+            cmd_args1.stop_on_error,
+            True,
+            1,
+            ignore_variables,
+            True)
+    else:
+        print 'NEMO restart files not supplied, skipping comparison.'
+
+    # output details of NEMO and CICE errors if there are any
+    if len(error_list_nemo) > 0 or len(error_list_cice) > 0:
+        sys.stderr.write('Mismatches found in NEMO and/or CICE files\n')
+        compare_utils.print_cube_errors('CICE', error_list_cice)
+        compare_utils.print_cube_errors('NEMO', error_list_nemo)
+
+    if ret_val_solver != 0 or \
+        len(error_list_nemo) > 0 or \
+        len(error_list_cice) > 0:
+        exit(1)
+    else:
+        print 'NEMO and CICE outputs match!'
+
+if __name__ == '__main__':
+    main()

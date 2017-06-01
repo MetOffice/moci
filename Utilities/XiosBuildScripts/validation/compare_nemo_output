@@ -29,9 +29,13 @@ def main():
     for file_name1 in NemoTestSystem.NemoTestSystem.OUTPUT_FILE_LIST:
         print 'evaluating file {filename}'.format(filename=file_name1)
         try:
-            compare_utils.compare_cube_list_files(nemo_kgo_dir,
-                                                  nemo_result_dir,
-                                                  file_name1)
+            file_path1 = os.path.join(nemo_kgo_dir, file_name1)
+            file_path2 = os.path.join(nemo_result_dir, file_name1)
+            msg1 = 'comparing files {0} and {1}'
+            msg1 = msg1.format(file_path1, file_path2)
+            print msg1
+            compare_utils.compare_cube_list_files(file_path1,
+                                                  file_path2)
         except Exception as except1:
             sys.stderr.write(str(except1))
             raise except1
