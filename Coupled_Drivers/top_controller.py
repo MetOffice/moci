@@ -149,11 +149,6 @@ def _setup_top_controller(restart_ctl,
     # Read restart from TOP namelist
     restart_direcs = []
 
-    # If it's not a continuation run, use the TOP_START
-    # env var.
-    if top_envar['CONTINUE'] == '':
-        latest_top_dump = top_envar['TOP_START']
-
     # Find the TOP restart location
     top_rst = _get_toprst_dir(top_envar['TOP_NL'])
 
@@ -165,8 +160,8 @@ def _setup_top_controller(restart_ctl,
     # wherever it was written by the previous task.
     ###########################################################
 
-    # Identify the TOP restart files. These should conform
-    # to the format
+    # Identify any relevant TOP restart files in the suite data directory.
+    # These should conform to the format:
     # <some arbitrary name>_yyyymmdd_restart_trc_<PE rank>.nc" or
     # <some arbitrary name>_yyyymmdd_restart_trc.nc" in the case
     # of the restart file having been rebuilt.
@@ -174,21 +169,23 @@ def _setup_top_controller(restart_ctl,
                          re.findall(r'.+_\d{8}_restart_trc', f)]
     top_restart_files.sort()
 
+    # Default position is that we're starting from a restart file and
+    # that the value of restart_ctl is simply whatever is provided
+    # by the NEMO driver, without modification.
+    ln_restart = ".true."
+
     if top_restart_files:
+        # Set up full path to restart files
         latest_top_dump = os.path.join(top_rst, top_restart_files[-1])
-        ln_restart = ".true."
-        # The value of restart_ctl is simply whatever is provided
-        # by the NEMO driver, without modification.
     else:
-        latest_top_dump = 'unset'
-        # We don't have a restart file, so TOP must be starting
-        # from climatology. Override the restart flag sent from
-        # NEMO accordingly.
-        ln_restart = ".false."
-        # Don't check restart time-step consistency, since we
-        # have no restart file. Overwrite any value provided
-        # by the NEMO driver.
-        restart_ctl = 0
+        # If we didn't find any restart files in the suite data directory,
+        # check the TOP_START env var.
+        if top_envar['CONTINUE'] == '':
+            latest_top_dump = top_envar['TOP_START']
+        else:
+            # We don't have a restart file, which implies we must be
+            # starting from climatology.
+            latest_top_dump = 'unset'
 
     top_init_dir = '.'
 
@@ -201,16 +198,11 @@ def _setup_top_controller(restart_ctl,
     if top_envar['CONTINUE'] == '':
 
         # This is definitely a new run
-        sys.stdout.write('[INFO] top_controller: New TOP/MEDUSA run\n')
-        # Don't check restart time-step consistency.
-        # This may or may not be a good thing depending on whether
-        # we want to ensure NRUNs start from consistently dated restarts
-        # in all components.
-        restart_ctl = 0
+        sys.stdout.write('[INFO] top_controller: New TOP/MEDUSA run\n\n')
 
         if os.path.isfile(latest_top_dump):
             sys.stdout.write('[INFO] top_controller: Removing old TOP '
-                             'restart data\n')
+                             'restart data\n\n')
             # For NRUNS, get rid of any existing restart files from
             # previous runs.
             for file_path in glob.glob(top_rst+'/*restart_trc*'):
@@ -234,10 +226,19 @@ def _setup_top_controller(restart_ctl,
         else:
             # If there's no TOP restart we must be starting from climatology.
             sys.stdout.write('[INFO] top_controller: TOP is starting from'
-                             'climatology.\n')
+                             ' climatology.\n\n')
+            # Set the restart flag accordingly
+            ln_restart = ".false."
+
+        # Don't check restart time-step consistency.
+        # This may or may not be a good thing depending on whether
+        # we want to ensure NRUNs start from consistently dated restarts
+        # in all components.
+        restart_ctl = 0
+
 
     elif os.path.isfile(latest_top_dump):
-
+        # We have a valid restart file so we're not starting from climatology
         # This could be a new run or a continutaion run.
         top_dump_time = re.findall(r'_(\d*)_restart_trc', latest_top_dump)[0]
 
@@ -252,7 +253,7 @@ def _setup_top_controller(restart_ctl,
         # a CRUN.
         sys.stdout.write('[INFO] top_controller: Restart data avaliable in '
                          'TOP restart directory %s. Restarting from previous '
-                         'task output\n'
+                         'task output\n\n'
                          % top_rst)
         top_init_dir = top_rst
 
@@ -318,6 +319,14 @@ def _setup_top_controller(restart_ctl,
     mod_topnl.var_val('ln_trcdta', ln_trcdta)
     mod_topnl.replace()
 
+    # Write details of our namelist settings
+    sys.stdout.write('[INFO] top_controller: Start of TOP namelist settings:\n')
+    sys.stdout.write('[INFO]     Namelist file: %s \n' % top_envar['TOP_NL'])
+    sys.stdout.write('[INFO]     ln_rsttr = %s \n' % ln_restart)
+    sys.stdout.write('[INFO]     nn_rsttr = %d \n' % restart_ctl)
+    sys.stdout.write('[INFO]     ln_trcdta = %s \n' % ln_trcdta)
+    sys.stdout.write('[INFO] top_controller: End of TOP namelist settings\n\n')
+
     return top_envar
 
 def _set_launcher_command(_):
@@ -325,7 +334,7 @@ def _set_launcher_command(_):
     Setup the launcher command for the executable
     '''
     sys.stdout.write('[INFO] top_controller: MEDUSA/TOP uses the same launch '
-                     'command as NEMO\n')
+                     'command as NEMO\n\n')
     launch_cmd = ''
     return launch_cmd
 
@@ -334,8 +343,8 @@ def _finalize_top_controller():
     Finalize the passive tracer set-up, copy the TOP namelist to the
     restart directory for the next cycle.
     '''
-    sys.stdout.write('[INFO] finalizing Ocean Passive Tracers')
-    sys.stdout.write('[INFO] running finalize in %s' % os.getcwd())
+    sys.stdout.write('[INFO] finalizing Ocean Passive Tracers \n')
+    sys.stdout.write('[INFO] running finalize in %s \n' % os.getcwd())
 
     # Move the TOP namelist to the restart directory to allow the next cycle
     # to pick it up
