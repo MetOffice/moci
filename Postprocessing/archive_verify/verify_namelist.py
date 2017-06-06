@@ -39,7 +39,7 @@ class AtmosVerify(object):
 
     verify_model = False
     archive_timestamps = 'Seasonal'
-    buffer_restart = 1
+    delay_rst_archive = '0d'
     fields = None
     mean_reference_date = '10001201'
     meanstreams = ['1m', '1s', '1y', '1x']

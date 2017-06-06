@@ -467,7 +467,7 @@ class DumpnameTests(unittest.TestCase):
         self.atmos.suite = mock.Mock()
         self.atmos.envars = mock.Mock()
         self.atmos.envars.MODELBASIS = '1980,09,01,00,00,00'
-        self.atmos.suite.prefix = 'RUNID'
+        self.atmos.suite.prefix = 'PREFIX'
         self.atmos.final_dumpname = None
         if 'monthly' in self.id():
             self.atmos.naml.archiving.arch_dump_freq = 'Monthly'
@@ -479,130 +479,143 @@ class DumpnameTests(unittest.TestCase):
     def tearDown(self):
         pass
 
-    @mock.patch('validation.utils.add_period_to_date')
-    def test_monthly_dumpname(self, mock_adddate):
+    def test_monthly_dumpname(self):
         '''Test creation of a dumpname for monthly archive'''
         func.logtest('Assert creation of dumpname for monthly archive')
-        mock_adddate.return_value = [1980, 10, 1, 0, 0, 0]
+        func.logtest('Testing first year:')
         self.atmos.suite.cycledt = [1980, 10, 1, 0, 0, 0]
         dumps = validation.make_dump_name(self.atmos)
-        self.assertEqual(dumps, ['RUNIDa.da19801001_00'])
-        mock_adddate.assert_called_with([1980, 9, 1, 0, 0, 0], [0, 1])
+        self.assertEqual(dumps, ['PREFIXa.da19801001_00'])
 
-    @mock.patch('validation.utils.add_period_to_date')
-    def test_monthly_dumpname12h(self, mock_adddate):
-        '''Test to ensure no creation of a dumpname with 12h timestamp
-        when running 12h cycling'''
-        func.logtest('Assure no creation of dumpname with 12h timestep'
-                     ' when using monthly archiving')
-        mock_adddate.return_value = [1980, 10, 1, 12, 0, 0]
-        self.atmos.suite.cycledt = [1980, 10, 1, 12, 0, 0]
+        func.logtest('Testing subsequent year:')
+        self.atmos.suite.cycledt = [1981, 4, 1, 0, 0, 0]
         dumps = validation.make_dump_name(self.atmos)
-        self.assertEqual(dumps, [])
+        self.assertListEqual(dumps, ['PREFIXa.da19801001_00',
+                                     'PREFIXa.da19801101_00',
+                                     'PREFIXa.da19801201_00',
+                                     'PREFIXa.da19810101_00',
+                                     'PREFIXa.da19810201_00',
+                                     'PREFIXa.da19810301_00',
+                                     'PREFIXa.da19810401_00'])
 
-    @mock.patch('validation.utils.add_period_to_date')
-    def test_monthly_offset_dumpname(self, mock_adddate):
+    def test_monthly_offset_dumpname(self):
         '''Test creation of a dumpname for monthly archive - offset'''
         func.logtest('Assert creation of dumpname for monthly archive')
-        mock_adddate.return_value = [1980, 10, 1, 0, 0, 0]
-        self.atmos.suite.cycledt = [1980, 10, 1, 0, 0, 0]
+        self.atmos.suite.cycledt = [1981, 5, 1, 0, 0, 0]
         self.atmos.naml.archiving.arch_dump_offset = 6
         dumps = validation.make_dump_name(self.atmos)
-        self.assertEqual(dumps, ['RUNIDa.da19801001_00'])
-        mock_adddate.assert_called_with([1980, 9, 1, 0, 0, 0], [0, 7])
+        self.assertListEqual(dumps, ['PREFIXa.da19810401_00',
+                                     'PREFIXa.da19810501_00'])
 
-    @mock.patch('validation.utils.add_period_to_date')
-    def test_monthly_dump_finalcycle(self, mock_adddate):
+    def test_monthly_dump_finalcycle(self):
         '''Test creation of dumpnames for monthly archive - final cycle'''
         func.logtest('Assert dumpname creation for monthly archive - final')
-        mock_adddate.return_value = [1980, 10, 1, 0, 0, 0]
         self.atmos.final_dumpname = 'FINALDUMP'
         self.atmos.suite.cycledt = [1980, 10, 1, 0, 0, 0]
         dumps = validation.make_dump_name(self.atmos)
-        self.assertListEqual(sorted(dumps),
-                             ['FINALDUMP', 'RUNIDa.da19801001_00'])
-        mock_adddate.assert_called_with([1980, 9, 1, 0, 0, 0], [0, 1])
+        self.assertListEqual(dumps, ['FINALDUMP', 'PREFIXa.da19801001_00'])
 
-    @mock.patch('validation.utils.add_period_to_date')
-    def test_monthly_dump_firstcycle(self, mock_adddate):
+    def test_monthly_dump_firstcycle(self):
         '''Test creation of dumpnames for monthly archive - first cycle'''
         func.logtest('Assert dumpname creation for monthly archive - first')
         self.atmos.suite.cycledt = [1980, 9, 1, 0, 0, 0]
         dumps = validation.make_dump_name(self.atmos)
         self.assertEqual(dumps, [])
-        self.assertEqual(mock_adddate.mock_calls, [])
 
-    @mock.patch('validation.utils.add_period_to_date')
-    def test_monthly_dump_mid_month(self, mock_adddate):
+    def test_monthly_dump_mid_month(self):
         '''Test creation of no dumpnames for monthly archive (mid month)'''
         func.logtest('Assert dumpname creation for monthly arch - mid month')
-        mock_adddate.return_value = [1980, 10, 1, 0, 0, 0]
         self.atmos.suite.cycledt = [1980, 10, 15, 0, 0, 0]
         dumps = validation.make_dump_name(self.atmos)
-        self.assertEqual(dumps, [])
+        self.assertListEqual(dumps, ['PREFIXa.da19801001_00'])
 
-    @mock.patch('validation.utils.add_period_to_date')
-    def test_monthly_dump_before_basis(self, mock_adddate):
-        '''Test creation of no dumpnames for monthly archive (before basis)'''
-        func.logtest('Assert dumpname creation for monthly arch - early')
-        mock_adddate.return_value = [1980, 11, 1, 0, 0, 0]
-        self.atmos.suite.cycledt = [1980, 10, 1, 0, 0, 0]
-        dumps = validation.make_dump_name(self.atmos)
-        self.assertEqual(dumps, [])
-
-    def test_seasonal_dumpname(self):
-        '''Test creation of a dumpname for seasonal archive'''
-        func.logtest('Assert creation of dumpname for seasonal archive')
+    def test_seasonal_dumpnames_one(self):
+        '''Test creation of one dumpname for seasonal archive'''
+        func.logtest('Assert creation of one dumpname for seasonal archive')
         self.atmos.suite.cycledt = [1980, 12, 1, 0, 0, 0]
         dumps = validation.make_dump_name(self.atmos)
-        self.assertEqual(dumps, ['RUNIDa.da19801201_00'])
+        self.assertListEqual(dumps, ['PREFIXa.da19801201_00'])
 
-    def test_seasonal_dumpname12h(self):
-        '''Test to ensure no creation of a dumpname with 12h timestamp
-        when running 12h cycling'''
-        func.logtest('Assure no creation of dumpname with 12h timestep'
-                     ' when using seasonal archiving')
-        self.atmos.suite.cycledt = [1981, 12, 1, 12, 0, 0]
-        dumps = validation.make_dump_name(self.atmos)
-        self.assertEqual(dumps, [])
+        for month in range(1, 3):
+            func.logtest('testing date (1 seasonal dump): {}'.
+                         format([1981, month, 1, 0, 0, 0]))
+            self.atmos.suite.cycledt = [1981, month, 1, 0, 0, 0]
+            dumps = validation.make_dump_name(self.atmos)
+            self.assertListEqual(dumps, ['PREFIXa.da19801201_00'])
 
-    def test_seasonal_dumpname_none(self):
-        '''Test creation of no dumpnames for seasonal archive'''
+
+    def test_seasonal_dumpnames_two(self):
+        '''Test creation of two dumpnames for seasonal archive'''
+        func.logtest('Assert creation of two dumpnames for seasonal archive')
+        for month in range(3, 6):
+            func.logtest('testing date (2 seasonal dumps): {}'.
+                         format([1981, month, 1, 0, 0, 0]))
+            self.atmos.suite.cycledt = [1981, month, 1, 0, 0, 0]
+            dumps = validation.make_dump_name(self.atmos)
+            self.assertListEqual(dumps, ['PREFIXa.da19801201_00',
+                                         'PREFIXa.da19810301_00'])
+
+    def test_seasonal_dumpnames_three(self):
+        '''Test creation of 3 dumpnames for seasonal archive'''
+        func.logtest('Assert creation of 3 dumpnames for seasonal archive')
+        for month in range(6, 9):
+            func.logtest('testing date (3 seasonal dumps): {}'.
+                         format([1981, month, 1, 0, 0, 0]))
+            self.atmos.suite.cycledt = [1981, month, 1, 0, 0, 0]
+            dumps = validation.make_dump_name(self.atmos)
+            self.assertListEqual(sorted(dumps), ['PREFIXa.da19801201_00',
+                                                 'PREFIXa.da19810301_00',
+                                                 'PREFIXa.da19810601_00'])
+
+    def test_seasonal_dumpnames_four(self):
+        '''Test creation of 4 dumpnames for seasonal archive'''
+        func.logtest('Assert creation of 4 dumpnames for seasonal archive')
+        for month in range(9, 12):
+            func.logtest('testing date (4 seasonal dumps): {}'.
+                         format([1981, month, 1, 0, 0, 0]))
+            self.atmos.suite.cycledt = [1981, month, 1, 0, 0, 0]
+            dumps = validation.make_dump_name(self.atmos)
+            self.assertListEqual(sorted(dumps), ['PREFIXa.da19801201_00',
+                                                 'PREFIXa.da19810301_00',
+                                                 'PREFIXa.da19810601_00',
+                                                 'PREFIXa.da19810901_00'])
+
+    def test_seasonal_dumpnames_none(self):
+        '''Test creation of a dumpname for seasonal archive - None'''
         func.logtest('Assert creation of no dumpnames for seasonal archive')
-        self.atmos.suite.cycledt = [1980, 10, 1, 0, 0, 0]
-        dumps = validation.make_dump_name(self.atmos)
-        self.assertEqual(dumps, [])
+        self.atmos.envars.MODELBASIS = '1980,10,1,0,0'
+        for month in range(10, 12):
+            func.logtest('testing date (no seasonal dumps): {}'.
+                         format([1980, month, 1, 0, 0, 0]))
+            self.atmos.suite.cycledt = [1980, month, 1, 0, 0, 0]
+            dumps = validation.make_dump_name(self.atmos)
+            self.assertListEqual(dumps, [])
 
     def test_annual_jan_dumpname(self):
         '''Test creation of a dumpname for annual archive'''
         func.logtest('Assert creation of dumpname for annual archive (Jan)')
-        self.atmos.suite.cycledt = [1981, 1, 1, 0, 0, 0]
+        self.atmos.suite.cycledt = [1981, 12, 1, 0, 0, 0]
         self.atmos.naml.archiving.arch_year_month = 'January'
         dumps = validation.make_dump_name(self.atmos)
-        self.assertEqual(dumps, ['RUNIDa.da19810101_00'])
+        self.assertEqual(dumps, ['PREFIXa.da19810101_00'])
 
-    def test_annual_jan_dumpname12h(self):
-        '''Test to ensure no creation of a dumpname with 12h timestamp
-        when running 12h cycling'''
-        func.logtest('Assure no creation of dumpname with 12h timestep'
-                     ' when using yearly archiving')
-        self.atmos.suite.cycledt = [1981, 1, 1, 12, 0, 0]
-        self.atmos.naml.archiving.arch_year_month = 'January'
+        self.atmos.suite.cycledt = [1983, 12, 1, 0, 0, 0]
         dumps = validation.make_dump_name(self.atmos)
-        self.assertEqual(dumps, [])
+        self.assertEqual(dumps, ['PREFIXa.da19820101_00',
+                                 'PREFIXa.da19830101_00'])
 
     def test_annual_july_dumpname(self):
         '''Test creation of a dumpname for annual archive'''
         func.logtest('Assert creation of dumpname for annual archive (Jan)')
-        self.atmos.suite.cycledt = [1981, 7, 1, 0, 0, 0]
+        self.atmos.suite.cycledt = [1981, 12, 1, 0, 0, 0]
         self.atmos.naml.archiving.arch_year_month = 'July'
         dumps = validation.make_dump_name(self.atmos)
-        self.assertEqual(dumps, ['RUNIDa.da19810701_00'])
+        self.assertEqual(dumps, ['PREFIXa.da19810701_00'])
 
     def test_annual_dumpname_none(self):
         '''Test creation of no dumpnames for annual archive'''
         func.logtest('Assert creation of no dumpnames for annual archive')
-        self.atmos.suite.cycledt = [1980, 10, 1, 0, 0, 0]
+        self.atmos.suite.cycledt = [1980, 12, 1, 0, 0, 0]
         self.atmos.naml.archiving.arch_year_month = 'January'
         dumps = validation.make_dump_name(self.atmos)
         self.assertEqual(dumps, [])
@@ -614,6 +627,42 @@ class DumpnameTests(unittest.TestCase):
         self.atmos.suite.cycledt = [1980, 9, 1, 0, 0, 0]
         dumps = validation.make_dump_name(self.atmos)
         self.assertEqual(dumps, ['FINALDUMP'])
+
+    def test_dumpname_timestamps_single(self):
+        '''Test creation of dumpnames for archive - first & last cycle'''
+        func.logtest('Assert dumpname creation for archive - first/last cycle')
+        self.atmos.naml.archiving.arch_dump_freq = 'Timestamps'
+        self.atmos.naml.archiving.arch_timestamps = '01-01'
+        self.atmos.suite.cycledt = [1982, 9, 1, 0, 0, 0]
+        dumps = validation.make_dump_name(self.atmos)
+        self.assertEqual(dumps, ['PREFIXa.da19810101_00',
+                                 'PREFIXa.da19820101_00'])
+
+    def test_dumpname_timestamps_multi(self):
+        '''Test creation of dumpnames for archive - first & last cycle'''
+        func.logtest('Assert dumpname creation for archive - first/last cycle')
+        self.atmos.naml.archiving.arch_dump_freq = 'Timestamps'
+        self.atmos.naml.archiving.arch_timestamps = ['01-01', '6-15_30',
+                                                     '12-1_0']
+        self.atmos.suite.cycledt = [1982, 9, 1, 0, 0, 0]
+        dumps = validation.make_dump_name(self.atmos)
+        self.assertEqual(dumps, ['PREFIXa.da19810101_00',
+                                 'PREFIXa.da19810615_30',
+                                 'PREFIXa.da19811201_00',
+                                 'PREFIXa.da19820101_00',
+                                 'PREFIXa.da19820615_30'])
+
+    def test_dumpname_tstamps_badformat(self):
+        '''Test creation of dumpnames for archive - first & last cycle'''
+        func.logtest('Assert dumpname creation for archive - first/last cycle')
+        self.atmos.naml.archiving.arch_dump_freq = 'Timestamps'
+        self.atmos.naml.archiving.arch_timestamps = ['01_01', '2-1']
+        self.atmos.suite.cycledt = [1982, 9, 1, 0, 0, 0]
+        dumps = validation.make_dump_name(self.atmos)
+        self.assertEqual(dumps, ['PREFIXa.da19810201_00',
+                                 'PREFIXa.da19820201_00'])
+        self.assertIn('timestamp "01_01" does not match the expected format',
+                      func.capture('err'))
 
 
 class TransformTests(unittest.TestCase):

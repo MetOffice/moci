@@ -147,6 +147,17 @@ class AtmosPostProc(control.RunPostProc):
         return convpp
 
     @property
+    def archive_tstamps(self):
+        '''
+        Return a list of timestamps for dumps to archive, having
+        removed blank strings.
+        '''
+        tstamps = self.naml.archiving.arch_timestamps
+        if not isinstance(tstamps, list):
+            tstamps = [tstamps]
+        return [ts for ts in tstamps if ts]
+
+    @property
     def _netcdf_streams(self):
         '''
         Calculate the regular expression required to find files

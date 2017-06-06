@@ -257,6 +257,34 @@ class pp20_t214(rose.upgrade.MacroUpgrade):
         return config, self.reports
 
 
+class pp20_t181(rose.upgrade.MacroUpgrade):
+
+    """Upgrade macro for ticket #181 by Erica Neininger."""
+    BEFORE_TAG = "pp20_t214"
+    AFTER_TAG = "pp20_t181"
+
+    def upgrade(self, config, meta_config=None):
+        """Upgrade a Postproc make app configuration."""
+        # Input your macro commands here
+        self.add_setting(config,
+                         ["namelist:archiving", "arch_timestamps", None])
+        dumpfreq = self.get_setting_value(config,
+                                          ["namelist.archiving",
+                                           "arch_dump_freq"])
+        if dumpfreq != "Monthly":
+            # offset was previously ignored - reset to default value (0)
+            self.add_setting(config,
+                             ["namelist:archiving", "arch_dump_offset"],
+                             "0", forced=True)
+
+        delay = self.get_setting_value(config, ["namelist.archiving",
+                                                "arch_dump_offset"])
+        self.add_setting(config, ["namelist:atmosverify", "delay_rst_archive"],
+                         (str(delay) if delay else '0') + "m")
+
+        return config, self.reports
+
+
 class pp12_tXXX(rose.upgrade.MacroUpgrade):
 
     """Upgrade macro for ticket #XXXX by <author>."""

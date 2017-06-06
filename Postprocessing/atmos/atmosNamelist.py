@@ -55,9 +55,10 @@ class Archiving:
     archive_switch = False
     arch_dump_freq = 'Monthly'
     arch_dump_offset = 0
+    arch_timestamps = []
     archive_dumps = False
     archive_pp = False
-    arch_year_month = 1
+    arch_year_month = None
 
 
 class Deletion:

@@ -178,6 +178,12 @@ class RestartFiles(ArchivedFiles):
         super(RestartFiles, self).__init__(startdate, enddate, prefix,
                                            model, naml)
         self.timestamps = self._timestamps()
+        try:
+            dump_delay = naml.delay_rst_archive
+        except AttributeError:
+            # No delay in restart file archive
+            dump_delay = '0d'
+        self.sdate = utils.add_period_to_date(self.sdate[:], dump_delay)
         self.rst_types = ['{}_rst'.format(model)]
         for rst in [a for a in dir(naml) if a.endswith('_rst')]:
             if getattr(self.naml, rst):

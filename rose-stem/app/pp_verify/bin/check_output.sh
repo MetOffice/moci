@@ -51,10 +51,10 @@
 #                 they've been archived based on presence of _ARCHIVED files, but conversion
 #                 to pp has been disabled.
 #
+#   MOCI #181  - Change to test seasonal offset for atmosphere dump archive
+#               - removed file: hg3esa.da19811201_00
 ###############################################################################
-
 adumps="
-hg3esa.da19811201_00
 hg3esa.da19820301_00
 hg3esa.da19820601_00
 hg3esa.da19820901_00

@@ -249,6 +249,10 @@ class RestartFilesTests(unittest.TestCase):
             model = 'cice'
             naml = verify_namelist.CiceVerify()
             naml.cice_age_rst = True
+        elif '10d_delay' in self.id():
+            naml.delay_rst_archive = '10days'
+        elif '6m_delay' in self.id():
+            naml.delay_rst_archive = '6M'
 
         with mock.patch('utils.finalcycle', return_value=False):
             self.files = expected_content.RestartFiles('19950811', '19981101',
@@ -264,6 +268,16 @@ class RestartFilesTests(unittest.TestCase):
                              [[3, 1], [6, 1], [9, 1], [12, 1]])
         self.assertListEqual(self.files.rst_types, ['model_rst'])
         self.assertIsNone(self.files.naml.streams_1d)
+
+    def test_rst_archive_10d_delay(self):
+        ''' Assert correct addition of delay to start date for dump archive '''
+        func.logtest('Assert delay to dump archive - 10days:')
+        self.assertEqual(self.files.sdate, [1995, 8, 21, 0, 0])
+
+    def test_rst_archive_6m_delay(self):
+        ''' Assert correct addition of delay to start date for dump archive '''
+        func.logtest('Assert delay to dump archive - 6months:')
+        self.assertEqual(self.files.sdate, [1996, 2, 11, 0, 0])
 
     def test_timestamps(self):
         ''' Assert correct return of timestamps to archive '''

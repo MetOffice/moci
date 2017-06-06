@@ -203,37 +203,45 @@ def make_dump_name(atmos):
 
     cycledt = atmos.suite.cycledt
     dt_len = len(cycledt)
-    basisdt = [int(elem) for elem in atmos.envars.MODELBASIS.split(',')]
+    no_arch_before = utils.add_period_to_date(
+        [int(elem) for elem in atmos.envars.MODELBASIS.split(',')],
+        [0, atmos.naml.archiving.arch_dump_offset]
+        )[:dt_len]
+    while len(no_arch_before) < dt_len:
+        no_arch_before.append(0)
 
-    if cycledt == basisdt[:dt_len]:
-        # This is the first cycle, only archive the final cycle dump name
-        return dumps_to_archive
+    months = [None, 'January', 'February', 'March', 'April', 'May',
+              'June', 'July', 'August', 'September', 'October',
+              'November', 'December']
+    month_range = {
+        'Yearly': (months.index(atmos.naml.archiving.arch_year_month),
+                   months.index(atmos.naml.archiving.arch_year_month) + 1),
+        'Seasonal': (3, 13, 3),
+        'Monthly': (1, 13),
+        }
 
-    # Process for yearly archiving to determine which month to archive
-    if atmos.naml.archiving.arch_dump_freq == 'Yearly':
-        months = {'January': 1, 'February': 2, 'March': 3, 'April': 4,
-                  'May': 5, 'June': 6, 'July': 7, 'August': 8, 'September': 9,
-                  'October': 10, 'November': 11, 'December': 12}
-        month_for_yearly_arch = months[atmos.naml.archiving.arch_year_month]
-    else:
-        # Set a default that mimics existing behaviour
-        month_for_yearly_arch = 1
+    dump_freq = atmos.naml.archiving.arch_dump_freq
+    dumpdates = []
+    for year in range(cycledt[0] - 1, cycledt[0] + 1):
+        try:
+            for month in range(*month_range[dump_freq]):
+                dumpdates.append([year, month, 1, 0, 0, 0])
+        except KeyError:
+            # List of timestamps
+            for tstamp in atmos.archive_tstamps:
+                match = re.match(r'(\d{1,2})-(\d{1,2})_?(\d{1,2})?', tstamp)
+                try:
+                    month, day, hour = match.groups()
+                except AttributeError:
+                    msg = 'Archive restart dumps: timestamp "{}"'.format(tstamp)
+                    msg += ' does not match the expected format: "MM-DD[_HH]"'
+                    utils.log_msg(msg, level='WARN')
+                    continue
+                hour = int(hour) if hour else 0
+                dumpdates.append([year, int(month), int(day), hour, 0, 0])
 
-    # cycledt is a tuple containing integer values
-    # (year,month,day,hour,minute,second) for the start of a cycle in a
-    # cycling model run.
-    dumptype = {
-        'Yearly': cycledt[1] == month_for_yearly_arch and
-                  cycledt[2] == 1 and cycledt[3] == 0,
-        'Seasonal': cycledt[1] in (12, 3, 6, 9) and cycledt[2] == 1 and
-                    cycledt[3] == 0,
-        'Monthly': cycledt >= utils.add_period_to_date(
-            basisdt,
-            [0, atmos.naml.archiving.arch_dump_offset + 1])[:dt_len] and
-                   cycledt[2] == 1 and cycledt[3] == 0
-    }
-
-    if dumptype[atmos.naml.archiving.arch_dump_freq]:
-        dumps_to_archive.append(atmos.dumpname())
+    for date in dumpdates:
+        if cycledt >= date[:dt_len] and date[:dt_len] > no_arch_before:
+            dumps_to_archive.append(atmos.dumpname(dumpdate=date))
 
     return dumps_to_archive
