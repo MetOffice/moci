@@ -467,6 +467,7 @@ class DiagnosticFiles(ArchivedFiles):
                         if newdate[1:3] > [1, 1]:
                             date[0] = newdate[0]
                     for stream in streams:
+                        stream = str(stream)
                         if stream in self.tlim and \
                                 (date < self.tlim[stream][0] or
                                  date >= self.tlim[stream][1]):
@@ -701,8 +702,12 @@ class DiagnosticFiles(ArchivedFiles):
             else:
                 start[3] = end[3] = ''
 
-            if stream == 'm' or \
-                    stream in utils.ensure_list(self.naml.streams_30d):
+            m_streams = ['m']
+            if self.naml.streams_30d:
+                m_streams += [str(s) for s in
+                              utils.ensure_list(self.naml.streams_30d,
+                                                listnone=False)]
+            if stream in m_streams:
                 start[2] = ''
                 start[1] = MONTHS[int(start[1])]
             elif stream == 's':

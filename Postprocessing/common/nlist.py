@@ -19,6 +19,7 @@ DESCRIPTION
 
 '''
 import os
+import re
 
 import control
 import utils
@@ -70,6 +71,10 @@ class ReadNamelist(object):
             return False
         elif 'none' in valstring.lower():
             return None
+        elif re.match(r'^\$\(.*\)$', valstring):
+            # Attempt to execute implied shell command
+            rcode, output = utils.exec_subproc(valstring.strip(r'$()\'"'))
+            return output.strip() if rcode == 0 else valstring
         else:
             valstring = valstring.strip('"').strip("'")
             try:

@@ -788,7 +788,7 @@ class DiagnosticFilesTests(unittest.TestCase):
         self.files.naml.meanstreams = '1x'
         self.files.naml.ff_streams = 'a'
         self.files.naml.streams_90d = ['a', 'b']
-        self.files.naml.streams_30d = 'c'
+        self.files.naml.streams_30d = 1
         self.files.naml.streams_1d = ''
         self.files.naml.streams_10h = 'd'
         self.files.naml.spawn_netcdf_streams = 'b'
@@ -798,8 +798,8 @@ class DiagnosticFilesTests(unittest.TestCase):
                          'PREFIXa.pa19980211', 'PREFIXa.pa19980511'],
             'apb.pp': ['PREFIXa.pb19950811.pp', 'PREFIXa.pb19951111.pp',
                        'PREFIXa.pb19980211.pp', 'PREFIXa.pb19980511.pp'],
-            'apc.pp': ['PREFIXa.pc1995aug.pp', 'PREFIXa.pc1995sep.pp',
-                       'PREFIXa.pc1998aug.pp', 'PREFIXa.pc1998sep.pp'],
+            'ap1.pp': ['PREFIXa.p11995aug.pp', 'PREFIXa.p11995sep.pp',
+                       'PREFIXa.p11998aug.pp', 'PREFIXa.p11998sep.pp'],
             'apd.pp': ['PREFIXa.pd19950811_00.pp', 'PREFIXa.pd19950811_10.pp',
                        'PREFIXa.pd19981029_18.pp', 'PREFIXa.pd19981030_04.pp'],
             'anb.nc.file': [r'atmos_prefixa_\d+[hdmsyx]_19950811-19951111_'

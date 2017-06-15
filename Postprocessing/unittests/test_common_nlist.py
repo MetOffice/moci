@@ -84,9 +84,10 @@ class ReadNamelistTests(unittest.TestCase):
         self.nlvars = {
             'integerVar=1': 1,
             'floatVar=1.0': 1.0,
-            'arrayVar="a","b",,1,2.5,false': ['a', 'b', '', 1, 2.5, False],
+            'arrayVar="a","b",,1,2.5,false,': ['a', 'b', '', 1, 2.5, False],
             'stringVar="$Hello There $$$"': '$Hello There $$$',
             'envVar=$PWD': os.environ['PWD'],
+            'execVar=$(echo Hi There!)': 'Hi There!',
             'boolVar=true': True
         }
         if not hasattr(sys.stdout, 'getvalue'):
