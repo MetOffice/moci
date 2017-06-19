@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #*****************************COPYRIGHT******************************
-# (C) Crown copyright 2016 Met Office. All rights reserved.
+# (C) Crown copyright 2017 Met Office. All rights reserved.
 #
 # Use, duplication or disclosure of this code is subject to the restrictions
 # as set forth in the licence. If no licence has been raised with this copy
@@ -78,12 +78,22 @@ system("cat namcouple* > namclist");
 my $process = 0; 
 my $begin = 0;
 my $end = 0;
-my $max_index = 0; 
 my $mapping_type = 1;
 my $items_count = 0; 
 
 my @types;
+my @names_out;
+my @names_in;
 my @names;
+
+my $line_field_count = 0;
+my $transient_o2a = 0;
+my $transient_a2o = 0;
+my $transient_c2a = 0;
+my $transient_a2c = 0;
+my $k_dim = 0;   # Size of 3rd dimension
+
+
 
 # Now read our combined namcouple file and extract details for each transient
 # to a FORTRAN namelist file. Namcouple files must be annotated in the 
@@ -111,6 +121,16 @@ while (<F0>) {
 
       if ( $begin == 1 ) {
          @names = split( / +/, $line );
+	 
+         # Now we need to cater for multi-2D fields which may be defined
+         # on a single line, delimited by ":"
+         @names_out = split( /:/, $names[0] );
+         @names_in = split( /:/, $names[1] );
+
+         $line_field_count = @names_out;  # How many field names on this line?
+                                     # We must assume names_in and names out
+                                     # contain the same number of elements!
+         $k_dim = $line_field_count;	 
 	 
 	 $mapping_type = 1; 
 	 
@@ -146,21 +166,46 @@ while (<F0>) {
 	    }   
 	 }   
 	 
-	 
-         print F1 " &TRANSFLD C_OUT=\'$types[2]\' , C_IN=\'$types[3]\' , 
-                              N_OUT=\'$names[0]\', N_IN=\'$names[1]\', 
-                              I_NUMBER=$types[4] , F_ID=$types[5] , 
-			      MAP_TYPE=$mapping_type ,/ \n";     
+         # We need to get the number of vertical levels by seeing how many fields 
+	 # are specified on the transient definition line. 2D fields are simply given
+	 # a vertical level of 1. 
+         print F1 " &TRANSFLD C_OUT=\'$types[2]\',C_IN=\'$types[3]\',
+	                      N_OUT=\'$names_out[0]\',N_IN=\'$names_in[0]\',
+			      I_NUMBER=$types[4],F_ID=$types[5],
+			      MAP_TYPE=$mapping_type,
+			      MAX_LEV=$k_dim/\n";
 
-         if ( $types[4] > $max_index ) {
-            $max_index = $types[4] ;
-         }	  
+         # The assumption for multi-2D field definitions (i.e. 3D fields) is 
+	 # that the unique index number of each item is actually the sequence 
+	 # index number plus the level number.
+	
+         if ( $types[2] =~ m/JNR/ ) {
+            # The source is Junior UM so this is chemistry to atmos field
+            $transient_c2a++ ;
+         }
+           
+         if ( $types[2] =~ m/OCN/ ) {
+            # The source is ocean so this is an ocean to atmos field
+            $transient_o2a++ ;
+         }
+
+         if ( $types[3] =~ m/JNR/ ) {
+            # The target is Junior UM so this is an atmos to chemistry field
+            $transient_a2c++ ;
+         }
+           
+         if ( $types[3] =~ m/OCN/ ) {
+            # The target is ocean so this is an atmos to ocean field
+            $transient_a2o++ ;
+         }
+
+         # We've finished dealing with this field so reset our 
+	 # processing indicator ready for any subsequent records
          $begin = 0;
 
 
       }
-    
-    
+        
       if ( $line =~ m/TRANSDEF/) {
     
          # If we've found a line containing TRANSDEF
@@ -181,13 +226,12 @@ while (<F0>) {
 close(F1);
 close(F0);
 
-# Create a namelist with the maximum index number used by our fields. 
-# This is not the same thing as the maximum number of fields we have to process
-# since there may well be gaps in the indexing where certain fields are
-# not active. 
+# Create a namelist with the maximum number of fields in each of 
+# our potential coupling categories. 
 open( F1, "> translist" );
 
-  print F1 " &TRANSCOUNT MAX_TRANSIENTS=$max_index, / \n";
+  print F1 "&TRANSCOUNT TRANSIENT_A2O_COUNT=$transient_a2o,TRANSIENT_O2A_COUNT=$transient_o2a,
+             TRANSIENT_A2C_COUNT=$transient_a2c,TRANSIENT_C2A_COUNT=$transient_c2a/\n";
 
 close(F1);
 
