@@ -24,6 +24,7 @@ import sys
 
 import compare_nemo_solver_stat
 import compare_utils
+import validate_common
 
 def get_command_line_arguments():
     """
@@ -33,30 +34,41 @@ def get_command_line_arguments():
     parser = argparse.ArgumentParser(description=desc_msg)
     parser.add_argument('--solver-file1',
                         dest='solver_path1',
-                        required=True)
+                        required=True,
+                        help='Path to the first NEMO norm file (solver.stat).')
     parser.add_argument('--solver-file2',
                         dest='solver_path2',
-                        required=True)
+                        required=True,
+                        help='Path to the secondNEMO norm file (solver.stat).')
     parser.add_argument('--solver-file2-offset',
                         dest='solver_offset2',
-                        help='add an offset to the timestep values in second '
-                             'solver file. This allows you to compare to runs'
-                             'with different timestep values.',
+                        help=validate_common.HELP_SOLVER_OFFSET,
                         type=int,
                         default=0)
-    parser.add_argument('--nemo-file1', dest='nemo_path1')
-    parser.add_argument('--nemo-file2', dest='nemo_path2')
-    parser.add_argument('--cice-file1', dest='cice_path1')
-    parser.add_argument('--cice-file2', dest='cice_path2')
+    parser.add_argument('--nemo-file1',
+                        dest='nemo_path1',
+                        help='Path to the first NEMO restart file')
+    parser.add_argument('--nemo-file2',
+                        dest='nemo_path2',
+                        help='Path to the second NEMO restart file')
+    parser.add_argument('--cice-file1',
+                        dest='cice_path1',
+                        help='Path to the first CICE restart file')
+    parser.add_argument('--cice-file2',
+                        dest='cice_path2',
+                        help='Path to the second CICE restart file')
     parser.add_argument('--list-errors',
                         dest='list_errors',
-                        action='store_true')
+                        action='store_true',
+                        help=validate_common.HELP_LIST_ERRORS)
     parser.add_argument('--stop-on-error',
                         dest='stop_on_error',
-                        action='store_true')
+                        action='store_true',
+                        help=validate_common.HELP_STOP_ON_ERROR)
 
     parser.add_argument('--ignore-variables',
-                        dest='ignore_variables')
+                        dest='ignore_variables',
+                        help=validate_common.HELP_IGNORE_VARIABLES)
 
     return parser.parse_args()
 
@@ -124,11 +136,16 @@ def main():
     else:
         print 'NEMO restart files not supplied, skipping comparison.'
 
-    # output details of NEMO and CICE errors if there are any
-    if len(error_list_nemo) > 0 or len(error_list_cice) > 0:
-        sys.stderr.write('Mismatches found in NEMO and/or CICE files\n')
-        compare_utils.print_cube_errors('CICE', error_list_cice)
-        compare_utils.print_cube_errors('NEMO', error_list_nemo)
+    # output details of NEMO and CICE errors if the list-errors flag is
+    # present and the there are errors to display
+    # NOTE: If stop-on-error flag is present, the script aborts immediately
+    # when finding an error, so will never get to this bit of code to
+    # output the error list.
+    if cmd_args1.list_errors:
+        if len(error_list_nemo) > 0 or len(error_list_cice) > 0:
+            sys.stderr.write('Mismatches found in NEMO and/or CICE files\n')
+            compare_utils.print_cube_errors('CICE', error_list_cice)
+            compare_utils.print_cube_errors('NEMO', error_list_nemo)
 
     if ret_val_solver != 0 or \
         len(error_list_nemo) > 0 or \

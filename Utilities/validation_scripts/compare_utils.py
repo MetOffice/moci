@@ -16,7 +16,7 @@ import sys
 import numpy
 import iris
 
-import validation_errors
+import validate_common
 
 iris.FUTURE.netcdf_promote = True
 
@@ -57,15 +57,15 @@ def compare_cube_list_files(file_path1,
     try:
         cube_list1 = iris.load(file_path1)
     except:
-        raise validation_errors.FileLoadError(file_path1)
+        raise validate_common.FileLoadError(file_path1)
 
     try:
         cube_list2 = iris.load(file_path2)
     except:
-        raise validation_errors.FileLoadError(file_path2)
+        raise validate_common.FileLoadError(file_path2)
 
     if len(cube_list1) != len(cube_list2):
-        raise validation_errors.CubeCountMismatchError()
+        raise validate_common.CubeCountMismatchError()
 
     print 'comparing cubes with tolerance {0:g}'.format(ERROR_TOLERANCE)
     if ignore_variables:
@@ -107,7 +107,7 @@ def compare_cube_list_files(file_path1,
                               cube_list2[cix1],
                               ignore_halos,
                               halo_size)
-        except validation_errors.DataSizeMismatchError as error1:
+        except validate_common.DataSizeMismatchError as error1:
             error1.file_name1 = file_path1
             error1.file_name2 = file_path2
             msg1 = 'size mismatch for variable {var_name}'
@@ -117,7 +117,7 @@ def compare_cube_list_files(file_path1,
                 print error1
                 raise error1
             error_list += [error1]
-        except validation_errors.DataMismatchError as error1:
+        except validate_common.DataMismatchError as error1:
             error1.file_name1 = file_path1
             error1.file_name2 = file_path2
             msg1 = \
@@ -150,7 +150,7 @@ def compare_cubes(cube1, cube2, ignore_halos, halo_size):
     DataMismatchError - Raised if the data in the cubes differs
     """
     if cube1.shape != cube2.shape:
-        error1 = validation_errors.DataSizeMismatchError()
+        error1 = validate_common.DataSizeMismatchError()
         error1.cube_name = cube1.name()
         raise error1
     max_error = 0.0
@@ -212,7 +212,7 @@ def compare_cubes(cube1, cube2, ignore_halos, halo_size):
         max_error = numpy.max(abs(cube1.data-cube2.data))
 
     if num_mismatches > 0:
-        error2 = validation_errors.DataMismatchError()
+        error2 = validate_common.DataMismatchError()
         error2.cube_name = cube1.name()
         error2.max_error = float(max_error)
         raise error2

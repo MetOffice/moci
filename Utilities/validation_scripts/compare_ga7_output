@@ -17,21 +17,38 @@ import argparse
 
 import compare_atmos_norms
 import compare_atmos_dump_files
+import validate_common
 
 def get_command_line_arguments():
     """Get command lines arguments"""
     desc_msg = 'Compare output from 2 GA7 tasks.'
     parser = argparse.ArgumentParser(description=desc_msg)
-    parser.add_argument('--norm-file1', dest='norm_path1', required=True)
-    parser.add_argument('--norm-file2', dest='norm_path2', required=True)
-    parser.add_argument('--dump-file1', dest='dump_path1')
-    parser.add_argument('--dump-file2', dest='dump_path2')
+    parser.add_argument('--norm-file1',
+                        dest='norm_path1',
+                        required=True,
+                        help='Path to the first UM PE output file')
+    parser.add_argument('--norm-file2',
+                        dest='norm_path2',
+                        required=True,
+                        help='Path to the second UM PE output file')
+    parser.add_argument('--dump-file1',
+                        dest='dump_path1',
+                        help='Path to the first UM restart dump file')
+    parser.add_argument('--dump-file2',
+                        dest='dump_path2',
+                        help='Path to the second UM restart dump file')
     parser.add_argument('--stop-on-error',
                         dest='stop_on_error',
-                        action='store_true')
+                        action='store_true',
+                        help=validate_common.HELP_STOP_ON_ERROR)
     parser.add_argument('--list-errors',
                         dest='list_errors',
-                        action='store_true')
+                        action='store_true',
+                        help=validate_common.HELP_LIST_ERRORS)
+    parser.add_argument('--instant-fields-only',
+                        dest='instant_fields_only',
+                        action='store_true',
+                        help=validate_common.HELP_INSTANT_ONLY)
 
     return parser.parse_args()
 
@@ -52,18 +69,20 @@ def main():
     dump_ret_code = \
         compare_atmos_dump_files.compare_files(cmd_args1.dump_path1,
                                                cmd_args1.dump_path2,
-                                               cmd_args1.stop_on_error)
+                                               cmd_args1.stop_on_error,
+                                               cmd_args1.list_errors,
+                                               cmd_args1.instant_fields_only)
     exit_code = 0
-    if norm_ret_code !=0  or dump_ret_code != 0:
+    if norm_ret_code != 0  or dump_ret_code != 0:
         msg1 = 'GA7 outputs do not match!'
         exit_code = 1
     else:
         msg1 = 'GA7 outputs match!'
-        
+
     print msg1
     sys.stderr.write(msg1 + '\n')
     exit(exit_code)
-        
-        
+
+
 if __name__ == '__main__':
     main()

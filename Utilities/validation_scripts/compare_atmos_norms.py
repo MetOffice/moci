@@ -27,6 +27,7 @@ import re
 import sys
 import itertools
 import argparse
+import validate_common
 
 class InvalidArgumentsError(Exception):
     """Error when incorrect command line arguments are supplied."""
@@ -59,10 +60,12 @@ def get_command_line_arguments():
     parser.add_argument('--filename2', dest='filename2')
     parser.add_argument('--list-errors',
                         dest='list_errors',
-                        action='store_true')
+                        action='store_true',
+                        help=validate_common.HELP_LIST_ERRORS)
     parser.add_argument('--stop-on-error',
                         dest='stop_on_error',
-                        action='store_true')
+                        action='store_true',
+                        help=validate_common.HELP_STOP_ON_ERROR)
 
     return parser.parse_args()
 

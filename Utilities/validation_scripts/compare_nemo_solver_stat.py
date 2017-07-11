@@ -18,6 +18,7 @@ Compare 2 NEMO solver.stat files
 import argparse
 import re
 import sys
+import validate_common
 
 def get_command_line_arguments():
     """
@@ -29,12 +30,11 @@ def get_command_line_arguments():
     parser.add_argument('--input2', dest='input2')
     parser.add_argument('--list-errors',
                         dest='list_errors',
-                        action='store_true')
+                        action='store_true',
+                        help=validate_common.HELP_LIST_ERRORS)
     parser.add_argument('--timestep-num-offset',
                         dest='timestep_num_offset',
-                        help='add an offset to the timestep values in second '
-                             'solver file. This allows you to compare to runs'
-                             'with different timestep values.',
+                        help=validate_common.HELP_SOLVER_OFFSET,
                         type=int,
                         default=0)
 

@@ -11,6 +11,28 @@ Created on 3 March 2017
 
 Common validation-related error classes derived from Exception.
 """
+HELP_STOP_ON_ERROR = '''If present, the script will stop on encounter an error.
+Otherwise, the script will perform all comparisons and output the result at
+the end'''
+
+HELP_LIST_ERRORS = '''If true, a detailed list of the errors will be output to
+stdout. IMPORTANT NOTE: If the stop-on-error flag is used, the script will stop
+performing comparisons when an error is encountered, so the list-errors flag
+will be ignored as the script will immediately abort and the list of errors
+will not be output.'''
+
+HELP_INSTANT_ONLY = '''If this flag is present, any fields in a restart dump
+that are not instantaneous values e.g. a monthly mean field, will be ignored
+when comparing 2 dump files.'''
+
+HELP_SOLVER_OFFSET = '''If the 2 jobs have different timestep numbers for
+the same point in model time, as offset must be provided to allow comparison.
+This typically happens when comparing NRUN and CRUN outputs. If for example
+P19780902T1200Z is timestep 720 in job 1 and timestep 360 in job 2, then an
+offset of 360 should be specified.'''
+
+HELP_IGNORE_VARIABLES = '''A list of variables to be ignored when comparing NEMO
+and CICE restart files.'''
 
 class MissingArgumentError(Exception):
     """
