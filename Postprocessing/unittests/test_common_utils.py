@@ -30,50 +30,38 @@ class EnvironTests(unittest.TestCase):
     def setUp(self):
         self.loadvars = ('PWD', 'HOME')
         testname = self.shortDescription()
+        self.envar = {}
         if 'Load one' in testname:
-            self.envar = utils.loadEnv(self.loadvars[0])
+            self.envar[self.loadvars[0]] = utils.load_env(self.loadvars[0])
         else:
-            self.envar = utils.loadEnv(*self.loadvars)
-
-    def test_object(self):
-        '''test object Instantiation'''
-        func.logtest('Variables() instantiation:')
-        self.assertIsInstance(self.envar, utils.Variables)
+            for var in self.loadvars:
+                self.envar[var] = utils.load_env(var)
 
     def test_load1(self):
         '''Test load one environment variable'''
         func.logtest('Load a single environment variable:')
         var = self.loadvars[0]
-        self. assertEqual(getattr(self.envar, var), os.environ[var])
+        self. assertEqual(self.envar[var], os.environ[var])
 
     def test_load2(self):
         '''Test load two environment variables'''
         func.logtest('Load two environment variables:')
         for var in self.loadvars:
-            self.assertEqual(getattr(self.envar, var), os.environ[var])
+            self.assertEqual(self.envar[var], os.environ[var])
 
     def test_append(self):
-        '''Test load one environment variable and append a second'''
+        '''Test load environment variables and append a further one'''
         func.logtest('Ability to append to environment variable list:')
-        envar = utils.loadEnv(self.loadvars[1], append=self.envar)
+        self.envar['DUMMYVAR'] = utils.load_env('DUMMYVAR')
         for var in self.loadvars:
-            self.assertEqual(getattr(envar, var), os.environ[var])
-
-    def test_not_found_warn(self):
-        '''Attempt to load non-existent variable with warning flag'''
-        func.logtest('Failure mode of loadEnv (WARN case):')
-        envar = utils.loadEnv('ARCHIVE_FINAL')
-        try:
-            self.fail(envar.ARCHIVE_FINAL)
-        except AttributeError:
-            pass
+            self.assertEqual(self.envar[var], os.environ[var])
+        self.assertIsNone(self.envar['DUMMYVAR'])
 
     def test_not_found_exit(self):
         '''Attempt to load non-existent variable with a failure flag'''
         func.logtest('Failure mode of loadEnd (FAIL case):')
         with self.assertRaises(SystemExit):
-            _ = utils.loadEnv('DUMMYVAR')
-
+            utils.load_env('DUMMYVAR', required=True)
 
 class ExecTests(unittest.TestCase):
     '''Unit tests for exec_subproc method'''
@@ -524,52 +512,91 @@ class CycletimeTests(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_cyclestring(self):
-        '''Test calculation of property "cyclestring"'''
-        func.logtest('Assert cycletime as string array property:')
+    def test_cylccycle(self):
+        '''Test instantiation of a CylcCycle object'''
+        func.logtest('Assert instantiation of a CylcCycle object:')
+        cycle = utils.CylcCycle()
+        # startcycle == $CYLC_TASK_CYCLE_POINT
+        self.assertEqual(cycle.startcycle['iso'], '20000121T0000Z')
+        self.assertListEqual(cycle.startcycle['strlist'],
+                             ['2000', '01', '21', '00', '00'])
+        self.assertListEqual(cycle.startcycle['intlist'],
+                             [2000, 1, 21, 0, 0])
+
+        self.assertEqual(cycle.endcycle['iso'], '20000221T0000Z')
+        self.assertListEqual(cycle.endcycle['strlist'],
+                             ['2000', '02', '21', '00', '00'])
+        self.assertListEqual(cycle.endcycle['intlist'],
+                             [2000, 2, 21, 0, 0])
+
+    def test_cylccycle_specific(self):
+        '''Test instantiation of a CylcCycle object - given point'''
+        func.logtest('Assert instantiation of CylcCycle object - given point:')
         with mock.patch.dict('utils.os.environ',
-                             {'CYLC_TASK_CYCLE_POINT': '19810611T0000Z'}):
-            self.assertTupleEqual(utils.cyclestring(),
-                                  ('1981', '06', '11', '00', '00'))
+                             {'CYCLEPERIOD': '3h1y'}):
+            cycle = utils.CylcCycle(cyclepoint=[1234, 8, 17, 6])
 
-    def test_specific_cycletime(self):
-        '''Test cycletime with given cycle'''
-        func.logtest('Assert calculation of given cycletime:')
-        self.assertTupleEqual(
-            utils.cyclestring(specific_cycle='11112233T4455Z'),
-            ('1111', '22', '33', '44', '55')
-            )
+            self.assertEqual(cycle.startcycle['iso'], '12340817T0600Z')
+            self.assertListEqual(cycle.startcycle['strlist'],
+                                 ['1234', '08', '17', '06', '00'])
+            self.assertListEqual(cycle.startcycle['intlist'],
+                                 [1234, 8, 17, 6, 0])
 
-    def test_bad_cycletime(self):
-        '''Test failure mode with incorrect format for
-        task cycle time environment variable'''
-        func.logtest('Failure mode of cycletime property:')
-        with mock.patch.dict('utils.os.environ',
-                             {'CYLC_TASK_CYCLE_POINT': 'dummy'}):
-            with self.assertRaises(SystemExit):
-                utils.cyclestring()
+            self.assertEqual(cycle.endcycle['iso'], '12350817T0900Z')
+            self.assertListEqual(cycle.endcycle['strlist'],
+                                 ['1235', '08', '17', '09', '00'])
+            self.assertListEqual(cycle.endcycle['intlist'],
+                                 [1235, 8, 17, 9, 0])
 
-    @mock.patch('utils.loadEnv')
-    def test_finalcycle_cylc(self, mock_env):
+    def test_failed_cylccycle(self):
+        ''' Assert failure to instantiate CylcCycle object '''
+        func.logtest('Assert failure to instantiate CylcCycle object:')
+        with self.assertRaises(SystemExit):
+            _ = utils.CylcCycle(cyclepoint='Dummy')
+        self.assertIn('Unable to determine cycle point', func.capture('err'))
+
+    def test_finalcycle_cylc(self):
         '''Test assertion of final cycle - defined by Cylc environment'''
         func.logtest('Assert final cycle time property - TRUE Cylc:')
-        mock_env.return_value.ARCHIVE_FINAL = None
-        mock_env.return_value.CYCLEPOINT_OVERRIDE = '12345678T0000Z'
-        mock_env.return_value.FINALCYCLE_OVERRIDE = '12345678T0000Z'
-        self.assertTrue(utils.finalcycle())
+        with mock.patch.dict('utils.os.environ',
+                             {'CYLC_SUITE_FINAL_CYCLE_POINT': '20000130T2359Z',
+                              'CYLC_TASK_CYCLE_POINT': '20000101T0000Z',
+                              'CYCLEPERIOD': '0,1,0,0,0,0'}):
+            self.assertTrue(utils.finalcycle())
 
-    @mock.patch('utils.loadEnv')
-    def test_final_cycle_env(self, mock_env):
+    def test_finalcycle_override(self):
+        '''Test assertion of final cycle - defined by Cylc override'''
+        func.logtest('Assert final cycle time property - TRUE override:')
+        with mock.patch.dict('utils.os.environ',
+                             {'CYCLEPOINT_OVERRIDE': '19911201T0000Z',
+                              'FINALCYCLE_OVERRIDE': '19911201T0000Z',
+                              'CYCLEPERIOD': 'P10D'}):
+            self.assertTrue(utils.finalcycle())
+
+        with mock.patch.dict('utils.os.environ',
+                             {'CYCLEPOINT_OVERRIDE': '19911201T0000Z',
+                              'FINALCYCLE_OVERRIDE': '19911230T0000Z',
+                              'CYCLEPERIOD': '0,1,0,0,0,0'}):
+            self.assertTrue(utils.finalcycle())
+
+    def test_final_cycle_env(self):
         '''Test assertion of final cycle in defined by ARCHIVE_FINAL'''
         func.logtest('Assert final cycle time property - TRUE archive_final:')
-        mock_env.return_value.ARCHIVE_FINAL = 'true'
-        self.assertTrue(utils.finalcycle())
+        with mock.patch.dict('utils.os.environ', {'ARCHIVE_FINAL': 'true'}):
+            self.assertTrue(utils.finalcycle())
 
     def test_not_final_cycle(self):
         '''Test negative assertion of final cycle'''
         func.logtest('Assert final cycle time property - FALSE:')
         with mock.patch.dict('utils.os.environ',
-                             {'CYLC_TASK_CYCLE_POINT': '19810611T0000Z'}):
+                             {'CYLC_TASK_CYCLE_POINT': '19810611T0000Z',
+                              'CYCLEPERIOD': '3M'}):
+            self.assertFalse(utils.finalcycle())
+
+        with mock.patch.dict('utils.os.environ',
+                             {'CYCLEPOINT_OVERRIDE': '19911101T0000Z',
+                              'FINALCYCLE_OVERRIDE': '19911201T0000Z',
+                              'CYCLEPERIOD': '0,1,0,0,0,0'}):
             self.assertFalse(utils.finalcycle())
 
 
@@ -623,9 +650,18 @@ class SmallUtilsTests(unittest.TestCase):
         self.assertListEqual(utils.get_frequency('x', rtn_delta=True),
                              [10, 0, 0, 0, 0])
 
+    def test_get_frequency_delta_multi(self):
+        ''' Assert get_frequency delta return value given an multiple period '''
+        func.logtest('Assert get_frequency return with multiple periods:')
+        self.assertListEqual(utils.get_frequency('3H-2M', rtn_delta=True),
+                             [0, -2, 0, 3, 0])
+        self.assertListEqual(utils.get_frequency('P5Y4M3DT2H1M',
+                                                 rtn_delta=True),
+                             [5, 4, 3, 2, 1])
+
     def test_get_frequency_fail(self):
         ''' Assert SystemExit given an invalid delta string '''
         func.logtest('Assert SystemExit given an invalid delta string:')
         with self.assertRaises(SystemExit):
             _ = utils.get_frequency('1F')
-        self.assertIn('Invalid target provided: 1F', func.capture('err'))
+        self.assertIn('Invalid target provided: 1f', func.capture('err'))

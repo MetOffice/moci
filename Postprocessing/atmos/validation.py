@@ -201,11 +201,11 @@ def make_dump_name(atmos):
         # can be restarted from where it left off
         dumps_to_archive.append(atmos.final_dumpname)
 
-    cycledt = atmos.suite.cycledt
-    dt_len = len(cycledt)
+    cyclept = atmos.suite.cyclepoint
+    dt_len = len(cyclept.endcycle['intlist'])
+
     no_arch_before = utils.add_period_to_date(
-        [int(elem) for elem in atmos.envars.MODELBASIS.split(',')],
-        [0, atmos.naml.archiving.arch_dump_offset]
+        atmos.suite.initpoint, [0, atmos.naml.archiving.arch_dump_offset]
         )[:dt_len]
     while len(no_arch_before) < dt_len:
         no_arch_before.append(0)
@@ -222,7 +222,8 @@ def make_dump_name(atmos):
 
     dump_freq = atmos.naml.archiving.arch_dump_freq
     dumpdates = []
-    for year in range(cycledt[0] - 1, cycledt[0] + 1):
+    for year in range(cyclept.startcycle['intlist'][0] - 1,
+                      cyclept.endcycle['intlist'][0] + 1):
         try:
             for month in range(*month_range[dump_freq]):
                 dumpdates.append([year, month, 1, 0, 0, 0])
@@ -241,7 +242,10 @@ def make_dump_name(atmos):
                 dumpdates.append([year, int(month), int(day), hour, 0, 0])
 
     for date in dumpdates:
-        if cycledt >= date[:dt_len] and date[:dt_len] > no_arch_before:
+        # Add dumpdates which fall between, but not including, "no_arch_before"
+        # (offset from the model basis time) and the end of the current cycle.
+        if date[:dt_len] < cyclept.endcycle['intlist'] and \
+                date[:dt_len] > no_arch_before:
             dumps_to_archive.append(atmos.dumpname(dumpdate=date))
 
     return dumps_to_archive

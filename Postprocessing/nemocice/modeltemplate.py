@@ -64,9 +64,6 @@ class ModelTemplate(control.RunPostProc):
                                         name.upper()[:-8] + ' WORK')
             self.diagsdir = os.path.join(self.share, 'archive_ready')
             self.suite = suite.SuiteEnvironment(self.share, input_nl)
-            self.suite.envars = utils.loadEnv('CYLC_SUITE_INITIAL_CYCLE_POINT',
-                                              'INITCYCLE_OVERRIDE',
-                                              append=self.suite.envars)
 
             # Initialise debug mode - calling base class method
             self._debug_mode(self.naml.debug)
@@ -190,7 +187,7 @@ class ModelTemplate(control.RunPostProc):
         basecmpt = self.naml.base_component
         multiplier = float(basecmpt[:-1])
 
-        if os.environ['CYLC_CYCLING_MODE'] in ['360day', 'integer']:
+        if utils.calendar() == '360day':
             cal_hd = 'hd'
         else:
             cal_hd = ''
@@ -584,7 +581,7 @@ class ModelTemplate(control.RunPostProc):
 
         if data_period == '24h':
             data_period = '1d'
-        elif self.suite.envars.CYLC_CYCLING_MODE in ['360day', 'integer']:
+        elif utils.calendar() == '360day':
             if data_period in ['30d', '720h', str(720 - 24 + frequency) + 'h']:
                 # Non-CF will calculate (720h - 1d + frequency) for 1m period
                 data_period = '1m'
@@ -774,18 +771,10 @@ class ModelTemplate(control.RunPostProc):
         Returns True if the model is in the spinup period for creation of
         a given mean.
         '''
-        try:
-            # An override is required for Single Cycle test suites
-            initialcycle = self.suite.envars.INITCYCLE_OVERRIDE
-        except AttributeError:
-            initialcycle = self.suite.envars.CYLC_SUITE_INITIAL_CYCLE_POINT
-        initialcycle = [int(x) for x in
-                        utils.cyclestring(specific_cycle=initialcycle)]
-
+        ptlen = len(self.suite.initpoint)
         enddate = list(mean_enddate)
-        for datelist in enddate, initialcycle:
-            while len(datelist) < 5:
-                datelist.append(0)
+        while len(enddate) < ptlen:
+            enddate.append(0)
 
         if 'Monthly' in description:
             delta = '-1m'
@@ -801,7 +790,8 @@ class ModelTemplate(control.RunPostProc):
             utils.log_msg(msg, level='WARN')
             delta = '0d'
 
-        return initialcycle[:5] > utils.add_period_to_date(enddate, delta)[:5]
+        return (self.suite.initpoint >
+                utils.add_period_to_date(enddate, delta)[:ptlen])
 
 
     # *** ARCHIVING *** #######################################################
@@ -811,7 +801,7 @@ class ModelTemplate(control.RunPostProc):
         Number of unprocessed files to retain after archiving
         task is complete
         '''
-        if self.suite.finalcycle or not self.naml.buffer_archive:
+        if self.suite.finalcycle is True or not self.naml.buffer_archive:
             buffer_arch = 0
         else:
             buffer_arch = self.naml.buffer_archive
@@ -880,7 +870,7 @@ class ModelTemplate(control.RunPostProc):
 
             # Final cycle only - select all required means remaining in share
             # as components of future higher means
-            if self.suite.finalcycle:
+            if self.suite.finalcycle is True:
                 # Archive, but do not delete means except the top standard mean
                 # which is already accounted for and should be deleted
                 arch_cmpts = self.requested_means[:-1] + self.additional_means
@@ -938,7 +928,7 @@ class ModelTemplate(control.RunPostProc):
             to_archive = []
             while len(rstfiles) > self.buffer_archive:
                 rst = rstfiles.pop(0)
-                if self.suite.finalcycle and len(rstfiles) == 0:
+                if self.suite.finalcycle is True and len(rstfiles) == 0:
                     final_rst = rst
                 month, day = self.get_date(rst)[1:3]
                 if self.timestamps(month, day) or final_rst:

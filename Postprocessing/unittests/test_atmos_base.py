@@ -35,6 +35,9 @@ class ArchiveDeleteTests(unittest.TestCase):
         self.atmos.suite = mock.Mock()
         self.atmos.suite.logfile = 'logfile'
         self.atmos.suite.prefix = 'RUNID'
+        self.atmos.suite.envars = {
+            'CYLC_TASK_LOG_ROOT': os.environ['CYLC_TASK_LOG_ROOT']
+            }
         self.dfiles = ['RUNIDa.YYYYMMDD_00']
         self.ffiles = ['RUNIDa.paYYYYjan', 'RUNIDa.pb1111jan',
                        'RUNIDa.pc1111jan', 'RUNIDa.pd1111jan']
@@ -398,6 +401,22 @@ class PropertyTests(unittest.TestCase):
             except OSError:
                 pass
 
+    def test_dumpname(self):
+        '''Test dumpname creation'''
+        func.logtest('Assert return of dumpname for current cycle:')
+        with mock.patch.dict('atmos.os.environ',
+                             {'CYLC_TASK_CYCLE_POINT': '19900901T0600Z'}):
+            self.atmos.suite = atmos.suite.SuiteEnvironment(os.getcwd())
+            self.assertEqual(self.atmos.dumpname(), 'TESTPa.da19900901_06')
+
+    def test_dumpname_specific(self):
+        '''Test dumpname creation for given dumpdate'''
+        func.logtest('Assert return of dumpname for final cycle:')
+        self.atmos.suite.prefix = 'PREFIX'
+        self.assertEqual(self.atmos.dumpname(dumpdate=[1111, 22, 33,
+                                                       44, 55, 66]),
+                         'PREFIXa.da11112233_44')
+
     def test_convpp_single(self):
         '''Test _convpp_streams calculation of regular expression - single'''
         func.logtest('Assert _convpp_streams calculation of regex - single:')
@@ -447,7 +466,6 @@ class PropertyTests(unittest.TestCase):
         '''Test the fieldsfile regular expression'''
         func.logtest('Assert correct return of fields file regex:')
 
-        mock_suite().finalcycle = False
         mock_suite().prefix = 'RUNID'
 
         with mock.patch('atmos.AtmosPostProc.runpp',
@@ -455,9 +473,8 @@ class PropertyTests(unittest.TestCase):
                         return_value=True):
             with mock.patch('atmos.AtmosPostProc._directory',
                             return_value='ModelDir'):
-                with mock.patch('atmos.utils.loadEnv'):
-                    with mock.patch('atmos.utils.set_debugmode'):
-                        myatmos = atmos.AtmosPostProc()
+                with mock.patch('atmos.utils.set_debugmode'):
+                    myatmos = atmos.AtmosPostProc()
 
         ff_pattern = r'^RUNIDa\.[pm][{}]\d{{4}}(\d{{4}}|\w{{3}})' \
             r'(_\d{{2}})?(\.pp)?(\.arch)?$'

@@ -31,66 +31,85 @@ globals()['debug_ok'] = True
 
 class Variables(object):
     '''Object to hold a group of variables'''
-    def __init__(self):
-        pass
 
 
-def loadEnv(*envars, **append):
-    ''' Load Environment Variables '''
-    append = append.pop('append', False)
-    container = Variables()
-    if append:
-        for var in [v for v in dir(append) if not v.startswith('_')]:
-            setattr(container, var, getattr(append, var))
-
-    for var in envars:
-        try:
-            setattr(container, var, os.environ[var])
-        except KeyError:
-            no_fail = {
-                'ARCHIVE_FINAL': 'ARCHIVE_FINAL=False',
-                'CYCLEPOINT_OVERRIDE': '',
-                'INITCYCLE_OVERRIDE': '',
-                'FINALCYCLE_OVERRIDE': '',
-                }
-            if var in no_fail.keys():
-                log_msg(no_fail[var], level='INFO')
-            else:
-                msg = 'LoadEnv: Unable to find environment variable: ' + var
-                log_msg(msg, level='FAIL')
-
-    return container
-
-
-def cyclestring(specific_cycle=None):
+def load_env(varname, default_value=None, required=False):
     '''
-    Create a representation of the current cycletime in string format.
-    Return a list of strings: YYYY,MM,DD,mm,ss
-
-    Optional argument: specific_cycle
-        <type 'str'>, Format: '[YYYY][MM][DD]T[mm][hh]Z'
-        Required when the cycle string required is for a date other than
-        the current cycletime, for example the final cycle time.
+    Load requested environment variable
+    Arguments:
+        varname       - <type str> Name of environment variable
+    Optional Arguments:
+        default_value - Default value set if the variable is not found
+                        in the environment
+        required      - <type bool>  Default=False
+                        Exit with system failure if True and no
+                        default_value is specified.
     '''
-    envars = loadEnv('CYCLEPOINT_OVERRIDE', 'CYLC_TASK_CYCLE_POINT')
+    try:
+        envar = os.environ[varname]
+    except KeyError:
+        envar = default_value
+        if required is True and default_value is None:
+            msg = 'REQUIRED variable not found in the environment: '
+            log_msg(msg + varname, level='FAIL')
 
-    if specific_cycle:
-        cyclepoint = specific_cycle
-    else:
-        # Default to current cycle point
+    return envar
+
+
+class CylcCycle(object):
+    ''' Object representing the current Cylc cycle point '''
+    def __init__(self, cyclepoint=None):
+        '''
+        Optional argument:
+           cyclepoint - ISOformat datestring OR list/tuple of digits
+        '''
+        if cyclepoint is None:
+            # Load optional cycle point override environment
+            cyclepoint = load_env('CYCLEPOINT_OVERRIDE')
+            if cyclepoint is None:
+                cyclepoint = load_env('CYLC_TASK_CYCLE_POINT', required=True)
+        self.startcycle = self._cyclepoint(cyclepoint)
+
+        cycleperiod = load_env('CYCLEPERIOD', required=True)
         try:
-            # An override is required for Single Cycle suites
-            cyclepoint = envars.CYCLEPOINT_OVERRIDE
-        except AttributeError:
-            cyclepoint = envars.CYLC_TASK_CYCLE_POINT
+            # Split period into list of integers if possible
+            cycleperiod = [int(x) for x in cycleperiod.split(',')]
+        except ValueError:
+            # Period provided is intended as a string
+            pass
+        enddate = add_period_to_date(self.startcycle['intlist'],
+                                     cycleperiod)
+        self.endcycle = self._cyclepoint(enddate)
 
-    match = re.search(r'(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})Z', cyclepoint)
-    if match:
-        cyclestring = match.groups()
-    else:
-        log_msg('Unable to determine cycletime', level='FAIL')
+    @staticmethod
+    def isoformat(cpoint):
+        ''' Return cycle point as ISO format datestring '''
+        if isinstance(cpoint, (list, tuple)):
+            cyclepoint = list(cpoint)
+            while len(cyclepoint) < 5:
+                cyclepoint.append(0)
+            cpoint = '{:0>4}{:0>2}{:0>2}T{:0>2}{:0>2}Z'.format(*cyclepoint)
 
-    return cyclestring
+        if re.match(r'\d{8}T\d{4}Z', cpoint):
+            return cpoint
+        else:
+            msg = 'Unable to determine cycle point in ISO format: '
+            log_msg(msg + str(cpoint), level='FAIL')
+
+    def _cyclepoint(self, cpoint):
+        '''
+        Return a dictionary representing a cycle point in 3 formats:
+           iso     = ISO format datestring
+           intlist = List of 5 <type int> values: [Y,M,D,hh,mm]
+           strlist = List of 5 <type str> values: ['Y','M','D','hh','mm']
+        '''
+        cycle_repr = {'iso': self.isoformat(cpoint)}
+        cycle_repr['strlist'] = list(re.match(
+            r'(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})Z', cycle_repr['iso']
+            ).groups())
+        cycle_repr['intlist'] = [int(x) for x in cycle_repr['strlist']]
+
+        return cycle_repr
 
 
 def finalcycle():
@@ -98,23 +117,29 @@ def finalcycle():
     Determine whether this cycle is the final cycle for the running suite.
     Return True/False
     '''
-    envars = loadEnv('ARCHIVE_FINAL',
-                     'FINALCYCLE_OVERRIDE',
-                     'CYLC_SUITE_FINAL_CYCLE_POINT')
-    try:
-        finalcycle = ('true' in envars.ARCHIVE_FINAL.lower())
-    except AttributeError:
-        try:
-            finalpoint = envars.FINALCYCLE_OVERRIDE
-        except AttributeError:
-            finalpoint = envars.CYLC_SUITE_FINAL_CYCLE_POINT
-        finalcycle = (cyclestring() == cyclestring(specific_cycle=finalpoint))
+    arch_final = load_env('ARCHIVE_FINAL')
+    if arch_final is None:
+        finalpoint = load_env('FINALCYCLE_OVERRIDE')
+        if finalpoint is None:
+            finalpoint = load_env('CYLC_SUITE_FINAL_CYCLE_POINT', required=True)
 
-    return finalcycle
+        # The end point of the final cycle will always be beyond the "final point"
+        # as defined by either $CYLC_SUITE_FINAL_CYCLE_POINT (calendar cycling
+        # suites) or $FINAL_CYCLE_OVERRIDE (for integer cycling suites), since
+        # Cylc will not trigger further cycles beyond this point.
+        # Set fcycle=True in this instance.
+        fcycle = (CylcCycle().endcycle['intlist'] >
+                  CylcCycle(cyclepoint=finalpoint).startcycle['intlist'])
+
+    else:
+        # Set final cycle according to value of ARCHIVE_FINAL
+        fcycle = ('true' in arch_final.lower())
+
+    return fcycle
 
 
 @timer.run_timer
-def exec_subproc(cmd, verbose=True, cwd=os.environ['PWD']):
+def exec_subproc(cmd, verbose=True, cwd=os.getcwd()):
     '''
     Execute given shell command.
     'cmd' input should be in the form of either a:
@@ -123,7 +148,7 @@ def exec_subproc(cmd, verbose=True, cwd=os.environ['PWD']):
     Optional arguments:
       verbose = False: only reproduce the command std.out upon
                 failure of the command
-                True: reprodude std.out regardless of outcome
+                True: reproduce std.out regardless of outcome
       cwd     = Directory in which to execute the command
     '''
     import subprocess
@@ -278,17 +303,17 @@ def move_files(mvfiles, destination, originpath=None, fail_on_err=False):
                 log_msg(msg, level='WARN')
                 shutil.move(fname, destination)
 
+
 def calendar():
     ''' Return the calendar based on the suite environment '''
-    cal = os.environ['CYLC_CYCLING_MODE']
+    cal = load_env('CYLC_CYCLING_MODE', default_value='360day')
     if cal.lower() == 'integer':
         # Non-Cycling suites should export the CALENDAR environment
         # variable.  DEFAULT VALUE: 360day
-        try:
-            cal = os.environ['CALENDAR']
-        except KeyError:
-            cal = '360day'
+        cal = load_env('CALENDAR', default_value='360day')
+
     return cal
+
 
 def add_period_to_date(indate, delta):
     '''
@@ -311,6 +336,7 @@ def add_period_to_date(indate, delta):
             outdate = _mod_all_calendars_date(indate, delta, cal)
 
     return outdate
+
 
 @timer.run_timer
 def _mod_all_calendars_date(indate, delta, cal):
@@ -348,6 +374,7 @@ def _mod_all_calendars_date(indate, delta, cal):
         outdate = None
 
     return outdate
+
 
 @timer.run_timer
 def _mod_360day_calendar_date(indate, delta):
@@ -401,7 +428,7 @@ def _mod_360day_calendar_date(indate, delta):
 def get_frequency(delta, rtn_delta=False):
     r'''
     Extract the frequency and base period from a delta string in
-    the form '\d+\w+'.
+    the form '\d+\w+' or an ISO period e.g. P1Y2M
 
     Optional argument:
        rtn_delta = True - return a delta in the form of a list
@@ -410,30 +437,52 @@ def get_frequency(delta, rtn_delta=False):
     # all_targets dictionary: key=base period, val=date list index
     all_targets = {'h': 3, 'd': 2, 'm': 1, 's': 1, 'y': 0, 'a': 0, 'x': 0}
     regex = r'(-?\d+)([{}])'.format(''.join(all_targets.keys()))
-    try:
-        freq, base = re.match(regex, delta.lower()).groups()
-        freq = int(freq)
-    except AttributeError:
-        freq = 1
-        base = delta[0].lower()
+    rval = [0]*5
 
-    try:
-        index = [all_targets[t] for t in all_targets if t == base][0]
-    except IndexError:
-        log_msg('get_frequency - Invalid target provided: ' + delta,
-                level='FAIL')
+    while delta:
+        multiplier = -1 if '-' in delta[:2] else 1
+        delta = delta.lower().lstrip('-p')
+        try:
+            freq, base = re.match(regex, delta).groups()
+            freq = int(freq) * multiplier
+        except AttributeError:
+            freq = 1 * multiplier
+            base = delta[0]
 
-    if rtn_delta:
-        # Return delta in the form of an integer list
-        rval = [0]*5
-        if base == 's':
-            freq = freq * 3
-        elif base == 'x':
-            freq = freq * 10
-        rval[index] = freq
-    else:
-        # Return an integer frequency and string base
-        rval = [freq, base]
+        try:
+            index = [all_targets[t] for t in all_targets if t == base][0]
+        except IndexError:
+            log_msg('get_frequency - Invalid target provided: ' + delta,
+                    level='FAIL')
+
+        if rtn_delta:
+            # Strip freq/base from the start of the delta string for next pass
+            delta = delta.lstrip('-')
+            delta = delta.lstrip(str(freq))
+            delta = delta.lstrip(base)
+            if delta.startswith('t'):
+                all_targets['m'] = 4
+                delta = delta.lstrip('t')
+            try:
+                int(delta[1 if delta[0] == '-' else 0])
+            except ValueError:
+                # Remaining delta string cannot be a period - pass complete
+                delta = ''
+            except IndexError:
+                # Delta string is empty - pass complete
+                pass
+
+            # Return delta in the form of an integer list
+            if base == 's':
+                freq = freq * 3
+            elif base == 'x':
+                freq = freq * 10
+            rval[index] = freq
+        else:
+            # Return an integer frequency and string base
+            rval = [freq, base]
+            delta = ''
+
     return rval
 
 

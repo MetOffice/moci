@@ -266,7 +266,7 @@ class RestartFiles(ArchivedFiles):
         edate = self.edate[:]
         if not self.finalcycle and hasattr(self.naml, 'buffer_restart'):
             # Adjust for mean buffer
-            cycletime = '{}{}{}T{}{}Z'.format(*utils.cyclestring())
+            cycletime = utils.CylcCycle().startcycle['iso']
             edate_str = [str(x).zfill(2) for x in edate]
             while len(edate_str) < 5:
                 edate_str.append('00')
@@ -277,9 +277,7 @@ class RestartFiles(ArchivedFiles):
             if rcode == 0:
                 rst_buffer = self.naml.buffer_restart
                 while rst_buffer and rst_buffer > 1:
-                    edate = utils.add_period_to_date(
-                        edate, cyclefreq.replace('P', '')
-                        )
+                    edate = utils.add_period_to_date(edate, cyclefreq)
                     rst_buffer -= 1
 
             else:

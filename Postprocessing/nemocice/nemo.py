@@ -156,7 +156,7 @@ class NemoPostProc(mt.ModelTemplate):
 
     def buffer_rebuild(self, filetype):
         '''Returns the rebuild buffer for the given filetype'''
-        if self.suite.finalcycle:
+        if self.suite.finalcycle is True:
             buffer_rebuild = 0
         else:
             buffer_rebuild = getattr(self.naml, 'buffer_rebuild_' + filetype)
@@ -221,7 +221,7 @@ class NemoPostProc(mt.ModelTemplate):
             if 'diaptr' in filetype:
                 self.global_attr_to_zonal(datadir, bldset)
 
-            if self.suite.finalcycle and len(bldfiles) == 0 and \
+            if self.suite.finalcycle is True and len(bldfiles) == 0 and \
                     'restart' in filetype:
                 # Final restart file - Rebuild regardless of timestamp
                 #                    - Do not delete components

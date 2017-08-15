@@ -388,6 +388,8 @@ class MeansTests(unittest.TestCase):
         self.model.fix_mean_time = mock.Mock()
 
         self.model.suite = mock.Mock()
+        self.model.suite.envars = {}
+        self.model.suite.initpoint = [0]*5
 
     def tearDown(self):
         for fname in runtime_environment.RUNTIME_FILES:
@@ -567,16 +569,18 @@ class MeansTests(unittest.TestCase):
         '''Test Spinup period for annual means'''
         func.logtest('Assert initial spinup period for annual means:')
 
-        for startdate in ['19941211T0000Z', '19951201T0000Z']:
-            self.model.suite.envars.INITCYCLE_OVERRIDE = startdate
-            func.logtest('Annual mean - Testing start date:' + startdate)
+        for startdate in [1994, 12, 11], [1995, 12, 1]:
+            func.logtest('Autumn mean - Testing start date: ' +
+                         '{}{:0>2}{:0>2}T0000Z'.format(*startdate))
+            self.model.suite.initpoint = startdate
             self.assertTrue(self.model.means_spinup(
                 'FIELD Annual mean for YYYY', ('1995', '12', '01')
                 ))
 
-        for startdate in ['19941201T0000Z', '19941111T0000Z']:
-            self.model.suite.envars.INITCYCLE_OVERRIDE = startdate
-            func.logtest('Annual mean - Testing start date:' + startdate)
+        for startdate in [1994, 12, 1], [1994, 11, 11]:
+            func.logtest('Autumn mean - Testing start date: ' +
+                         '{}{:0>2}{:0>2}T0000Z'.format(*startdate))
+            self.model.suite.initpoint = startdate
             self.assertFalse(self.model.means_spinup(
                 'FIELD Annual mean for YYYY', ('1995', '12', '01')
                 ))
@@ -585,17 +589,18 @@ class MeansTests(unittest.TestCase):
         '''Test Spinup period for seasonal means - first year'''
         func.logtest('Assert initial spinup period for seasonal means - yr1:')
 
-        for startdate in ['19950911T0000Z', '19951001T0000Z',
-                          '19951101T0000Z']:
-            self.model.suite.envars.INITCYCLE_OVERRIDE = startdate
-            func.logtest('Autumn mean - Testing start date:' + startdate)
+        for startdate in [1995, 9, 11], [1995, 10, 1], [1995, 11, 1]:
+            func.logtest('Autumn mean - Testing start date: ' +
+                         '{}{:0>2}{:0>2}T0000Z'.format(*startdate))
+            self.model.suite.initpoint = startdate
             self.assertTrue(self.model.means_spinup(
                 'FIELD Seasonal mean for SEASON YYYY', ('1995', '12', '01')
                 ))
 
-        for startdate in ['19950801T0000Z', '19950901T0000Z']:
-            self.model.suite.envars.INITCYCLE_OVERRIDE = startdate
-            func.logtest('Autumn mean - Testing start date:' + startdate)
+        for startdate in [1995, 8, 1], [1995, 9, 1]:
+            func.logtest('Autumn mean - Testing start date: ' +
+                         '{}{:0>2}{:0>2}T0000Z'.format(*startdate))
+            self.model.suite.initpoint = startdate
             self.assertFalse(self.model.means_spinup(
                 'FIELD Seasonal mean for SEASON YYYY', ('1995', '12', '01')
                 ))
@@ -604,23 +609,26 @@ class MeansTests(unittest.TestCase):
         '''Test Spinup period for seasonal means - second year'''
         func.logtest('Assert initial spinup period for seasonal means - yr2:')
 
-        for startdate in ['19951211T0000Z', '19951221T0000Z']:
-            self.model.suite.envars.INITCYCLE_OVERRIDE = startdate
-            func.logtest('Autumn mean - Testing start date:' + startdate)
+        for startdate in [1995, 12, 11], [1995, 12, 21]:
+            func.logtest('Autumn mean - Testing start date: ' +
+                         '{}{:0>2}{:0>2}T0000Z'.format(*startdate))
+            self.model.suite.initpoint = startdate
             self.assertTrue(self.model.means_spinup(
                 'FIELD Seasonal mean for SEASON YYYY', ('1996', '03', '01')
                 ))
 
-        for startdate in ['19951201T0000Z', '19951001T0000Z']:
-            self.model.suite.envars.INITCYCLE_OVERRIDE = startdate
-            func.logtest('Autumn mean - Testing start date:' + startdate)
+        for startdate in [1995, 12, 1], [1995, 10, 1]:
+            func.logtest('Autumn mean - Testing start date: ' +
+                         '{}{:0>2}{:0>2}T0000Z'.format(*startdate))
+            self.model.suite.initpoint = startdate
             self.assertFalse(self.model.means_spinup(
                 'FIELD Seasonal mean for SEASON YYYY', ('1996', '03', '01')
                 ))
 
-        for startdate in ['19951221T0000Z', '19950901T0000Z']:
-            self.model.suite.envars.INITCYCLE_OVERRIDE = startdate
-            func.logtest('Autumn mean - Testing start date:' + startdate)
+        for startdate in [1995, 12, 21], [1995, 9, 1]:
+            func.logtest('Autumn mean - Testing start date: ' +
+                         '{}{:0>2}{:0>2}T0000Z'.format(*startdate))
+            self.model.suite.initpoint = startdate
             self.assertFalse(self.model.means_spinup(
                 'FIELD Seasonal mean for SEASON YYYY', ('1996', '06', '01')
                 ))
@@ -628,7 +636,7 @@ class MeansTests(unittest.TestCase):
     def test_monthly_mean_spinup(self):
         '''Test Spinup period for monthly means'''
         func.logtest('Assert initial spinup period for monthly means:')
-        self.model.suite.envars.INITCYCLE_OVERRIDE = '19950801T0000Z'
+        self.model.suite.initpoint = [1995, 8, 1, 0, 0]
         self.assertTrue(self.model.means_spinup(
             'FIELD Monthly mean for MONTH YYYY', ('1995', '08', '01')))
         self.assertTrue(self.model.means_spinup(
@@ -636,7 +644,7 @@ class MeansTests(unittest.TestCase):
         self.assertFalse(self.model.means_spinup(
             'FIELD Monthly mean for MONTH YYYY', ('1995', '09', '01')))
 
-        self.model.suite.envars.INITCYCLE_OVERRIDE = '19950811T0000Z'
+        self.model.suite.initpoint = [1995, 8, 11, 0, 0]
         self.assertTrue(self.model.means_spinup(
             'FIELD Monthly mean for MONTH YYYY', ('1995', '09', '01')))
         self.assertFalse(self.model.means_spinup(
@@ -645,7 +653,7 @@ class MeansTests(unittest.TestCase):
     def test_spinup_invalid(self):
         '''Test Spinup period for invalid means'''
         func.logtest('Assert initial spinup period for invalid means:')
-        self.model.suite.envars.INITCYCLE_OVERRIDE = '19950801T0000Z'
+        self.model.suite.initpoint = [1995, 8, 1, 0, 0]
         self.assertFalse(self.model.means_spinup(
             'FIELD INVALID mean for YYYY', ('1995', '10', '01')))
         self.assertIn('[WARN]', func.capture('err'))
@@ -1024,9 +1032,10 @@ class PreprocessTests(unittest.TestCase):
             mock_nl().modeltemplate.base_component = '10d'
             mock_nl().modeltemplate.debug = False
             with mock.patch('modeltemplate.suite.SuiteEnvironment'):
-                self.model = modeltemplate.ModelTemplate()
-                self.model.share = 'ShareDir'
-                self.model._debug_mode(False)
+                with mock.patch('modeltemplate.utils.CylcCycle'):
+                    self.model = modeltemplate.ModelTemplate()
+                    self.model.share = 'ShareDir'
+                    self.model._debug_mode(False)
 
     def tearDown(self):
         pass
@@ -1409,23 +1418,24 @@ class MethodsTests(unittest.TestCase):
             )
         self.assertEqual(target, '1d')
 
-        self.model.suite.envars.CYLC_CYCLING_MODE = 'gregorian'
-        target = self.model.datestamp_period(
-            'RUNIDx_10d_19901001_19901101_FIELD.nc'
-            )
-        self.assertEqual(target, '30d')
+        with mock.patch('modeltemplate.utils.calendar',
+                        return_value='gregorian'):
+            target = self.model.datestamp_period(
+                'RUNIDx_10d_19901001_19901101_FIELD.nc'
+                )
+            self.assertEqual(target, '30d')
 
-        self.model.suite.envars.CYLC_CYCLING_MODE = '360day'
-        target = self.model.datestamp_period(
-            'RUNIDx_10d_19901001_19901101_FIELD.nc'
-            )
-        self.assertEqual(target, '1m')
+        with mock.patch('modeltemplate.utils.calendar',
+                        return_value='360day'):
+            target = self.model.datestamp_period(
+                'RUNIDx_10d_19901001_19901101_FIELD.nc'
+                )
+            self.assertEqual(target, '1m')
 
-        self.model.suite.envars.CYLC_CYCLING_MODE = '360day'
-        target = self.model.datestamp_period(
-            'RUNIDx_12h_19901001_19901101_FIELD.nc'
-            )
-        self.assertEqual(target, '1m')
+            target = self.model.datestamp_period(
+                'RUNIDx_12h_19901001_19901101_FIELD.nc'
+                )
+            self.assertEqual(target, '1m')
 
     def test_dstamp_period_noncf_base(self):
         '''Test datestamp_period from filename - non-cf, base target'''

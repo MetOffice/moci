@@ -365,9 +365,7 @@ class RestartFilesTests(unittest.TestCase):
         self.assertListEqual(self.files.expected_files()['oda.file'], expect)
         self.assertListEqual(self.files.expected_files().keys(), ['oda.file'])
 
-    @mock.patch('utils.cyclestring',
-                return_value=['1998', '06', '21', '00', '00'])
-    def test_expected_nemo_dumps_buffer(self, mock_ctime):
+    def test_expected_nemo_dumps_buffer(self):
         ''' Test calculation of expected nemo restart files buffer=3'''
         func.logtest('Assert list of archived nemo dumps - buffered:')
         # Default setting is bi-annual archive
@@ -380,14 +378,17 @@ class RestartFilesTests(unittest.TestCase):
                   'PREFIXo_19980601_restart.nc',
                   'PREFIXo_19980701_restart.nc']
         self.files.naml.buffer_restart = 4  # 40 days
-        files_returned = self.files.expected_files()['oda.file']
-        self.assertListEqual(files_returned, expect[:-2])
-        mock_ctime.assert_called_once_with()
 
-        self.files.finalcycle = True
-        dict_returned = self.files.expected_files()
-        self.assertListEqual(dict_returned['oda.file'], expect)
-        self.assertListEqual(dict_returned.keys(), ['oda.file'])
+        with mock.patch('utils.CylcCycle._cyclepoint',
+                        return_value={'iso': '19980621T0000Z',
+                                      'intlist':  [1998, 6, 21, 0, 0]}):
+            files_returned = self.files.expected_files()['oda.file']
+            self.assertListEqual(files_returned, expect[:-2])
+
+            self.files.finalcycle = True
+            dict_returned = self.files.expected_files()
+            self.assertListEqual(dict_returned['oda.file'], expect)
+            self.assertListEqual(dict_returned.keys(), ['oda.file'])
 
     def test_expected_nemo_olddumps(self):
         ''' Test calculation of expected nemo restarts with 3.1 datestamp'''
@@ -426,9 +427,7 @@ class RestartFilesTests(unittest.TestCase):
         self.assertListEqual(self.files.expected_files()['ida.file'], expect)
         self.assertListEqual(self.files.expected_files().keys(), ['ida.file'])
 
-    @mock.patch('utils.cyclestring',
-                return_value=['1998', '10', '01', '00', '00'])
-    def test_expected_cice_dumps_buffer(self, mock_ctime):
+    def test_expected_cice_dumps_buffer(self):
         ''' Test calculation of expected cice restart files - buffer=2'''
         func.logtest('Assert list of archived cice dumps - buffered:')
         self.files.timestamps = [[3, 1]]
@@ -441,12 +440,14 @@ class RestartFilesTests(unittest.TestCase):
                   'PREFIXi.restart.1998-11-01-00000.nc',
                   'PREFIXi.restart.age.1998-11-01-00000.nc']
         self.files.naml.buffer_restart = 9  # 9*1m --> effective edate=1998,3,1
-        self.assertListEqual(self.files.expected_files()['ida.file'],
-                             expect[:-4])
+        with mock.patch('utils.CylcCycle._cyclepoint',
+                        return_value={'iso': '19981001T0000Z',
+                                      'intlist':  [1998, 10, 1, 0, 0]}):
+            self.assertListEqual(self.files.expected_files()['ida.file'],
+                                 expect[:-4])
 
-        self.files.finalcycle = True
-        self.assertListEqual(self.files.expected_files()['ida.file'], expect)
-        mock_ctime.assert_called_once_with()
+            self.files.finalcycle = True
+            self.assertListEqual(self.files.expected_files()['ida.file'], expect)
 
     def test_expected_cice_dumps_suffix(self):
         ''' Test calculation of expected cice restarts - with suffix'''

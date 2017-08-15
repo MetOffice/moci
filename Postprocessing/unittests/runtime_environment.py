@@ -26,6 +26,7 @@ def setup_env():
     os.environ['CYLC_SUITE_NAME'] = 'suiteID'
     os.environ['CYLC_CYCLING_MODE'] = '360day'
     os.environ['CYLC_SUITE_SHARE_DIR'] = os.getcwd()
+    os.environ['CYLC_SUITE_WORK_DIR'] = os.getcwd()
     os.environ['CYLC_TASK_WORK_DIR'] = os.getcwd()
     os.environ['CYLC_TASK_LOG_ROOT'] = os.getcwd() + '/job'
     os.environ['CYLC_SUITE_INITIAL_CYCLE_POINT'] = '19950821T0000Z'
@@ -35,3 +36,4 @@ def setup_env():
     # Standard UM Setup Environment
     os.environ['RUNID'] = 'TESTP'
     os.environ['DATAM'] = os.environ['CYLC_TASK_WORK_DIR']
+    os.environ['CYCLEPERIOD'] = 'P1M'

@@ -20,11 +20,9 @@ DESCRIPTION
 ENVIRONMENT VARIABLES
   Standard Cylc environment:
     CYLC_SUITE_WORK_DIR
-    CYLC_TASK_LOG_ROOT
-
-  Suite specific environment:
-    MODELBASIS
+    CYLC_TASK_CYCLE_POINT
 '''
+
 import os
 import re
 
@@ -50,7 +48,8 @@ class AtmosPostProc(control.RunPostProc):
         '''
         Initialise UM Atmosphere Postprocessing:
             Import namelists: atmospp, archiving, delete_sc
-            Import required environment: CYLC_SUITE_WORK_DIR, MODELBASIS
+            Import required environment:
+                CYLC_SUITE_WORK_DIR, CYLC_TASK_WORK_DIR
             Check WORK and SHARE directories exist
             Determine dumpname for final cycle: archived but not deleted
         '''
@@ -59,8 +58,6 @@ class AtmosPostProc(control.RunPostProc):
         self.netcdf_streams = self._netcdf_streams
 
         if self.runpp:
-            self.envars = utils.loadEnv('CYLC_SUITE_WORK_DIR',
-                                        'MODELBASIS')
             self.share = self._directory(self.naml.atmospp.share_directory,
                                          'ATMOS SHARE')
             self.suite = suite.SuiteEnvironment(self.share, input_nl)
@@ -69,10 +66,10 @@ class AtmosPostProc(control.RunPostProc):
             self.ff_pattern = r'^{}a\.[pm][{{}}]'.format(self.suite.prefix) + \
                 r'\d{{4}}(\d{{4}}|\w{{3}})(_\d{{2}})?(\.pp)?(\.arch)?$'
 
-            if self.suite.finalcycle:
-                dumpdate = utils.add_period_to_date(self.suite.cycledt,
-                                                    self.suite.cycleperiod)
-                self.final_dumpname = self.dumpname(dumpdate)
+            if self.suite.finalcycle is True:
+                self.final_dumpname = self.dumpname(
+                    dumpdate=self.suite.cyclepoint.endcycle['intlist']
+                    )
             else:
                 self.final_dumpname = None
 
@@ -107,9 +104,10 @@ class AtmosPostProc(control.RunPostProc):
     @property
     def _work(self):
         ''' Work directory - Contains unprocessed .arch files'''
-        return os.path.join(self.envars.CYLC_SUITE_WORK_DIR,
-                            self.suite.envars.CYLC_TASK_CYCLE_POINT,
-                            self.suite.umtask)
+        cylc_work = utils.load_env('CYLC_SUITE_WORK_DIR', required=True)
+        cylc_cycle = utils.load_env('CYLC_TASK_CYCLE_POINT', required=True)
+
+        return os.path.join(cylc_work, cylc_cycle, self.suite.umtask)
 
     @property
     def streams(self):
@@ -196,9 +194,14 @@ class AtmosPostProc(control.RunPostProc):
                 if fields.index(key) % 2 == 0}
 
     def dumpname(self, dumpdate=None):
-        ''' Returns the dump name to be archived and/or deleted'''
-        if not dumpdate:
-            dumpdate = self.suite.cycledt
+        '''
+        Returns the dump name to be archived and/or deleted.
+        Optional argument:
+          dumpdate - List of <type int> values
+                   - Default = current cyclepoint
+        '''
+        if dumpdate is None:
+            dumpdate = self.suite.cyclepoint.startcycle['intlist']
         return '{0}a.da{1:0>4d}{2:0>2d}{3:0>2d}_{4:0>2d}'.\
             format(self.suite.prefix, *dumpdate)
 
@@ -214,7 +217,7 @@ class AtmosPostProc(control.RunPostProc):
                 # Header verification required
                 if validation.verify_header(
                         self.naml.atmospp, fnfull,
-                        self.suite.envars.CYLC_TASK_LOG_ROOT,
+                        self.suite.envars['CYLC_TASK_LOG_ROOT'],
                         logfile=log_file
                     ):
                     arch_dumps.append(fname)
@@ -250,7 +253,7 @@ class AtmosPostProc(control.RunPostProc):
                     process_files.append(fnfull)
                 elif validation.verify_header(
                         self.naml.atmospp, fnfull,
-                        self.suite.envars.CYLC_TASK_LOG_ROOT,
+                        self.suite.envars['CYLC_TASK_LOG_ROOT'],
                         logfile=log_file
                     ):
                     # Header verification required

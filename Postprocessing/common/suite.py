@@ -20,12 +20,11 @@ DESCRIPTION
 
 ENVIRONMENT VARIABLES
   Standard Cylc environment:
+    CYLC_SUITE_INITIAL_CYCLE_POINT
     CYLC_TASK_LOG_ROOT
-    CYLC_TASK_CYCLE_POINT
 
-  Suite specific environment:
-    ARCHIVE FINAL - Suite defined: Logical to indicate final cycle
-                    -> Default: False
+  Optional Override environment:
+    INITCYCLE_OVERRIDE
 '''
 import os
 
@@ -53,15 +52,22 @@ class SuiteEnvironment(object):
                     '&moose_arch namelist from namelist file: ' + input_nl
                 utils.log_msg(msg, level='FAIL')
 
-        self.envars = utils.loadEnv('CYLC_TASK_LOG_ROOT',
-                                    'CYLC_TASK_CYCLE_POINT',
-                                    'CYLC_SUITE_FINAL_CYCLE_POINT',
-                                    'CYLC_CYCLING_MODE',
-                                    'CYCLEPOINT_OVERRIDE',
-                                    'FINALCYCLE_OVERRIDE')
-
         self.sourcedir = sourcedir
-        self.cyclestring = utils.cyclestring()
+        self.envars = {
+            'CYLC_TASK_LOG_ROOT':
+                utils.load_env('CYLC_TASK_LOG_ROOT', required=True),
+            'CYLC_SUITE_INITIAL_CYCLE_POINT':
+                utils.load_env('CYLC_SUITE_INITIAL_CYCLE_POINT', required=True),
+            'INITCYCLE_OVERRIDE': utils.load_env('INITCYCLE_OVERRIDE')
+            }
+
+        self.cyclepoint = utils.CylcCycle()
+        init = self.envars['INITCYCLE_OVERRIDE']
+        if init is None:
+            init = self.envars['CYLC_SUITE_INITIAL_CYCLE_POINT']
+        self.initpoint = \
+            utils.CylcCycle(cyclepoint=init).startcycle['intlist']
+
         self.finalcycle = utils.finalcycle()
 
         # Monitoring attributes
@@ -83,27 +89,12 @@ class SuiteEnvironment(object):
     @property
     def logfile(self):
         '''Archiving log will be sent to the suite log directory'''
-        return self.envars.CYLC_TASK_LOG_ROOT + '-archive.log'
+        return self.envars['CYLC_TASK_LOG_ROOT'] + '-archive.log'
 
     @property
     def meanref(self):
         '''Return mean reference date for creation of means'''
         return self.naml.mean_reference_date
-
-    @property
-    def cycleperiod(self):
-        '''Returns the cycling period for the suite.
-        Provided via  &suitegen namelist
-        '''
-        return self.naml.cycleperiod
-
-    @property
-    def cycledt(self):
-        '''
-        Creates a representation of the current cycletime in integer format.
-        Returns a list of integers: YYYY,MM,DD,mm,ss
-        '''
-        return map(int, self.cyclestring)
 
     def monthlength(self, month):
         '''Returns length of given month in days - calendar dependent'''
@@ -111,19 +102,13 @@ class SuiteEnvironment(object):
             '360day': [None, ] + [30]*12,
             '365day': [None, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
             'gregorian': [None, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31],
-            # "integer" required for rose-stem testing mode - assumes 360day
-            'integer': [None, ] + [30, ]*12,
             }
 
-        date = self.cycledt
+        date = self.cyclepoint.startcycle['intlist']
         if date[0] % 4 == 0 and (date[0] % 100 != 0 or date[0] % 400 == 0):
             days_per_month['gregorian'][2] = 29
 
-        try:
-            return days_per_month[self.envars.CYLC_CYCLING_MODE][int(month)]
-        except KeyError:
-            msg = 'Calendar not recognised: ' + self.envars.CYLC_CYCLING_MODE
-            utils.log_msg('SuiteEnvironment: ' + msg, level='FAIL')
+        return days_per_month[utils.calendar()][int(month)]
 
     def _archive_command(self, filename, preproc):
         '''
@@ -295,7 +280,6 @@ class SuiteEnvironment(object):
             cmd = os.path.join(cmd, 'ncks')
 
         for key, val in sorted(kwargs.items()):
-            print 'key:', key, 'val:', val, '.'
             cmd = ' '.join([cmd, '-' + key.split('_')[0], val])
         cmd = ' '.join([cmd, fname, tmpfile])
 
@@ -322,7 +306,6 @@ class SuitePostProc(object):
     ''' Default namelist for model independent properties '''
     prefix = os.environ['RUNID']
     umtask_name = 'atmos'
-    cycleperiod = 0, 1, 0, 0, 0
     archive_command = 'Moose'
     nccopy_path = ''
     ncdump_path = ''

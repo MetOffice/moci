@@ -32,7 +32,6 @@ class SuiteTests(unittest.TestCase):
             ('&suitegen', None),
             ('umtask_name="atmos"', 'umtask'),
             ('prefix="RUNID"', 'prefix'),
-            ('cycleperiod=0, 1, 10, 0, 0', 'cycleperiod'),
             ('archive_command="Moose"', None),
             ('/', None),
             ('&moose_arch', None),
@@ -54,7 +53,29 @@ class SuiteTests(unittest.TestCase):
         '''Test creation of suite object and assertion of Cylc6 environment'''
         func.logtest('Assert creation of a suite object:')
         self.assertEqual(self.mysuite.sourcedir, self.mypath)
-        self.assertTrue(hasattr(self.mysuite.envars, 'CYLC_TASK_LOG_ROOT'))
+        self.assertIn('CYLC_TASK_LOG_ROOT', self.mysuite.envars.keys())
+        self.assertTrue(isinstance(self.mysuite.cyclepoint,
+                                   suite.utils.CylcCycle))
+        self.assertEqual(self.mysuite.cyclepoint.startcycle['iso'],
+                         os.environ['CYLC_TASK_CYCLE_POINT'])
+        self.assertEqual(
+            '{:0>4}{:0>2}{:0>2}T{:0>2}{:0>2}Z'.format(*self.mysuite.initpoint),
+            os.environ['CYLC_SUITE_INITIAL_CYCLE_POINT']
+            )
+
+    def test_suite_object_cycle_overrides(self):
+        '''Test creation of suite object and assertion of Cylc6 environment'''
+        func.logtest('Assert creation of a suite object with cycle overrides:')
+        with mock.patch.dict('suite.os.environ',
+                             {'CYCLEPOINT_OVERRIDE': '11112233T4455Z',
+                              'INITCYCLE_OVERRIDE': '00060708T0910Z'}):
+            mysuite = suite.SuiteEnvironment(self.mypath, self.myfile)
+            self.assertEqual(mysuite.cyclepoint.startcycle['strlist'],
+                             ['1111', '22', '33', '44', '55'])
+        self.assertEqual(
+            '{:0>4}{:0>2}{:0>2}T{:0>2}{:0>2}Z'.format(*mysuite.initpoint),
+            '00060708T0910Z'
+            )
 
     def test_suite_object_blank_file(self):
         '''Test creation of suite object with a blank namelist file'''
@@ -76,19 +97,6 @@ class SuiteTests(unittest.TestCase):
                                          names[key][1])).strip('[]'),
                              names[key][0])
 
-    def test_cyclestring(self):
-        '''Test calculation of property "cyclestring in a Cylc6 environment"'''
-        func.logtest('Assert cycletime as string array property:')
-        # Cycle time (from runtime_environment) = 2000,1,21,0,0,0
-        self.assertTupleEqual(self.mysuite.cyclestring,
-                              ('2000', '01', '21', '00', '00'))
-
-    def test_cycledt(self):
-        '''Test access to property "cycledt"'''
-        func.logtest('Assert cycletime as integer array property:')
-        # Cycle time (from runtime_environment) = 2000,1,21,0,0,0
-        self.assertListEqual(self.mysuite.cycledt, [2000, 1, 21, 0, 0])
-
     def test_log(self):
         '''Test creation of and access to property "logfile"'''
         func.logtest('Create a log file:')
@@ -105,30 +113,29 @@ class SuiteTests(unittest.TestCase):
     def test_monthlength_365d(self):
         '''Test return of month length in days - 365d calendar'''
         func.logtest('Test the monthlength method - 365d calendar:')
-        self.mysuite.envars.CYLC_CYCLING_MODE = '365day'
-        self.assertEqual(self.mysuite.monthlength('01'), 31)
-        self.assertEqual(self.mysuite.monthlength('02'), 28)
-        self.assertEqual(self.mysuite.monthlength('03'), 31)
-        self.assertEqual(self.mysuite.monthlength('04'), 30)
+        with mock.patch('modeltemplate.utils.calendar',
+                        return_value='365day'):
+            self.assertEqual(self.mysuite.monthlength('01'), 31)
+            self.assertEqual(self.mysuite.monthlength('02'), 28)
+            self.assertEqual(self.mysuite.monthlength('03'), 31)
+            self.assertEqual(self.mysuite.monthlength('04'), 30)
 
     def test_monthlength_gregorian(self):
         '''Test return of month length in days - Gregorian calendar'''
         func.logtest('Test the monthlength method - Gregorian calendar:')
-        self.mysuite.envars.CYLC_CYCLING_MODE = 'gregorian'
         # Cycle time (from runtime_environment) = 2000,1,21,0,0,0
-        self.assertEqual(self.mysuite.cycledt[0] % 4, 0)
-        self.assertEqual(self.mysuite.cycledt[0] % 100, 0)
-        self.assertEqual(self.mysuite.monthlength('01'), 31)
-        self.assertEqual(self.mysuite.monthlength('02'), 29)
-        self.assertEqual(self.mysuite.monthlength('03'), 31)
-        self.assertEqual(self.mysuite.monthlength('04'), 30)
-
-    def test_monthlength_badcalendar(self):
-        '''Test return of month length in days - unknown calendar'''
-        func.logtest('Test the monthlength method - unknown calendar:')
-        self.mysuite.envars.CYLC_CYCLING_MODE = 'dummy'
-        with self.assertRaises(SystemExit):
-            self.mysuite.monthlength('01')
+        with mock.patch('modeltemplate.utils.calendar',
+                        return_value='gregorian'):
+            self.assertEqual(
+                self.mysuite.cyclepoint.startcycle['intlist'][0] % 4, 0
+                )
+            self.assertEqual(
+                self.mysuite.cyclepoint.startcycle['intlist'][0] % 100, 0
+                )
+            self.assertEqual(self.mysuite.monthlength('01'), 31)
+            self.assertEqual(self.mysuite.monthlength('02'), 29)
+            self.assertEqual(self.mysuite.monthlength('03'), 31)
+            self.assertEqual(self.mysuite.monthlength('04'), 30)
 
 
 class ArchiveTests(unittest.TestCase):
