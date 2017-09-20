@@ -9,7 +9,7 @@ Created on 20 August 2015
 
 @author: Stephen Haddad
 
-Utility functions for use in validating output of test scripts.
+Utility functions for use in test scripts.
 """
 import itertools
 
@@ -17,7 +17,7 @@ import numpy
 
 import iris
 
-import validate_common
+import test_common
 import cf_units
 
 iris.FUTURE.netcdf_promote = True
@@ -57,20 +57,20 @@ def compare_cube_list_files(file_path1,
     """
 
     if not io_manager:
-        io_manager = validate_common.ValidateIO()
+        io_manager = test_common.TestIO()
     #load files to get list of variables
     try:
         cube_list1 = iris.load(file_path1)
     except:
-        raise validate_common.FileLoadError(file_path1)
+        raise test_common.FileLoadError(file_path1)
 
     try:
         cube_list2 = iris.load(file_path2)
     except:
-        raise validate_common.FileLoadError(file_path2)
+        raise test_common.FileLoadError(file_path2)
 
     if len(cube_list1) != len(cube_list2):
-        raise validate_common.CubeCountMismatchError()
+        raise test_common.CubeCountMismatchError()
 
     io_manager.write_out(
         'comparing cubes with tolerance {0:g}'.format(ERROR_TOLERANCE))
@@ -117,7 +117,7 @@ def compare_cube_list_files(file_path1,
                               cube_list2[cix1],
                               ignore_halos,
                               halo_size)
-        except validate_common.DataSizeMismatchError as error1:
+        except test_common.DataSizeMismatchError as error1:
             error1.file_name1 = file_path1
             error1.file_name2 = file_path2
             msg1 = 'size mismatch for variable {var_name}'
@@ -127,7 +127,7 @@ def compare_cube_list_files(file_path1,
                 io_manager.write_out(error1)
                 raise error1
             error_list += [error1]
-        except validate_common.DataMismatchError as error1:
+        except test_common.DataMismatchError as error1:
             error1.file_name1 = file_path1
             error1.file_name2 = file_path2
             msg1 = \
@@ -160,7 +160,7 @@ def compare_cubes(cube1, cube2, ignore_halos, halo_size):
     DataMismatchError - Raised if the data in the cubes differs
     """
     if cube1.shape != cube2.shape:
-        error1 = validate_common.DataSizeMismatchError()
+        error1 = test_common.DataSizeMismatchError()
         error1.cube_name = cube1.name()
         raise error1
     max_error = 0.0
@@ -225,7 +225,7 @@ def compare_cubes(cube1, cube2, ignore_halos, halo_size):
         max_error = numpy.max(numpy.abs(cube1.data-cube2.data))
 
     if num_mismatches > 0:
-        error2 = validate_common.DataMismatchError()
+        error2 = test_common.DataMismatchError()
         error2.cube_name = cube1.name()
         error2.max_error = float(max_error)
         raise error2
@@ -248,7 +248,7 @@ def print_cube_errors(name, error_list, io_manager):
 
         io_manager.write_both(msg1)
     else:
-        io_manager.write_error('No mismatches in {0} files.\n'.format(name))
+        io_manager.write_out('No mismatches in {0} files.\n'.format(name))
 
 
 def find_matching_timesteps(cube1, cube2):
@@ -324,7 +324,7 @@ def compare_cubes_at_timesteps(diag_path1,
                         encountered.
     """
     if len(cube_list1) != len(cube_list2):
-        raise validate_common.CubeCountMismatchError()
+        raise test_common.CubeCountMismatchError()
     num_cubes = len(cube_list1)
     error_list = []
     ignore_halos = True
@@ -379,7 +379,7 @@ def compare_cubes_at_timesteps(diag_path1,
                                   cube_list2[cix1][ix2],
                                   ignore_halos,
                                   halo_size)
-            except validate_common.DataSizeMismatchError as error1:
+            except test_common.DataSizeMismatchError as error1:
                 error1.file_name1 = diag_path1
                 error1.file_name2 = diag_path2
                 msg1 = 'size mismatch for variable {var_name}'
@@ -389,7 +389,7 @@ def compare_cubes_at_timesteps(diag_path1,
                     io_manager.write_out(error1)
                     raise error1
                 error_list += [error1]
-            except validate_common.DataMismatchError as error1:
+            except test_common.DataMismatchError as error1:
                 error1.file_name1 = diag_path1
                 error1.file_name2 = diag_path2
                 msg1 = 'mismatch for variable {var_name}\n max diff = {diff:g}'
@@ -433,15 +433,15 @@ def compare_netcdf_diagnostic_files(diag_path1,
     try:
         cube_list1 = iris.load(diag_path1)
     except:
-        raise validate_common.FileLoadError(diag_path1)
+        raise test_common.FileLoadError(diag_path1)
 
     try:
         cube_list2 = iris.load(diag_path2)
     except:
-        raise validate_common.FileLoadError(diag_path2)
+        raise test_common.FileLoadError(diag_path2)
 
     if len(cube_list1) != len(cube_list2):
-        raise validate_common.CubeCountMismatchError()
+        raise test_common.CubeCountMismatchError()
 
     # look at first cube to find matching timesteps (assuming all cubes have
     # data for the same timestamps
@@ -457,12 +457,12 @@ def compare_netcdf_diagnostic_files(diag_path1,
                                                 save_memory,
                                                 stop_on_error,
                                                 io_manager)
-    except validate_common.DataSizeMismatchError as error1:
+    except test_common.DataSizeMismatchError as error1:
         error1.file_name1 = diag_path1
         error1.file_name2 = diag_path2
         io_manager.write_out(error1)
         raise error1
-    except validate_common.DataMismatchError as error1:
+    except test_common.DataMismatchError as error1:
         error1.file_name1 = diag_path1
         error1.file_name2 = diag_path2
         io_manager.write_out(error1)

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+    #!/usr/bin/env python2.7
 #
 #*****************************COPYRIGHT******************************
 #(C) Crown copyright Met Office. All rights reserved.
@@ -12,46 +12,21 @@
  NAME
    compare_nemo_solver_stat.py
 
-Compare 2 NEMO solver.stat files
+ Implements function to compare 2 NEMO solver.stat files
 """
-
-import argparse
 import re
-import validate_common
 
-def get_command_line_arguments():
-    """
-    Get command line arguments
-    """
-    desc_msg = ''
-    parser = argparse.ArgumentParser(description=desc_msg)
-    parser.add_argument('--input1', dest='input1')
-    parser.add_argument('--input2', dest='input2')
-    parser.add_argument('--list-errors',
-                        dest='list_errors',
-                        action='store_true',
-                        help=validate_common.HELP_LIST_ERRORS)
-    parser.add_argument('--timestep-num-offset',
-                        dest='timestep_num_offset',
-                        help=validate_common.HELP_SOLVER_OFFSET,
-                        type=int,
-                        default=0)
-
-    cmd_args = parser.parse_args()
-    return (cmd_args.input1,
-            cmd_args.input2,
-            cmd_args.list_errors,
-            cmd_args.timestep_num_offset)
+import test_common
 
 class NemoTimestep(object):
     """
     Container for the values relevant to each NEMO timestep read in.
     """
-    COMP_TOLERANCE = 1e-5
-    REGEX_TSN = 'it:\s+[0-9-]+'
-    REGEX_ITER = 'iter:\s+[0-9-]+'
-    REGEX_B = 'b:\s+[0-9\.\+-E]+'
-    REGEX_R = 'r:\s+[0-9\.\+-E]+'
+    COMP_TOLERANCE = 1e-8
+    REGEX_TSN = r'it:\s+\d+'
+    REGEX_ITER = r'iter:\s+\d+'
+    REGEX_B = r'b:\s-?\d+\.\d+E[-+]\d+'
+    REGEX_R = r'r:\s-?\d+\.\d+E[-+]\d+'
 
     def __init__(self, text_line1, timestep_num_offset):
         """
@@ -216,12 +191,11 @@ def compare_solver_stat_files(nemo_solver_file1,
     ret_val - 0 if no errors, non-zero if errors found
     """
     if not io_manager:
-        io_manager = validate_common.ValidateIO()
+        io_manager = test_common.TestIO()
 
     timestep_list1 = parse_solver_stat_file(nemo_solver_file1, 0)
     timestep_list2 = parse_solver_stat_file(nemo_solver_file2,
                                             nemo_solver_file2_offset)
-
     try:
         num_comps, mismatches, max_err_b, max_err_r = \
             compare_timestep_result_lists(timestep_list1,
@@ -241,6 +215,7 @@ def compare_solver_stat_files(nemo_solver_file1,
     ret_val = 0
     if len(mismatches) == 0:
         msg1 = 'All corresponding timesteps have equal solver values'
+        io_manager.write_out(msg1)
     else:
         msg1 = '{0:d} of {1:d} corrsponding timesteps have differing '\
                'solver values'.format(len(mismatches), num_comps)
@@ -252,24 +227,7 @@ def compare_solver_stat_files(nemo_solver_file1,
             for mm1 in mismatches:
                 io_manager.write_out('Timestep {0:d}'.format(mm1))
         ret_val = 1
-    io_manager.write_both(msg1)
+        io_manager.write_both(msg1)
+
 
     return ret_val
-
-def main():
-    """
-    Main function for comparing NEMO solver.stat files.
-    """
-    path1, path2, list_errors, timestep_num_offset = \
-        get_command_line_arguments()
-    io_manager = validate_common.ValidateIO()
-    exit_code = compare_solver_stat_files(path1,
-                                          path2,
-                                          list_errors,
-                                          False,
-                                          timestep_num_offset,
-                                          io_manager)
-    exit(exit_code)
-
-if __name__ == '__main__':
-    main()

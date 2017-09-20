@@ -7,21 +7,21 @@
 #*****************************COPYRIGHT******************************
 
 """
-Executable script for comparing netcdf files. These can be files for a single 
+Executable script for comparing netcdf files. These can be files for a single
 time, or for multiple timestamps containing a time coordinate.
 """
 import argparse
 
-import validate_common
+import test_common
 import compare_utils
 
 def get_cmd_line_arguments():
 	"""
-	Get user input command line arguments.
-	
-	Return values:
-	An object containing the command line arguments
-	"""
+    Get user input command line arguments.
+
+    Return values:
+    An object containing the command line arguments
+    """
     desc_msg = 'Compare 2 netcdf files.'
     parser = argparse.ArgumentParser(description=desc_msg)
     parser.add_argument('--netcdf-file1', dest='netcdf_file1')
@@ -29,18 +29,18 @@ def get_cmd_line_arguments():
     parser.add_argument('--diag',
                         dest='diagnostic',
                         action='store_true',
-                        help=validate_common.HELP_DIAGNOSTIC_FILE)
+                        help=test_common.HELP_DIAGNOSTIC_FILE)
     parser.add_argument('--list-errors',
                         dest='list_errors',
                         action='store_true',
-                        help=validate_common.HELP_LIST_ERRORS)
+                        help=test_common.HELP_LIST_ERRORS)
     parser.add_argument('--stop-on-error',
                         dest='stop_on_error',
                         action='store_true',
-                        help=validate_common.HELP_STOP_ON_ERROR)
+                        help=test_common.HELP_STOP_ON_ERROR)
     parser.add_argument('--ignore-variables',
                         dest='ignore_variables',
-                        help=validate_common.HELP_IGNORE_VARIABLES)
+                        help=test_common.HELP_IGNORE_VARIABLES)
 
 
     return parser.parse_args()
@@ -50,7 +50,7 @@ def main():
 	Main function for comparing netcdf files
 	"""
     cmd_args1 = get_cmd_line_arguments()
-    io_manager = validate_common.ValidateIO()
+    io_manager = test_common.TestIO()
     save_memory = True
     ignore_halos=False
     halo_size=0
@@ -82,12 +82,12 @@ def main():
 
     if error_list1:
         msg1 = 'Mismatches between netcdf files'
-        io_manager.write_both(msg1, '[ERROR]')
+        io_manager.write_both(msg1)
         if cmd_args1.list_errors:
             compare_utils.print_cube_errors('', error_list1, io_manager)
     else:
         msg1 = 'Netcdf files match!'
-        io_manager.write_both(msg1, '[INFO]')
+        io_manager.write_out(msg1)
 
 
 if __name__ == '__main__':

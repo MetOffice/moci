@@ -1,0 +1,73 @@
+#!/usr/bin/env python2.7
+#
+#*****************************COPYRIGHT******************************
+#(C) Crown copyright Met Office. All rights reserved.
+# For further details please refer to the file COPYRIGHT.txt
+# which you should have received as part of this distribution.
+#*****************************COPYRIGHT******************************
+"""
+ CODE OWNER
+   Stephen Haddad
+
+ NAME
+   compare_nemo_solver_output
+
+Compare 2 NEMO solver.stat files
+"""
+
+import argparse
+
+import test_common
+import compare_nemo_solver_stat
+
+HELP_INPUT1 = 'Path to the first solver.stat input file'
+HELP_INPUT2 = 'Path to the second solver.stat input file'
+
+def get_command_line_arguments():
+    """
+    Get command line arguments
+    """
+    desc_msg = ''
+    parser = argparse.ArgumentParser(description=desc_msg)
+    parser.add_argument('--input1',
+                        dest='input1',
+                        help=HELP_INPUT1)
+    parser.add_argument('--input2',
+                        dest='input2',
+                        help=HELP_INPUT2)
+    parser.add_argument('--list-errors',
+                        dest='list_errors',
+                        action='store_true',
+                        help=test_common.HELP_LIST_ERRORS)
+    parser.add_argument('--timestep-num-offset',
+                        dest='timestep_num_offset',
+                        help=test_common.HELP_SOLVER_OFFSET,
+                        type=int,
+                        default=0)
+
+    cmd_args = parser.parse_args()
+    return (cmd_args.input1,
+            cmd_args.input2,
+            cmd_args.list_errors,
+            cmd_args.timestep_num_offset)
+
+
+def main():
+    """
+    Main function for comparing NEMO solver.stat files.
+    """
+    path1, path2, list_errors, timestep_num_offset = \
+        get_command_line_arguments()
+    io_manager = test_common.TestIO()
+    exit_code = \
+        compare_nemo_solver_stat.compare_solver_stat_files(
+            path1,
+            path2,
+            list_errors,
+            False,
+            timestep_num_offset,
+            io_manager)
+    exit(exit_code)
+
+if __name__ == '__main__':
+    main()

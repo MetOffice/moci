@@ -10,6 +10,7 @@ used to compare model output of various sorts to check that it matches.
 """
 from rose.apps.rose_ana import AnalysisTask
 
+import compare_nemo_solver_stat
 import compare_utils
 
 class RoseAnaRestartTask(AnalysisTask):
@@ -54,10 +55,57 @@ class RoseAnaRestartTask(AnalysisTask):
 
     def write_both(self, msg):
         """
-        Write output to rose_ana reporter object with prefix [ERROR].
+        Write output to rose_ana reporter object
         """
-        self.parent.reporter(msg + '\n', prefix='[ERROR]')
+        self.write_out(msg)
+        self.write_error(msg)
 
+class NemoSolverStatComparison(RoseAnaRestartTask):
+    """
+    Analysis class for comparing norm values in NEMO solver.stat output files
+    """
+    def __init__(self, parent_app, task_options):
+        """
+        Initialise function for NemoSolverStatComparison class.
+        """
+        RoseAnaRestartTask.__init__(self, parent_app, task_options)
+        self.solver_path1 = ''
+        self.solver_path2 = ''
+        self.solver_offset2 = 0
+        self.passed = False
+
+    def load_settings(self):
+        """
+        Load settings passed in through rose_ana task configuration files.
+        """
+        RoseAnaRestartTask.load_settings(self)
+        self.solver_path1 = self.options['solver_path1']
+        self.solver_path2 = self.options['solver_path2']
+        self.solver_offset2 = int(self.options['solver_offset2'])
+
+    def run_analysis(self):
+        """
+        Function called by rose_ana task to do comparison of NEMO
+        solver.stat files
+        """
+        self.load_settings()
+        msg1 = 'Comparing NEMO solver.stat files:\n'
+        msg1 += 'file 1: {0}'.format(self.solver_path1)
+        msg1 += 'file 2: {0}'.format(self.solver_path2)
+        self.write_out(msg1)
+        ret_val_solver = \
+            compare_nemo_solver_stat.compare_solver_stat_files(
+                self.solver_path1,
+                self.solver_path2,
+                self.list_errors,
+                self.stop_on_error,
+                self.solver_offset2,
+                self)
+
+        if ret_val_solver == 0:
+            self.passed = True
+        else:
+            self.write_out('Mismatches found in solver.stat files.')
 
 class NetCdfComparison(RoseAnaRestartTask):
     """
@@ -110,8 +158,8 @@ class NetCdfComparison(RoseAnaRestartTask):
         """
         self.load_settings()
         msg1 = 'Comparing NetCDF instantaneous files:\n'
-        msg1 += 'file 1: {0}'.format(self.file1)
-        msg1 += 'file 2: {0}'.format(self.file2)
+        msg1 += 'file 1: {0}\n'.format(self.file1)
+        msg1 += 'file 2: {0}\n'.format(self.file2)
         self.write_out(msg1)
 
         error_list1 = \
@@ -130,7 +178,7 @@ class NetCdfComparison(RoseAnaRestartTask):
                                             error_list1,
                                             self)
         else:
-            self.write_both('NetCDF files match!\n')
+            self.write_out('NetCDF files match!\n')
             self.passed = True
 
 
@@ -146,8 +194,8 @@ class NemoDiagnostic(NetCdfComparison):
         self.load_settings()
 
         msg1 = 'Comparing NEMO diagnostic files:\n'
-        msg1 += 'file 1: {0}'.format(self.file1)
-        msg1 += 'file 2: {0}'.format(self.file2)
+        msg1 += 'file 1: {0}\n'.format(self.file1)
+        msg1 += 'file 2: {0}\n'.format(self.file2)
         self.write_out(msg1)
 
         error_list = \
@@ -162,5 +210,5 @@ class NemoDiagnostic(NetCdfComparison):
                                             error_list,
                                             self)
         else:
-            self.write_both('Nemo diagnostic files match!\n')
+            self.write_out('Nemo diagnostic files match!\n')
             self.passed = True

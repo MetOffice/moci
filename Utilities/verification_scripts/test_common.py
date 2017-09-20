@@ -9,7 +9,7 @@ Created on 3 March 2017
 
 @author: Stephen Haddad
 
-Common validation-related error classes derived from Exception.
+Common test-related error classes derived from Exception.
 """
 import sys
 
@@ -40,7 +40,7 @@ and CICE restart files.'''
 HELP_DIAGNOSTIC_FILE = '''If present, then the command line arguments should be
 treated as diagnostic files.'''
 
-class ValidateIO(object):
+class TestIO(object):
     """
     Wrapper class for output functionality. The main reason for wrapping this
     basic functionality is so that comparison functions don't need to know
@@ -65,8 +65,8 @@ class ValidateIO(object):
         """
         Write message to both stdout and stderr.
         """
-        sys.stdout.write(msg + '\n')
-        sys.stderr.write(msg + '\n')
+        self.write_out(msg)
+        self.write_error(msg)
 
 
 class MissingArgumentError(Exception):
