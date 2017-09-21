@@ -21,18 +21,9 @@ import os
 import sys
 import glob
 import re
+import stat
 import common
 import error
-
-
-
-def _write_errflag():
-    '''
-    Write the errflag file
-    '''
-    errflag_hand = common.open_text_file('errflag', 'w')
-    errflag_hand.write('F  No request to stop model')
-    errflag_hand.close()
 
 def _verify_rst(xhistfile, cyclepoint):
     '''
@@ -117,7 +108,6 @@ def _load_run_environment_variables(um_envar):
     um_envar.add('HOUSEKEEP', 'hkfile')
     um_envar.add('STASHC', 'STASHC')
     um_envar.add('ATMOSCNTL', 'ATMOSCNTL')
-    um_envar.add('ERROR_FLAG', 'errflag')
     um_envar.add('IDEALISE', 'IDEALISE')
     um_envar.add('IOSCNTL', 'IOSCNTL')
 
@@ -162,8 +152,6 @@ def _setup_executable(common_envar):
 
     um_envar.add('UM_NPES', str(um_npes))
     um_envar.add('NPROC', str(nproc))
-
-    _write_errflag()
 
     # Set the stashmaster default. Note that the environment variable STASHMSTR
     # takes precedence if set. STASHMSTR is a legacy version of STASHMASTER
@@ -267,6 +255,15 @@ def _finalize_executable(_):
                 # Check and remove any existing symlink of this name
                 os.remove(lnk_dst)
             os.symlink(lnk_src, lnk_dst)
+
+    # Make any core dump files world-readable to assist in debugging problems
+    for corefile in glob.glob('*core*'):
+        if os.path.isfile(corefile):
+            current_st = os.stat(corefile)
+            # Update, so in addition to current permissions the file is
+            # readable by user, group, and others
+            os.chmod(corefile, current_st.st_mode | stat.S_IRUSR |
+                     stat.S_IRGRP | stat.S_IROTH)
 
 
 
