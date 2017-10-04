@@ -211,18 +211,27 @@ class NemoPostProc(mt.ModelTemplate):
     @timer.run_timer
     def rebuild_fileset(self, datadir, filetype):
         '''Rebuild partial files for given filetype'''
-        rebuild = True
-        keep_components = False
-
         bldfiles = utils.get_subset(
             datadir,
             r'^.*{}{}$'.format(filetype, self.rebuild_suffix['ZERO'])
             )
+        if self.suite.finalcycle is not True:
+            # Disregard any bldfiles produced during "future" cycles of
+            # model-run task
+            end_of_cycle = self.suite.cyclepoint.endcycle['strlist']
+            for filename in reversed(bldfiles):
+                date = self.get_date(filename, enddate=True)
+                if ''.join([str(d).zfill(2) for d in date]) > \
+                        ''.join(end_of_cycle):
+                    bldfiles.remove(filename)
         bldfiles = sorted(bldfiles)
 
         buff = self.buffer_rebuild('restart') if \
             'restart' in filetype else self.buffer_rebuild('mean')
         while len(bldfiles) > buff:
+            rebuild = True
+            keep_components = False
+
             bldfile = bldfiles.pop(0)
             corename = bldfile.split(self.rebuild_suffix['ZERO'])[0]
             bldset = utils.get_subset(

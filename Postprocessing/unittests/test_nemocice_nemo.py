@@ -153,6 +153,8 @@ class RebuildTests(unittest.TestCase):
         self.nemo.suite = mock.Mock()
         self.nemo.suite.prefix = 'RUNID'
         self.nemo.suite.finalcycle = False
+        self.nemo.suite.cyclepoint = \
+            nemo.utils.CylcCycle(cyclepoint='20000901T0000Z')
         self.defaults = nemo_namelist.Processing()
 
     def tearDown(self):
@@ -229,8 +231,20 @@ class RebuildTests(unittest.TestCase):
         func.logtest('Assert restart files fewer than buffer are retained:')
         mock_subset.return_value = ['file1']
         self.nemo.naml.processing.rebuild_restart_buffer = 5
-        self.nemo.rebuild_fileset('ShareDir', 'restart')
+        with mock.patch('nemo.NemoPostProc.get_date',
+                        return_value=('1990', '01', '01')):
+            self.nemo.rebuild_fileset('ShareDir', 'restart')
         self.assertIn('5 retained', func.capture())
+
+    @mock.patch('nemo.utils.get_subset')
+    def test_rbld_restart_beyond_cpoint(self, mock_subset):
+        '''Test rebuild restarts function retaining files beyond cyclepoint'''
+        func.logtest('Assert restart files beyond cyclepoint are retained:')
+        mock_subset.return_value = ['file1']
+        with mock.patch('nemo.NemoPostProc.get_date',
+                        return_value=('2001', '01', '01')):
+            self.nemo.rebuild_fileset('ShareDir', 'restart')
+        self.assertNotIn('Nothing to rebuild', func.capture())
 
     @mock.patch('nemo.utils.get_subset')
     def test_rebuild_mean_not_required(self, mock_subset):
@@ -238,7 +252,9 @@ class RebuildTests(unittest.TestCase):
         func.logtest('Assert means files fewer than buffer (1) are retained:')
         mock_subset.return_value = ['file1']
         self.nemo.naml.processing.rebuild_mean_buffer = 1
-        self.nemo.rebuild_fileset('ShareDir', 'field')
+        with mock.patch('nemo.NemoPostProc.get_date',
+                        return_value=('1990', '01', '01')):
+            self.nemo.rebuild_fileset('ShareDir', 'field')
         self.assertIn('1 retained', func.capture())
 
     @mock.patch('nemo.utils.remove_files')
@@ -849,7 +865,8 @@ class AdditionalArchiveTests(unittest.TestCase):
         '''Test call to create_regional_extraction - field specific dims'''
         func.logtest('Assert call to create_regional_extraction - field dims:')
         self.nemo.naml.processing.extract_region = True
-        self.nemo.naml.processing.region_dimensions = ['xgrid_%G', 1, 2, 'ygrid_%G', 3, 4]
+        self.nemo.naml.processing.region_dimensions = ['xgrid_%G', 1, 2,
+                                                       'ygrid_%G', 3, 4]
         self.nemo.region_fields = ['shelf-T']
         self.nemo.diagsdir = os.getcwd()
         mock_set.side_effect = [['fileT']]

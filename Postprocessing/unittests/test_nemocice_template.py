@@ -721,6 +721,8 @@ class ArchiveTests(unittest.TestCase):
 
         self.model.suite = mock.Mock()
         self.model.suite.finalcycle = False
+        self.model.suite.cyclepoint = \
+            modeltemplate.utils.CylcCycle(cyclepoint='20000901T0000Z')
         self.model.suite.archive_file.return_value = 0
 
         ncf = netcdf_filenames.NCFilename('MODEL', 'RUNID', 'X')
@@ -1110,8 +1112,31 @@ class ArchiveTests(unittest.TestCase):
         func.logtest('Assert function with nothing to archive:')
         with mock.patch('modeltemplate.ModelTemplate.periodfiles',
                         return_value=[]):
-            with mock.patch('modeltemplate.utils.remove_files'):
-                self.model.archive_restarts()
+            self.model.archive_restarts()
+        self.assertIn(' -> Nothing to archive', func.capture())
+        self.assertNotIn('Deleting', func.capture())
+
+    def test_archive_restarts_retained(self):
+        '''Test archive restarts function - files retained'''
+        func.logtest('Assert function with files retained:')
+        self.model.naml.archiving.archive_restart_buffer = 2
+        with mock.patch('modeltemplate.ModelTemplate.periodfiles',
+                        return_value=['rst1']):
+            self.model.archive_restarts()
+        self.assertIn('2 retained', func.capture())
+        self.assertIn(' -> Nothing to archive', func.capture())
+        self.assertNotIn('Deleting', func.capture())
+
+    def test_archive_rst_beyond_cpoint(self):
+        '''Test archive restarts function - all files beong cyclepoint'''
+        func.logtest('Assert function with all files beyond cyclepoint:')
+        self.model.suite.cyclepoint = \
+            modeltemplate.utils.CylcCycle(cyclepoint='19960330T0000Z')
+        self.model.naml.archiving.archive_restart_buffer = 2
+        with mock.patch('modeltemplate.ModelTemplate.periodfiles',
+                        return_value=['rst1']):
+            self.model.archive_restarts()
+        self.assertNotIn('retained', func.capture())
         self.assertIn(' -> Nothing to archive', func.capture())
         self.assertNotIn('Deleting', func.capture())
 

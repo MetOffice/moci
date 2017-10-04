@@ -993,7 +993,17 @@ class ModelTemplate(control.RunPostProc):
         '''
         for rsttype in self.rsttypes:
             final_rst = None
+
             rstfiles = self.periodfiles(rsttype, 'set')
+            if self.suite.finalcycle is not True:
+                # Disregard rstfiles produced during "future" cycles of
+                # model-run task
+                end_of_cycle = self.suite.cyclepoint.endcycle['strlist']
+                for filename in reversed(rstfiles):
+                    date = self.get_date(filename, enddate=True)
+                    if ''.join([str(d).zfill(2) for d in date]) > \
+                            ''.join(end_of_cycle):
+                        rstfiles.remove(filename)
             rstfiles = sorted(rstfiles)
             to_archive = []
             while len(rstfiles) > self.buffer_archive:
