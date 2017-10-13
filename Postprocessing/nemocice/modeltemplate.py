@@ -745,6 +745,7 @@ class ModelTemplate(control.RunPostProc):
                         msg = '{C}: Error={E}\n{O}\nFailed to create {M}: {L}'
                         msg = msg.format(C=self.means_cmd, E=icode, O=output,
                                          M=describe, L=meanfile)
+                        utils.remove_files(fn_full, ignoreNonExist=True)
                         utils.log_msg(msg, level='FAIL')
 
                     # Meaning gets the time_bounds variables wrong

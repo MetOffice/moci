@@ -544,7 +544,9 @@ class MeansTests(unittest.TestCase):
     @mock.patch('modeltemplate.os.path')
     @mock.patch('modeltemplate.utils.exec_subproc', side_effect=[(99, 'None')])
     @mock.patch('modeltemplate.ModelTemplate.mean_stencil')
-    def test_create_annual_mean_fail(self, mock_stencil, mock_exec, mock_path):
+    @mock.patch('modeltemplate.utils.remove_files')
+    def test_create_annual_mean_fail(self, mock_rm, mock_stencil,
+                                     mock_exec, mock_path):
         '''Test failed creation of annual mean'''
         func.logtest('Assert failed creation of annual mean:')
         mock_path.isfile.return_value = False
@@ -560,6 +562,9 @@ class MeansTests(unittest.TestCase):
         self.assertIn('Error=99', func.capture('err'))
         cmd = '{} ssn1 ssn2 ssn3 ssn4 AnnualMean'.format(self.model.means_cmd)
         mock_exec.assert_called_once_with(cmd, cwd='ShareDir')
+        self.assertIn('Failed to create', func.capture('err'))
+        mock_rm.assert_called_once_with(mock_path.join.return_value,
+                                        ignoreNonExist=True)
 
     def test_create_means_partial(self):
         '''Test create_means function with partial period'''
