@@ -47,8 +47,7 @@ try:
             except KeyError:
                 dataset[collection] = [fname]
 
-    permission = 'w' if (os.environ['CYLC_TASK_NAME'] == 'postproc_19811001' and
-                         os.environ['CYLC_TASK_TRY_NUMBER'] == 1) else 'a'
+    permission = 'a' if os.path.isfile(cylclog) else 'w'
     with open(cylclog, permission) as archive:
         archive.write('[INFO] writing log for ' + os.environ['CYLC_TASK_NAME'])
         archive.write('\n')

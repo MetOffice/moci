@@ -20,6 +20,7 @@ DESCRIPTION
 '''
 import os
 import re
+import shutil
 
 import timer
 import utils
@@ -211,6 +212,19 @@ class NemoPostProc(mt.ModelTemplate):
     @timer.run_timer
     def rebuild_fileset(self, datadir, filetype):
         '''Rebuild partial files for given filetype'''
+        # Recover any partial files which may have been left in temporary
+        # directories due to failure (usually timeout) in a previous task.
+        tmp_dirs = utils.get_subset(datadir,
+                                    r'rebuilding_.*{}'.format(filetype.upper()))
+        for tmp_dir in tmp_dirs:
+            fullpath_tmp = os.path.join(datadir, tmp_dir)
+            partial_files = utils.get_subset(
+                fullpath_tmp,
+                r'^.*{}$'.format(self.rebuild_suffix['REGEX'])
+                )
+            utils.move_files(partial_files, datadir, originpath=fullpath_tmp)
+            shutil.rmtree(fullpath_tmp)
+
         bldfiles = utils.get_subset(
             datadir,
             r'^.*{}{}$'.format(filetype, self.rebuild_suffix['ZERO'])
@@ -258,7 +272,7 @@ class NemoPostProc(mt.ModelTemplate):
             if rebuild:
                 utils.log_msg('Rebuilding: ' + corename, level='INFO')
                 icode = self.rebuild_namelist(
-                    datadir, corename, len(bldset),
+                    datadir, corename, bldset,
                     omp=1, msk=self.naml.processing.msk_rebuild
                     )
             else:
@@ -337,12 +351,27 @@ class NemoPostProc(mt.ModelTemplate):
             utils.log_msg(msg, level=level)
 
     @timer.run_timer
-    def rebuild_namelist(self, datadir, filebase, ndom,
+    def rebuild_namelist(self, datadir, filebase, bldset,
                          omp=16, chunk=None, dims=None, msk=False):
         '''Create the namelist file required by the rebuild_nemo executable'''
-        namelist = 'nam_rebuild'
-        namelistfile = os.path.join(datadir, namelist)
-        txt = "&{}\nfilebase='{}'\nndomain={}".format(namelist, filebase, ndom)
+        cmd = self.rebuild_cmd.replace('%F', 'rebuild_' + filebase.upper())
+        try:
+            namelist = cmd.split()[1]
+            tempdir = False
+        except IndexError:
+            namelist = 'nam_rebuild'
+            tempdir = True
+
+        ndom = len(bldset)
+        if tempdir:
+            rebuild_dir = os.path.join(datadir,
+                                       'rebuilding_' + filebase.upper())
+            utils.create_dir(rebuild_dir)
+        else:
+            rebuild_dir = datadir
+
+        namelistfile = os.path.join(rebuild_dir, namelist)
+        txt = "&nam_rebuild\nfilebase='{}'\nndomain={}".format(filebase, ndom)
         if msk:
             txt += "\nl_maskout=.true."
         if dims:
@@ -354,26 +383,44 @@ class NemoPostProc(mt.ModelTemplate):
 
         os.environ['OMP_NUM_THREADS'] = str(omp)
         if os.path.isfile(namelistfile):
-            icode, _ = utils.exec_subproc(self.rebuild_cmd, cwd=datadir)
-            rebuiltfile = os.path.join(datadir, filebase + '.nc')
+            if tempdir:
+                utils.move_files(bldset, rebuild_dir, originpath=datadir)
+            icode, _ = utils.exec_subproc(cmd, cwd=rebuild_dir)
+
+            rebuiltfile = os.path.join(rebuild_dir, filebase + '.nc')
             if icode != 0 or not os.path.isfile(rebuiltfile):
                 icode = icode if icode != 0 else 900
             elif 'icebergs' in filebase:
                 # Additional processing required for iceberg restart files
-                icode = self.rebuild_icebergs(datadir, filebase, ndom)
+                icode = self.rebuild_icebergs(rebuild_dir, filebase, ndom)
+            if tempdir:
+                utils.move_files(bldset, datadir, originpath=rebuild_dir)
 
             if icode == 0:
                 msg = 'Successfully rebuilt file: ' + rebuiltfile
                 utils.log_msg(msg, level='INFO')
+                if tempdir:
+                    utils.move_files(rebuiltfile, datadir)
                 utils.remove_files(namelistfile)
             else:
                 msg = '{}: Error={}\n -> Failed to rebuild file: {}'.\
-                    format(self.rebuild_cmd, icode, rebuiltfile)
+                    format(cmd, icode, rebuiltfile)
+                if tempdir:
+                    shutil.rmtree(rebuild_dir)
                 utils.log_msg(msg, level='ERROR')
         else:
             utils.log_msg('Failed to create namelist file: ' + namelist,
                           level='WARN')
             icode = 910
+
+        if tempdir:
+            try:
+                shutil.rmtree(rebuild_dir)
+            except OSError:
+                # Directory was previously removed following rebuild failure.
+                # For debug_mode=False, the app exits following the failure.
+                pass
+
         return icode
 
     @timer.run_timer
@@ -402,8 +449,8 @@ class NemoPostProc(mt.ModelTemplate):
         if 'error' in output.lower() or icode != 0:
             msg = 'icb_combrest: Error={}\n\t{}'.format(icode, output)
             msg = msg + '\n -> Failed to rebuild file: ' + filebase
-            utils.log_msg(msg, level='ERROR')
-            icode = -1
+            utils.log_msg(msg, level='WARN')
+            icode = icode if icode != 0 else -1
         else:
             msg = 'icb_combrest: Successfully rebuilt iceberg file ' + filebase
             utils.log_msg(msg, level='INFO')

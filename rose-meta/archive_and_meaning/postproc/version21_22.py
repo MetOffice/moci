@@ -186,14 +186,14 @@ class pp21_t221(rose.upgrade.MacroUpgrade):
                                             "archive_restart_buffer"])
 
         # NEMO only items
-        for item in ["process_all_fieldsfiles", "means_fieldsfiles"]:
+        for item in ["process_all_fieldsfiles"]:
               self.rename_setting(config, ["namelist:nemopostproc", item],
                                   ["namelist:nemo_pp", item])
  
         for item in ["msk_rebuild", "exec_rebuild", "exec_rebuild_icebergs",
                      "exec_rebuild_iceberg_trajectory", "ncatted_cmd",
                      "extract_region", "region_fieldsfiles", "region_dimensions",
-                     "region_chunking_args"]:
+                     "region_chunking_args", "means_fieldsfiles"]:
               self.rename_setting(config, ["namelist:nemopostproc", item],
                                   ["namelist:nemo_processing", item])
 

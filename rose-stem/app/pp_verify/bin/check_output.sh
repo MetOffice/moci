@@ -1452,7 +1452,7 @@ hg3eso_19830130_restart_0001.nc
 hg3eso_19830130_restart_0002.nc"
 
 CYLC_SUITE_LOG_DIR=${CYLC_SUITE_LOG_DIR:-$HOME/cylc-run/test_postproc/log/suite}
-logfile=job/1/postproc_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/[0-9][0-9]/job-arch*.log
+logfile=job/1/p*_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]/[0-9][0-9]/job-arch*.log
 search=$(grep -r ARCHIVE $CYLC_SUITE_LOG_DIR/../$logfile)
 fails=$(grep -r FAILED $CYLC_SUITE_LOG_DIR/../$logfile)
 ghost=$(grep -r "does not exist" $CYLC_SUITE_LOG_DIR/../$logfile)

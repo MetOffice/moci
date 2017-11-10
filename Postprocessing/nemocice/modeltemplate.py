@@ -98,21 +98,22 @@ class ModelTemplate(control.RunPostProc):
         process = self.suite.naml.process_toplevel is True
         archive = self.suite.naml.archive_toplevel is True
         return OrderedDict(
-            [('move_to_share', any([self.naml.processing.create_monthly_mean,
+            [('move_to_share', (any([self.naml.processing.create_monthly_mean,
                                     self.naml.processing.create_seasonal_mean,
                                     self.naml.processing.create_annual_mean,
-                                    self.naml.processing.create_decadal_mean,
-                                    self.naml.archiving.archive_means])),
+                                    self.naml.processing.create_decadal_mean])
+                                and self.naml.processing.create_means) or
+              self.naml.archiving.archive_means),
 
              ('create_general', process and
               any(ftype[1] for ftype in self.process_types if
                   ftype[1] is True)),
 
-             ('create_means', process and
-              any([self.naml.processing.create_monthly_mean,
-                   self.naml.processing.create_seasonal_mean,
-                   self.naml.processing.create_annual_mean,
-                   self.naml.processing.create_decadal_mean])),
+             ('create_means', process and self.naml.processing.create_means
+              and any([self.naml.processing.create_monthly_mean,
+                       self.naml.processing.create_seasonal_mean,
+                       self.naml.processing.create_annual_mean,
+                       self.naml.processing.create_decadal_mean])),
 
              ('prepare_archive', process and
               (self.naml.archiving.archive_restarts or
@@ -812,7 +813,6 @@ class ModelTemplate(control.RunPostProc):
                                               self.prefix,
                                               self.model_realm,
                                               custom=custom)
-
 
             # Select additional means files, not in base_component
             # or standard means

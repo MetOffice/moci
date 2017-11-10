@@ -123,7 +123,7 @@ def finalcycle():
         if finalpoint is None:
             finalpoint = load_env('CYLC_SUITE_FINAL_CYCLE_POINT', required=True)
 
-        # The end point of the final cycle will always be beyond the "final point"
+        # The end point of final cycle will always be beyond the "final point"
         # as defined by either $CYLC_SUITE_FINAL_CYCLE_POINT (calendar cycling
         # suites) or $FINAL_CYCLE_OVERRIDE (for integer cycling suites), since
         # Cylc will not trigger further cycles beyond this point.
@@ -278,6 +278,15 @@ def move_files(mvfiles, destination, originpath=None, fail_on_err=False):
     '''
     Move a single file or list of files to a given directory.
     Optionally a directory of origin may be specified.
+    Arguments:
+      mvfiles     - filename or list of filenames to be moved
+      destination - Path to move the file(s) to
+    Optional Arguments:
+      originpath  - Current location of the file.
+                    Default=os.path.basename(<filename>)
+      fail_on_err - Failure to move the file results in app failure.
+                    Primary cause of failure is a non-existent target file.
+                    Default=False
     '''
     msglevel = 'ERROR' if fail_on_err else 'WARN'
     destination = check_directory(destination)

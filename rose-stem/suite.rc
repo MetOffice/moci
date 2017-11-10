@@ -31,7 +31,7 @@
          test_mule:succeed => !remove_cutout_from_postproc
          test_mule:fail => remove_cutout_from_postproc
          test_mule | remove_cutout_from_postproc => fcm_make_pp
-         fcm_make_pp => coupled_dummy_19811001 => postproc_19811001 & coupled_dummy_19811101
+         pp_clearlog & fcm_make_pp => coupled_dummy_19811001 => postproc_19811001 & coupled_dummy_19811101
          coupled_dummy_19811101 => postproc_19811101 & coupled_dummy_19811201
          coupled_dummy_19811201 => postproc_19811201 & coupled_dummy_19820101
          coupled_dummy_19820101 => postproc_19820101 & coupled_dummy_19820201
@@ -46,11 +46,20 @@
          coupled_dummy_19821001 => postproc_19821001 & coupled_dummy_19821101
          coupled_dummy_19821101 => postproc_19821101 & coupled_dummy_19821201
          coupled_dummy_19821201 => postproc_19821201 & coupled_dummy_19830101
-         coupled_dummy_19830101 => postproc_19830101 => pp_verify & verify_final => housekeeping_pp
-         postproc_19811001 => postproc_19811101 => postproc_19811201 => postproc_19820101 => \
-         postproc_19820201 => postproc_19820301 => postproc_19820401 => postproc_19820501 => \
-         postproc_19820601 => postproc_19820701 => postproc_19820801 => postproc_19820901 => \
-         postproc_19821001 => postproc_19821101 => postproc_19821201 => postproc_19830101
+         coupled_dummy_19830101 => postproc_19830101" + (":succeed-all" if SPLIT_PP else "") + " => pp_verify & verify_final => housekeeping_pp
+         postproc_19811001" + (":succeed-all" if SPLIT_PP else "") + " => postproc_19811101" + (":succeed-all" if SPLIT_PP else "") + " => \
+         postproc_19811201" + (":succeed-all" if SPLIT_PP else "") + " => postproc_19820101" + (":succeed-all" if SPLIT_PP else "") + " => \
+         postproc_19820201" + (":succeed-all" if SPLIT_PP else "") + " => postproc_19820301" + (":succeed-all" if SPLIT_PP else "") + " => \
+         postproc_19820401" + (":succeed-all" if SPLIT_PP else "") + " => postproc_19820501" + (":succeed-all" if SPLIT_PP else "") + " => \
+         postproc_19820601" + (":succeed-all" if SPLIT_PP else "") + " => postproc_19820701" + (":succeed-all" if SPLIT_PP else "") + " => \
+         postproc_19820801" + (":succeed-all" if SPLIT_PP else "") + " => postproc_19820901" + (":succeed-all" if SPLIT_PP else "") + " => \
+         postproc_19821001" + (":succeed-all" if SPLIT_PP else "") + " => postproc_19821101" + (":succeed-all" if SPLIT_PP else "") + " => \
+         postproc_19821201" + (":succeed-all" if SPLIT_PP else "") + " => postproc_19830101" + (":succeed-all" if SPLIT_PP else "") + ("
+         pp_nemomean_19811201 & pp_nemorst_19811201 => pp_verifynemo_19811201
+         pp_nemomean_19820301 & pp_nemorst_19820301 => pp_verifynemo_19820301
+         pp_nemomean_19820601 & pp_nemorst_19820601 => pp_verifynemo_19820601
+         pp_nemomean_19820901 & pp_nemorst_19820901 => pp_verifynemo_19820901
+         pp_nemomean_19821201 & pp_nemorst_19821201 => pp_verifynemo_19821201" if SPLIT_PP else "") + "
          fcm_make_pp => pp_unittests",
 
     "default" : "default_task"
@@ -455,7 +464,8 @@ rm -rf {{dir1}}
             ARCHIVE_SET = 'dummy'
             PP_TESTING_LOG = "python2.7 $CYLC_SUITE_RUN_DIR/app/postproc/bin/process_log.py"
             DATE1 = 19811001
-            DATE2 = $(rose date ${CYLC_TASK_NAME:9} --calendar 360day -s P1M -f '%Y%m%d')
+            DATE2 = $(rose date $(echo $CYLC_TASK_NAME | tr '_' '\n' | tail -n1) --calendar 360day -s P1M -f '%Y%m%d')
+            
 
 {% if USE_LINUX_SERVER %}
         [[[directives]]]
@@ -483,7 +493,52 @@ rm -rf {{dir1}}
             CYCLEPOINT_OVERRIDE = {{ CYCLEPOINT }}
     {%- if cyclestring[1:3] in ['03', '06', '09', '12'] %}
             VERIFY_ARCHIVE = true
-    {%- endif %}        
+    {%- endif %}
+
+    {%- if SPLIT_PP %}
+    [[{{'pp_nemorst_198%s01' % (cycle)}}]]
+        inherit = {{'postproc_198%s01' % (cycle)}}
+        script = """{{TASK_RUN}}  --command-key=pp_nemo \
+--define='[namelist:nemo_processing]create_means=false' \
+--define='[namelist:nemo_archiving]archive_means=false' """
+        [[[environment]]]
+           ROSE_APP_COMMAND_KEY = pp_nemo
+           VERIFY_ARCHIVE = false
+
+    [[{{'pp_nemomean_198%s01' % (cycle)}}]]
+        inherit = {{'postproc_198%s01' % (cycle)}}
+        script = """{{TASK_RUN}} \
+--define='[namelist:nemo_archiving]archive_restarts=false' """
+        [[[environment]]]
+           ROSE_APP_COMMAND_KEY = pp_nemo
+           VERIFY_ARCHIVE = false
+
+        {%- if cyclestring[1:3] in ['03', '06', '09', '12'] %}
+    [[{{'pp_verifynemo_198%s01' % (cycle)}}]]
+        inherit = None, {{'postproc_198%s01' % (cycle)}}
+        script = """{{TASK_RUN}} \
+--define='[namelist:atmosverify]verify_model=false' \
+--define='[namelist:ciceverify]verify_model=false' """
+        [[[environment]]]
+           ROSE_APP_COMMAND_KEY = verify
+        {%- endif %}
+
+    [[{{'pp_cice_198%s01' % (cycle)}}]]
+        inherit = {{'postproc_198%s01' % (cycle)}}
+        script = """{{TASK_RUN}} \
+--define='[namelist:atmosverify]verify_model=false' \
+--define='[namelist:nemoverify]verify_model=false' """
+        [[[environment]]]
+           ROSE_APP_COMMAND_KEY = pp_cice
+
+    [[{{'pp_atmos_198%s01' % (cycle)}}]]
+        inherit = {{'postproc_198%s01' % (cycle)}}
+        script = """{{TASK_RUN}} \
+--define='[namelist:ciceverify]verify_model=false' \
+--define='[namelist:nemoverify]verify_model=false' """
+        [[[environment]]]
+           ROSE_APP_COMMAND_KEY = pp_atmos
+    {%- endif %}     
 
     [[{{'coupled_dummy_198%s01' % (cycle)}}]]
         inherit=None, PP_COUPLED_DUMMY
@@ -515,9 +570,14 @@ rm -rf {{dir1}}
        inherit = None, LINUX
        script = cylc broadcast $CYLC_SUITE_NAME -n PP_TASKS -s [environment]"ROSE_APP_OPT_CONF_KEYS=disable_mule"
 
+    
+    [[pp_clearlog]]
+        inherit = None, LINUX
+        script = if [ -f  "$CYLC_SUITE_SHARE_DIR/cylclog" ] ; then rm $CYLC_SUITE_SHARE_DIR/cylclog ; fi
+
     [[housekeeping_pp]]
         inherit=None, LINUX, HOUSEKEEPING 
         [[[environment]]]
-            RUNDIR="$CYLC_SUITE_SHARE_DIR/data/postproc $CYLC_SUITE_WORK_DIR/1/fcm_make_pp $CYLC_SUITE_WORK_DIR/1/postproc_* $CYLC_SUITE_WORK_DIR/1/pp_* $CYLC_SUITE_WORK_DIR/1/housekeeping_pp $CYLC_SUITE_WORK_DIR/1/coupled_dummy_*"
+            RUNDIR="$CYLC_SUITE_SHARE_DIR/data/postproc $CYLC_SUITE_WORK_DIR/1/fcm_make_pp $CYLC_SUITE_WORK_DIR/1/p*_* $CYLC_SUITE_WORK_DIR/1/housekeeping_pp $CYLC_SUITE_WORK_DIR/1/coupled_dummy_*"
 
 {% include 'site/'+SYSTEM_NAME+'.rc' %}
