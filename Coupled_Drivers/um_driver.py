@@ -24,6 +24,7 @@ import re
 import stat
 import common
 import error
+import save_um_state
 
 def _verify_rst(xhistfile, cyclepoint):
     '''
@@ -122,6 +123,10 @@ def _setup_executable(common_envar):
     um_envar = common.LoadEnvar()
     # Load the environment variables required
     um_envar = _load_run_environment_variables(um_envar)
+
+    # Save the state of the partial sum files, or restore state depending on
+    # what is required
+    save_um_state.save_state(common_envar, um_envar['CONTINUE'])
 
     # Create a link to the UM atmos exec in the work directory
     if os.path.isfile(um_envar['ATMOS_LINK']):
