@@ -46,6 +46,39 @@ def nlist_date(date, description):
     return datelist
 
 
+def atmos_stream_items(naml):
+    '''
+    Atmosphere stream IDs should be two character.
+    Format = [pm][a-z0-9]
+    Single character namelist input is accepted, in which case the
+    first character is assumed to be "p".
+    Arguments:
+       naml - <type utils.Variables> Namelist object
+    '''
+    stream_namelists = [a for a in dir(naml) if
+                        a.startswith('streams') or a.endswith('_streams')]
+
+    for namelist in stream_namelists:
+        val = getattr(naml, namelist)
+        newval = []
+        if val:
+            for stream_id in utils.ensure_list(val):
+                # Default to 'p' prefix for single character streams
+                stream_id = str(stream_id)
+                if len(stream_id) == 1:
+                    stream_id = 'p' + stream_id
+                elif len(stream_id) != 2:
+                    utils.log_msg(
+                        'Unidentifiable atmosphere streamID '
+                        '"{}" in &atmosverify/{}'.format(stream_id, namelist),
+                        level='ERROR'
+                        )
+                newval.append(stream_id)
+        setattr(naml, namelist, newval)
+
+    return naml
+
+
 class ArchivedFiles(object):
     '''
     Methods specific to determining filenames expected to be present
@@ -57,6 +90,8 @@ class ArchivedFiles(object):
         self.edate = nlist_date(enddate, 'End date')
         self.prefix = prefix
         self.model = model
+        if self.model == 'atmos':
+            naml = atmos_stream_items(naml)
         self.naml = naml
         self.finalcycle = utils.finalcycle()
 
@@ -146,7 +181,8 @@ class ArchivedFiles(object):
             try:
                 stream = period[-1]
             except TypeError:
-                pass
+                # Period is None. atmos ncf_mean takes streamID
+                stream = stream[-1]
 
         collection = filenames.COLLECTIONS[key].format(R=realm, S=stream)
         return collection
@@ -156,12 +192,16 @@ class ArchivedFiles(object):
         Construct the dictionary key for filenames module.
         '''
         realm, component = filenames.model_components(self.model, stream)
+
         if component:
             # "component" is only relevant to the netCDF convention filenames
             key = 'ncf_mean'
         elif stream:
             # Atmosphere fields/pp files
-            key = 'atmos_ff' if stream in self.naml.ff_streams else 'atmos_pp'
+            if str(stream) in self.naml.ff_streams:
+                key = 'atmos_ff'
+            else:
+                key = 'atmos_pp'
         else:
             key = 'rst'
 
@@ -358,7 +398,7 @@ class DiagnosticFiles(ArchivedFiles):
             else:
                 descript = 'mean'
                 if self.model == 'atmos':
-                    streams = [reinit[-1]]
+                    streams = ['p' + reinit[-1]]
                 else:
                     streams = self.meanfields
 
@@ -564,7 +604,7 @@ class DiagnosticFiles(ArchivedFiles):
     def time_limited_streams(self):
         '''
         Return a dictionary of Atmosphere time-limited streams.
-           { stream_id (1Char) : tuple(
+           { stream_id (2Char) : tuple(
                                        startdate (integer list [YYYY, MM, DD]),
                                        enddate (integer list [YYYY, MM, DD])
                                       )
@@ -572,7 +612,7 @@ class DiagnosticFiles(ArchivedFiles):
 
         Based on namelist variables:
            bool     : timelimitedstreams
-           str list : tlim_streams (1char)
+           str list : tlim_streams (2char)
            str list : tlim_starts (8char)
            str list : tlim_ends (8char)
         '''
@@ -681,21 +721,21 @@ class DiagnosticFiles(ArchivedFiles):
         end = [str(x).zfill(2) for x in end]
         prefix = self.prefix
 
-        if self.model == 'atmos' and len(stream) == 1:
+        if self.model == 'atmos' and re.match(r'^[pm][a-z1-9]$', stream):
             if 'h' in period:
                 # Hourly files require "_HH" post-fix
                 start[3] = '_{}'.format(start[3])
             else:
                 start[3] = end[3] = ''
 
-            m_streams = ['m']
+            m_streams = ['pm']
             if self.naml.streams_30d:
                 m_streams += [str(s) for s in
                               utils.ensure_list(self.naml.streams_30d)]
             if stream in m_streams:
                 start[2] = ''
                 start[1] = MONTHS[int(start[1])]
-            elif stream == 's':
+            elif stream == 'ps':
                 start[2] = ''
                 for mth, ssn in self.seasons(self.meanref):
                     if int(start[1]) in range(mth, mth + 3):

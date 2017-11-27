@@ -48,8 +48,8 @@ class AtmosVerify(object):
     streams_10d = None
     streams_2d = None
     streams_1d = None
-    ff_streams = []
-    spawn_netcdf_streams = []
+    ff_streams = None
+    spawn_netcdf_streams = None
     timelimitedstreams = False
     tlim_streams = None
     tlim_starts = None

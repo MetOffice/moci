@@ -233,3 +233,22 @@ class pp21_t238(rose.upgrade.MacroUpgrade):
                          ["namelist:atmospp", "cutout_coords",], "1,1,192,145")
 
         return config, self.reports
+
+
+class pp21_t265(rose.upgrade.MacroUpgrade):
+
+    """Upgrade macro for ticket #265 by Erica Neininger."""
+    BEFORE_TAG = "pp21_t238"
+    AFTER_TAG = "pp21_t265"
+
+    def upgrade(self, config, meta_config=None):
+        """Upgrade a Postproc app configuration."""
+        ffstreams = self.get_setting_value(config,
+                                           ["namelist:atmosverify", "ff_streams"])
+        if ffstreams:
+            ffstreams = ','.join([f for f in ffstreams])  
+            self.change_setting_value(config,
+                                      ["namelist:atmosverify", "ff_streams"],
+                                      ffstreams)
+
+        return config, self.reports

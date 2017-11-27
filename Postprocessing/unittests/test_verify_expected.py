@@ -167,12 +167,13 @@ class ArchivedFilesTests(unittest.TestCase):
         func.logtest('Assert successful return of atmos key and realm:')
         self.files.model = 'atmos'
         self.files.naml = verify_namelist.AtmosVerify()
+        self.files.naml.ff_streams = []
         self.assertTupleEqual(self.files.get_fn_components(None),
                               ('rst', 'a', None))
-        self.assertTupleEqual(self.files.get_fn_components('k'),
+        self.assertTupleEqual(self.files.get_fn_components('pk'),
                               ('atmos_pp', 'a', None))
-        self.files.naml.ff_streams = 'k'
-        self.assertTupleEqual(self.files.get_fn_components('k'),
+        self.files.naml.ff_streams = 'mk'
+        self.assertTupleEqual(self.files.get_fn_components('mk'),
                               ('atmos_ff', 'a', None))
         self.assertTupleEqual(self.files.get_fn_components(r'[a-zA-Z0-9\-]*'),
                               ('ncf_mean', 'a', 'atmos'))
@@ -200,12 +201,12 @@ class ArchivedFilesTests(unittest.TestCase):
         mock_cmp.return_value = ('rst', 'a', None)
         self.assertEqual(self.files.get_collection(), 'ada.file')
         mock_cmp.return_value = ('atmos_pp', 'a', None)
-        self.assertEqual(self.files.get_collection(period='10d', stream='k'),
-                         'apk.pp')
+        self.assertEqual(self.files.get_collection(period='10d', stream='mk'),
+                         'amk.pp')
         mock_cmp.return_value = ('atmos_ff', 'a', None)
-        self.assertEqual(self.files.get_collection(stream='k'), 'apk.file')
+        self.assertEqual(self.files.get_collection(stream='pk'), 'apk.file')
         mock_cmp.return_value = ('ncf_mean', 'a', 'atmos')
-        self.assertEqual(self.files.get_collection(stream='k'), 'ank.nc.file')
+        self.assertEqual(self.files.get_collection(stream='mk'), 'ank.nc.file')
 
     @mock.patch('expected_content.ArchivedFiles.get_fn_components')
     def test_collection_nemo(self, mock_cmp):
@@ -234,6 +235,27 @@ class ArchivedFilesTests(unittest.TestCase):
         mock_cmp.return_value = ('ncf_mean', 'i', 'medusa')
         self.assertEqual(self.files.get_collection(period='1y', stream=''),
                          'iny.nc.file')
+
+    def test_modify_atmos_namelist(self):
+        '''Assert update to atmosphere streams list namelist items'''
+        func.logtest('Assert updating of streams lists in  atmos namelist:')
+        naml = verify_namelist.AtmosVerify()
+        naml.streams_1d = 'a'
+        naml.streams_2d = ['a', 'mb']
+        naml.streams_90d = 'abc'
+        naml.ff_streams = 1
+        naml.spawn_netcdf_streams = ''
+        with mock.patch('expected_content.utils.get_debugmode',
+                        return_value=True):
+            naml = expected_content.atmos_stream_items(naml)
+        self.assertListEqual(naml.streams_1d, ['pa'])
+        self.assertListEqual(naml.streams_2d, ['pa', 'mb'])
+        self.assertListEqual(naml.streams_30d, [])
+        self.assertListEqual(naml.streams_90d, ['abc'])
+        self.assertListEqual(naml.spawn_netcdf_streams, [])
+        self.assertListEqual(naml.ff_streams, ['p1'])
+        self.assertIn('Unidentifiable atmosphere streamID "abc" in '
+                      '&atmosverify/streams_90d', func.capture('err'))
 
 
 class RestartFilesTests(unittest.TestCase):
@@ -471,6 +493,7 @@ class DiagnosticFilesTests(unittest.TestCase):
         naml = verify_namelist.AtmosVerify()
         if 'atmos' in self.id():
             model = 'atmos'
+            naml.ff_streams = []
         elif 'nemo' in self.id():
             model = 'nemo'
             naml = verify_namelist.NemoVerify()
@@ -500,16 +523,16 @@ class DiagnosticFilesTests(unittest.TestCase):
         yield_rtn = []
         self.files.naml.streams_1d = []
         self.files.naml.streams_2d = ''
-        self.files.naml.streams_90d = 'a'
+        self.files.naml.streams_90d = ['ma']
         for rval in self.files.gen_reinit_period(['m', '2s', 'y', 'streams_1d',
                                                   'streams_2d', 'streams_10d',
                                                   'streams_90d']):
             yield_rtn.append(rval)
         self.assertListEqual(yield_rtn,
-                             [('m', 'm', ['m'], 'mean'),
-                              ('2s', '2s', ['s'], 'mean'),
-                              ('y', 'y', ['y'], 'mean'),
-                              ('90d', '90d', ['a'], 'instantaneous')])
+                             [('m', 'm', ['pm'], 'mean'),
+                              ('2s', '2s', ['ps'], 'mean'),
+                              ('y', 'y', ['py'], 'mean'),
+                              ('90d', '90d', ['ma'], 'instantaneous')])
 
     def test_reinit_generator_nemo(self):
         ''' Test performance of the reinit periods generator - nemo '''
@@ -799,12 +822,12 @@ class DiagnosticFilesTests(unittest.TestCase):
         ''' Assert correct list of expected files - pp and f files'''
         func.logtest('Assert correct return of atmos files - pp & f files:')
         self.files.naml.meanstreams = '1x'
-        self.files.naml.ff_streams = 'a'
-        self.files.naml.streams_90d = ['a', 'b']
-        self.files.naml.streams_30d = 1
-        self.files.naml.streams_1d = ''
-        self.files.naml.streams_10h = 'd'
-        self.files.naml.spawn_netcdf_streams = 'b'
+        self.files.naml.ff_streams = ['pa']
+        self.files.naml.streams_90d = ['pa', 'pb']
+        self.files.naml.streams_30d = ['p1']
+        self.files.naml.streams_1d = []
+        self.files.naml.streams_10h = ['md']
+        self.files.naml.spawn_netcdf_streams = ['pb']
 
         outfiles = {
             'apa.file': ['PREFIXa.pa19950811', 'PREFIXa.pa19951111',
@@ -813,8 +836,8 @@ class DiagnosticFilesTests(unittest.TestCase):
                        'PREFIXa.pb19980211.pp', 'PREFIXa.pb19980511.pp'],
             'ap1.pp': ['PREFIXa.p11995aug.pp', 'PREFIXa.p11995sep.pp',
                        'PREFIXa.p11998aug.pp', 'PREFIXa.p11998sep.pp'],
-            'apd.pp': ['PREFIXa.pd19950811_00.pp', 'PREFIXa.pd19950811_10.pp',
-                       'PREFIXa.pd19981029_18.pp', 'PREFIXa.pd19981030_04.pp'],
+            'amd.pp': ['PREFIXa.md19950811_00.pp', 'PREFIXa.md19950811_10.pp',
+                       'PREFIXa.md19981029_18.pp', 'PREFIXa.md19981030_04.pp'],
             'anb.nc.file': [r'atmos_prefixa_\d+[hdmsyx]_19950811-19951111_'
                             r'[a-zA-Z0-9\-]*\.nc$',
                             r'atmos_prefixa_\d+[hdmsyx]_19951111-19960211_'
@@ -834,9 +857,9 @@ class DiagnosticFilesTests(unittest.TestCase):
     def test_expected_atmos_final(self):
         ''' Assert correct list of expected files - atmos finalcycle'''
         func.logtest('Assert correct return of atmos files - finalcycle:')
-        self.files.naml.streams_90d = 'a'
-        self.files.naml.streams_10h = ['d', 'e']
-        self.files.tlim = {'e': ([1997, 1, 1], [1998, 1, 2])}
+        self.files.naml.streams_90d = ['pa']
+        self.files.naml.streams_10h = ['pd', 'pe']
+        self.files.tlim = {'pe': ([1997, 1, 1], [1998, 1, 2])}
         self.files.finalcycle = True
         lastout = {
             'apa.pp': 'PREFIXa.pa19980811.pp',

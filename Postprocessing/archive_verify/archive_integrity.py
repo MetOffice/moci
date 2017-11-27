@@ -68,7 +68,7 @@ def moose_archive(dataset):
     ''' Return Moose archive listing '''
     if len(dataset.split('/')) == 1:
         dataset = 'moose:crum/' + dataset
-    cmd = 'moo ls -rt {}'.format(dataset)
+    cmd = 'moo ls -r {}'.format(dataset)
     _, listing = utils.exec_subproc(cmd)
     utils.log_msg('Moose archive listing --->\n {}\n'.format(listing.strip()),
                   level='INFO')

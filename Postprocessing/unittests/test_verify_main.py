@@ -43,19 +43,29 @@ class FilenamesTests(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_model_components(self):
+    def test_atmos_components(self):
         ''' Assert realm and component for a given model and field '''
         func.logtest('Assert realm and component:')
         self.assertTupleEqual(filenames.model_components('atmos', None),
                               ('a', None))
-        self.assertTupleEqual(filenames.model_components('atmos', 'm'),
+        self.assertTupleEqual(filenames.model_components('atmos', 'pm'),
                               ('a', None))
+        self.assertTupleEqual(filenames.model_components('atmos', '[abcde]*'),
+                              ('a', 'atmos'))
+
+    def test_nemo_components(self):
+        ''' Assert realm and component for a given model and field '''
+        func.logtest('Assert realm and component:')
         self.assertTupleEqual(filenames.model_components('nemo', None),
                               ('o', None))
         self.assertTupleEqual(filenames.model_components('nemo', 'grid-V'),
                               ('o', 'nemo'))
         self.assertTupleEqual(filenames.model_components('nemo', 'diad-T'),
                               ('o', 'medusa'))
+
+    def test_cice_components(self):
+        ''' Assert realm and component for a given model and field '''
+        func.logtest('Assert realm and component:')
         self.assertTupleEqual(filenames.model_components('cice', None),
                               ('i', None))
         self.assertTupleEqual(filenames.model_components('cice', ''),
