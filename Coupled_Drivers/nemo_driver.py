@@ -65,22 +65,82 @@ def _get_nemorst(nemo_nl_file):
             nemo_rst = nemo_rst[:-1]
         return nemo_rst
 
-def _verify_rst(restartdate, cyclepoint):
+def _get_ln_icebergs(nemo_nl_file):
+    '''
+    Interrogate the nemo namelist to see if we are running with icebergs,
+    Returns boolean, True if icebergs are used, False if not
+    '''
+    icb_rcode, icb_val = common.exec_subproc([ \
+            'grep', 'ln_icebergs', nemo_nl_file])
+    if icb_rcode != 0:
+        sys.stderr.write('Unable to read ln_icebergs in &namberg namelist'
+                         ' in the NEMO namelist file %s\n'
+                         % nemo_nl_file)
+        sys.exit(error.SUBPROC_ERROR)
+    else:
+        if 'true' in icb_val.lower():
+            return True
+        else:
+            return False
+
+
+def _verify_nemo_rst(cyclepointstr, nemo_rst, nemo_nl, nemo_nproc):
+    '''
+    Verify that the full set of nemo restart files match. Currently this
+    is limited to the icebergs restart file. We require either a single
+    restart file, or a number of restart files equal to the number of
+    nemo processors.
+    '''
+    restart_files = [f for f in os.listdir(nemo_rst) if
+                     'restart' in f]
+    if _get_ln_icebergs(nemo_nl):
+        nemo_icb_regex = r'_icebergs_%s_restart(_\d+)?\.nc' % cyclepointstr
+        icb_restart_files = [f for f in restart_files if
+                             re.findall(nemo_icb_regex, f)]
+        if len(icb_restart_files) not in (1, nemo_nproc):
+            sys.stderr.write('[FAIL] Unable to find iceberg restart files for'
+                             ' this cycle. Must either have one, or as many'
+                             ' as there are nemo processors (%i)\n'
+                             '[FAIL] Found %i iceberg restart files\n'
+                             % (len(icb_restart_files), nemo_nproc))
+            sys.exit(error.MISSING_MODEL_FILE_ERROR)
+
+
+def _verify_fix_rst(restartdate, cyclepoint, nemo_rst):
     '''
     Verify that the restart file for nemo is at the cyclepoint for the
     start of this cycle. The cyclepoint variable has form
-    yyyymmddThhmmZ, restart date yyyymmdd
+    yyyymmddThhmmZ, restart date yyyymmdd. If they don't match, then
+    make sure that nemo restarts from the correct restart date
     '''
     cycle_date_string = cyclepoint.split('T')[0]
-    if restartdate != cycle_date_string:
-        sys.stderr.write('[INFO] The NEMO restart data does not match the '
-                         ' current cycle time\n.'
-                         '   Cycle time is %s\n'
-                         '   NEMO restart time is %s\n' %
-                         (cycle_date_string, restartdate))
-        sys.exit(error.DATE_MISMATCH_ERROR)
-    else:
+    if restartdate == cycle_date_string:
         sys.stdout.write('[INFO] Validated NEMO restart date\n')
+    else:
+        # Write the message to both standard out and standard error
+        msg = '[WARN] The NEMO restart data does not match the ' \
+            ' current cycle time\n.' \
+            '   Cycle time is %s\n' \
+            '   NEMO restart time is %s\n' \
+            '[WARN] Automatically removing NEMO dumps ahead of ' \
+            'the current cycletime, and pick up the dump at ' \
+            'this time\n' % (cycle_date_string, restartdate)
+        sys.stdout.write(msg)
+        sys.stderr.write(msg)
+        #Remove all nemo restart files that are later than the correct
+        #cycle times
+        #Make our generic restart regular expression, to cover normal NEMO
+        #restart, and potential iceberg or passive tracer restart files, for
+        #both the rebuilt and non rebuilt cases
+        generic_rst_regex = r'(icebergs)?.*restart(_trc)?(_\d+)?\.nc'
+        all_restart_files = [f for f in os.listdir(nemo_rst) if
+                             re.findall(generic_rst_regex, f)]
+        for restart_file in all_restart_files:
+            fname_date = re.findall(r'\d{8}', restart_file)[0]
+            if fname_date > cycle_date_string:
+                os.remove(os.path.join(nemo_rst, restart_file))
+        restartdate = cycle_date_string
+    return restartdate
 
 
 def _load_environment_variables(nemo_envar):
@@ -139,7 +199,7 @@ def _load_environment_variables(nemo_envar):
     _ = nemo_envar.load_envar('L_OCN_PASS_TRC', 'false')
 
     return nemo_envar
-
+    
 
 def _setup_dates(nemo_envar):
     '''
@@ -168,7 +228,7 @@ def _setup_dates(nemo_envar):
                                  run_length[0], run_length[1], run_length[2],
                                  calendar)
     return nleapy, model_basis, run_start, run_length, run_days
-
+                                                    
 
 
 def _setup_executable(common_envar):
@@ -252,10 +312,21 @@ def _setup_executable(common_envar):
             for file_path in glob.glob(nemo_rst+'/*trajectory*'):
                 if os.path.isfile(file_path):
                     os.remove(file_path)
+        # source our history namelist file from the current directory in case
+        # of first cycle
+        history_nemo_nl = os.path.join(nemo_init_dir, nemo_envar['NEMO_NL'])
     elif os.path.isfile(latest_nemo_dump):
         sys.stdout.write('[INFO] Restart data available in NEMO restart '
                          'directory %s. Restarting from previous task output\n'
                          % nemo_rst)
+        sys.stdout.write('[INFO] Sourcing namelist file from the work '
+                         'directory of the previous cycle\n')
+        # find the previous work directory
+        prev_workdir = common.find_previous_workdir ( \
+            common_envar['CYLC_TASK_CYCLE_POINT'],
+            common_envar['CYLC_TASK_WORK_DIR'],
+            common_envar['CYLC_TASK_NAME'])
+        history_nemo_nl = os.path.join(prev_workdir, nemo_envar['NEMO_NL'])
         nemo_init_dir = nemo_rst
     else:
         sys.stderr.write('[FAIL] No restart data available in NEMO restart '
@@ -267,9 +338,6 @@ def _setup_executable(common_envar):
     gl_last_step_match = 'nn_itend='
     gl_step_int_match = 'rn_rdt='
     gl_nemo_restart_date_match = 'ln_rstdate'
-
-
-    history_nemo_nl = '%s/%s' % (nemo_init_dir, nemo_envar['NEMO_NL'])
 
     # Read values from the nemo namelist file used by the previous cycle
     # (if appropriate), or the configuration namelist if this is the initial
@@ -317,9 +385,14 @@ def _setup_executable(common_envar):
 
     if os.path.isfile(latest_nemo_dump):
         nemo_dump_time = re.findall(r'_(\d*)_restart', latest_nemo_dump)[0]
-        # Verify the dump time against cycle time if appropriate
+        # Verify the dump time against cycle time if appropriate, do the
+        # automatic fix, and check all other restart files match
         if common_envar['DRIVERS_VERIFY_RST'] == 'True':
-            _verify_rst(nemo_dump_time, common_envar['CYLC_TASK_CYCLE_POINT'])
+            nemo_dump_time = _verify_fix_rst( \
+                nemo_dump_time,
+                common_envar['CYLC_TASK_CYCLE_POINT'], nemo_rst)
+            _verify_nemo_rst(nemo_dump_time, nemo_rst, nemo_envar['NEMO_NL'],
+                             int(nemo_envar['NEMO_NPROC']))
         # link restart files no that the last output one becomes next input one
         if os.path.islink('restart.nc'):
             os.remove('restart.nc')
@@ -476,7 +549,8 @@ def _setup_executable(common_envar):
                 # We need to make sure there isn't already
 	  	# an iceberg restart file link set up, and if there is, get
 		# rid of it because symlink wont work otherwise!
-                if os.path.isfile('restart_icebergs.nc') or os.path.islink('restart_icebergs.nc'):
+                if os.path.isfile('restart_icebergs.nc') or \
+                        os.path.islink('restart_icebergs.nc'):
                     os.remove('restart_icebergs.nc')
                 os.symlink(nemo_envar['NEMO_ICEBERGS_START'],
                            'restart_icebergs.nc')
@@ -581,15 +655,6 @@ def _finalize_executable(_):
     sys.stdout.write('[INFO] finalizing NEMO')
     sys.stdout.write('[INFO] running finalize in %s' % os.getcwd())
 
-    # move the nemo namelist to the restart directory to allow the next cycle
-    # to pick it up
-    nemo_envar_fin = common.LoadEnvar()
-    nemo_envar_fin = _get_nemonl_envar(nemo_envar_fin)
-    nemo_rst = _get_nemorst(nemo_envar_fin['NEMO_NL'])
-    if os.path.isdir(nemo_rst) and \
-            os.path.isfile(nemo_envar_fin['NEMO_NL']):
-        shutil.copy(nemo_envar_fin['NEMO_NL'], nemo_rst)
-
     # append the ocean output and solver stat file to standard out. Use an
     # iterator to read the files, incase they are too large to fit into
     # memory
@@ -608,6 +673,15 @@ def _finalize_executable(_):
                          ' Please investigate the ocean.output file for more'
                          ' details\n')
         sys.exit(error.COMPONENT_MODEL_ERROR)
+
+    # move the nemo namelist to the restart directory to allow the next cycle
+    # to pick it up
+    nemo_envar_fin = common.LoadEnvar()
+    nemo_envar_fin = _get_nemonl_envar(nemo_envar_fin)
+    nemo_rst = _get_nemorst(nemo_envar_fin['NEMO_NL'])
+    if os.path.isdir(nemo_rst) and \
+            os.path.isfile(nemo_envar_fin['NEMO_NL']):
+        shutil.copy(nemo_envar_fin['NEMO_NL'], nemo_rst)
 
     # The only way to check if TOP is active is by checking the
     # passive tracer env var.

@@ -110,6 +110,23 @@ def _get_toprst_dir(top_nl_file):
             top_rst_dir = top_rst_dir[:-1]
         return top_rst_dir
 
+def _verify_top_rst(cyclepointstr, nemo_nproc, top_restart_files):
+    '''
+    Verify that the top restart files match what we expect from the number
+    of NEMO processors.
+    '''
+    top_rst_regex = r'%s_restart_trc(_\d+)?\.nc' % cyclepointstr
+    current_rst_files = [f for f in top_restart_files if
+                         re.findall(top_rst_regex, f)]
+    if len(current_rst_files) not in (1, nemo_nproc):
+        sys.stderr.write('[FAIL] Unable to find top restart files for'
+                         ' this cycle. Must either have one, or as many'
+                         ' as there are nemo processors (%i)\n'
+                         '[FAIL] Found %i iceberg restart files\n'
+                         % (len(current_rst_files), nemo_nproc))
+        sys.exit(error.MISSING_MODEL_FILE_ERROR)
+    
+
 def _load_environment_variables(top_envar):
     '''
     Load the TOP environment variables required for the model run
@@ -242,6 +259,7 @@ def _setup_top_controller(restart_ctl,
         # This could be a new run or a continutaion run.
         top_dump_time = re.findall(r'_(\d*)_restart_trc', latest_top_dump)[0]
 
+        _verify_top_rst(nemo_dump_time, nemo_nproc, top_restart_files)
         if top_dump_time != nemo_dump_time:
             sys.stderr.write('[FAIL] top_controller: Mismatch in TOP restart '
                              'file date %s and NEMO restart file date %s\n'

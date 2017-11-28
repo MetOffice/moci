@@ -47,16 +47,17 @@ def __expand_array(short_array):
         long_array = long_array[:-1]
     return long_array
 
-def _verify_rst(pointerfile, cyclepoint):
+def _verify_fix_rst(pointerfile, cyclepoint):
     '''
     Verify the restart file for cice is at the cyclepoint for the start of
     this cycle. The cyclepoint variable has form yyyymmddThhmmZ, pointerfile
-    contains a string of the path to the restart file
+    contains a string of the path to the restart file. If the dates dont
+    match, fix the date in the pointerfile.
     '''
     cycle_date_string = cyclepoint.split('T')[0]
     # deal with the pointer file
-    pointer_handle = common.open_text_file(pointerfile, 'r')
-    restart_path = pointer_handle.readlines()[0].strip()
+    with common.open_text_file(pointerfile, 'r') as pointer_handle:
+        restart_path = pointer_handle.readlines()[0].strip()
     if not os.path.isfile(restart_path):
         sys.stderr.write('[INFO] The CICE restart file %s can not be found\n' %
                          restart_path)
@@ -68,12 +69,33 @@ def _verify_rst(pointerfile, cyclepoint):
     restartdate = restartmatch.group(0).replace('-', '')
 
     if restartdate != cycle_date_string:
-        sys.stderr.write('[INFO]The CICE restart data does not match the '
-                         ' current cycle time\n.'
-                         '   Cycle time is %s\n'
-                         '   NEMO restart time is %s\n' %
-                         (cycle_date_string, restartdate))
-        sys.exit(error.DATE_MISMATCH_ERROR)
+        # write the message to both standard out and standard error
+        msg = '[WARN ]The CICE restart data does not match the ' \
+            ' current cycle time\n.' \
+            '   Cycle time is %s\n' \
+            '   CICE restart time is %s\n' % (cycle_date_string, restartdate)
+        sys.stdout.write(msg)
+        sys.stderr.write(msg)
+        #Turn the cycle_date_string into form yyyy-mm-dd
+        fixed_restart_date = '%s-%s-%s' % (cycle_date_string[:4],
+                                           cycle_date_string[4:6],
+                                           cycle_date_string[6:8])
+        #Swap the date in the restart path
+        restart_path_fixed = restart_path.replace(restartmatch.group(0),
+                                                  fixed_restart_date)
+        new_pointerfile = '%s.tmp' % (pointerfile)
+        with common.open_text_file(new_pointerfile, 'w') as new_pointer_handle:
+            #The restart path line should be padded to 256 characters
+            new_pointer_handle.write("{:<256}".format(restart_path_fixed))
+        os.rename(new_pointerfile, pointerfile)
+        sys.stdout.write('%s\n' % ('*'*42,))
+        sys.stdout.write('[WARN] Automatically fixing CICE restart\n')
+        sys.stdout.write('[WARN] Update pointer file %s to replace \n'
+                         '[WARN] restart file %s\n'
+                         '[WARN] with\n'
+                         '[WARN] restart file %s\n' %
+                         (pointerfile, restart_path, restart_path_fixed))
+        sys.stdout.write('%s\n' % ('*'*42,))
     else:
         sys.stdout.write('[INFO] Validated CICE restart date\n')
 
@@ -284,7 +306,7 @@ def _setup_executable(common_envar):
     # if this is a continuation verify the restart file date
     if cice_runtype == 'continue' and \
             common_envar['DRIVERS_VERIFY_RST'] == 'True':
-        _verify_rst(cice_restart, common_envar['CYLC_TASK_CYCLE_POINT'])
+        _verify_fix_rst(cice_restart, common_envar['CYLC_TASK_CYCLE_POINT'])
 
 
     #block of code to modify the main CICE namelist

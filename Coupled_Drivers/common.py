@@ -161,6 +161,23 @@ class ModNamelist(object):
         os.rename(self.filename+'out', self.filename)
 
 
+def find_previous_workdir(cyclepoint, workdir, taskname):
+    '''
+    Find the work directory for the previous cycle. Takes as argument
+    the current cyclepoint, the path to the current work directory, and
+    the current taskname, and returns an absolute path.
+    '''
+    cyclesdir = os.sep.join(workdir.split(os.sep)[:-2])
+    #find the work directory for the previous cycle
+    work_cycles = os.listdir(cyclesdir)
+    work_cycles.sort()
+    try:
+        work_cycles.remove(cyclepoint)
+    except ValueError:
+        pass
+    return os.path.join(cyclesdir, work_cycles[-1], taskname)
+
+
 def get_filepaths(directory):
     '''
     Equivilant to ls -d

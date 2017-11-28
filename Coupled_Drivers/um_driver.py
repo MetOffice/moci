@@ -19,6 +19,7 @@ DESCRIPTION
 '''
 import os
 import sys
+import shutil
 import glob
 import re
 import stat
@@ -26,14 +27,12 @@ import common
 import error
 import save_um_state
 
-def _verify_rst(xhistfile, cyclepoint):
+
+def _grab_xhist_date(xhistfile):
     '''
-    Verify that the restart dump the UM is attempting to pick up is for the
-    start of the cycle. The cyclepoint variable has the form yyyymmddThhmmZ.
+    Retrieve the checkpoint dump date from the variable CHECKPOINT_DUMP_IM
+    in a Unified Model xhist file
     '''
-    cycle_date_string = cyclepoint.split('T')[0]
-    # grab the restart filename from the history file, and grab the 8 digit
-    # date yyyymmdd from that filename
     xhist_handle = common.open_text_file(xhistfile, 'r')
     for line in xhist_handle.readlines():
         match = re.search(r"CHECKPOINT_DUMP_IM\s*=\s*'\S*da(\d{8})", line)
@@ -41,15 +40,47 @@ def _verify_rst(xhistfile, cyclepoint):
             checkpoint_date = match.group(1)
             break
     xhist_handle.close()
+    return checkpoint_date
+
+
+def _verify_fix_rst(xhistfile, cyclepoint, workdir, task_name):
+    '''
+    Verify that the restart dump the UM is attempting to pick up is for the
+    start of the cycle. The cyclepoint variable has the form yyyymmddThhmmZ.
+    If they don't match, attempt an automatic fix
+    '''
+    cycle_date_string = cyclepoint.split('T')[0]
+    checkpoint_date = _grab_xhist_date(xhistfile)
     if checkpoint_date != cycle_date_string:
-        sys.stderr.write('[INFO] The UM restart data does not match the '
-                         ' current cycle time\n.'
-                         '   Cycle time is %s\n'
-                         '   UM restart time is %s\n' %
-                         (cycle_date_string, checkpoint_date))
-        sys.exit(error.DATE_MISMATCH_ERROR)
+        # write the message to both standard out and standard error
+        msg = '[WARN] The UM restart data does not match the ' \
+            ' current cycle time\n.' \
+            '   Cycle time is %s\n' \
+            '   UM restart time is %s\n' % (cycle_date_string, checkpoint_date)
+        sys.stdout.write(msg)
+        sys.stderr.write(msg)
+        #find the work directory for the previous cycle
+        prev_work_dir = common.find_previous_workdir(cyclepoint, workdir,
+                                                    task_name)
+        old_hist_path = os.path.join(prev_work_dir, 'history_archive')
+        old_hist_files = [f for f in os.listdir(old_hist_path) if
+                          'temp_hist' in f]
+        old_hist_files.sort(reverse=True)
+        for o_h_f in old_hist_files:
+            xhist_date = _grab_xhist_date(os.path.join(old_hist_path, o_h_f))
+            if xhist_date == cycle_date_string:
+                shutil.copy(os.path.join(old_hist_path, o_h_f),
+                            xhistfile)
+                sys.stdout.write('%s\n' % ('*'*42,))
+                sys.stdout.write('[WARN] Automatically attempting to fix UM'
+                                 ' restart data, by using the xhist file:\n'
+                                 '    %s\n from the previous cycle\n' %
+                                 (os.path.join(old_hist_path, o_h_f)))
+                sys.stdout.write('%s\n' % ('*'*42,))
+                break
     else:
         sys.stdout.write('[INFO] Validated UM restart date\n')
+
 
 def _load_run_environment_variables(um_envar):
     '''
@@ -146,8 +177,10 @@ def _setup_executable(common_envar):
                              um_envar['HISTORY'])
             sys.exit(error.MISSING_DRIVER_FILE_ERROR)
         if common_envar['DRIVERS_VERIFY_RST'] == 'True':
-            _verify_rst(um_envar['HISTORY'],
-                        common_envar['CYLC_TASK_CYCLE_POINT'])
+            _verify_fix_rst(um_envar['HISTORY'],
+                            common_envar['CYLC_TASK_CYCLE_POINT'],
+                            common_envar['CYLC_TASK_WORK_DIR'],
+                            common_envar['CYLC_TASK_NAME'])
     um_envar.add('HISTORY_TEMP', 'thist')
 
     # Calculate total number of processes
