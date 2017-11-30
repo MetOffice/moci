@@ -378,6 +378,53 @@ class HeaderTests(unittest.TestCase):
         self.logfile.close()
         self.assertEqual('', open('logfile', 'r').read())
 
+    def test_genlist_invalid_pumfver(self):
+        '''Test genlist assertion of pumf version'''
+        func.logtest('Test genlist assertion of pumf version:')
+        with mock.patch('validation.utils.exec_subproc',
+                        return_value=[1, '']):
+            with self.assertRaises(SystemExit):
+                _ = {
+                    int(k): str(v) for k, v in validation.genlist(
+                        'ppfile', 'headerfile', 'path/vn8.6/um-pumf')
+                    }
+            self.assertIn('Currently attempting to use version 8.6',
+                          func.capture('err'))
+
+            with self.assertRaises(SystemExit):
+                _ = {
+                    int(k): str(v) for k, v in validation.genlist(
+                        'ppfile', 'headerfile', 'path/vn10.9/um-pumf')
+                    }
+            self.assertIn('Currently attempting to use version 10.9',
+                          func.capture('err'))
+
+    def test_genlist_pumf_failure(self):
+        '''Test genlist assertion of pumf failure'''
+        func.logtest('Test genlist assertion of pumf failure:')
+        with mock.patch('validation.utils.exec_subproc',
+                        return_value=[1, 'Problem with PUMF program']):
+            with self.assertRaises(SystemExit):
+                _ = {
+                    int(k): str(v) for k, v in validation.genlist(
+                        'ppfile', 'headerfile', 'path/vn10.0/um-pumf')
+                    }
+            self.assertIn('Failed to extract header information',
+                          func.capture('err'))
+
+    def test_genlist_pumf_unavailable(self):
+        '''Test genlist assertion of invalid pumf path'''
+        func.logtest('Test genlist assertion of invalid pumf path:')
+        with mock.patch('validation.utils.exec_subproc',
+                        return_value=[1, 'No such file or directory']):
+            with self.assertRaises(SystemExit):
+                _ = {
+                    int(k): str(v) for k, v in validation.genlist(
+                        'ppfile', 'headerfile', 'path/vn10.0/um-pumf')
+                    }
+            self.assertIn('Failed to find pumf executable',
+                          func.capture('err'))
+
     @mock.patch('validation.mule_headers')
     def test_verify_header_mismatch(self, mock_mule):
         '''Test verify_header functionality - pumf ismatch'''

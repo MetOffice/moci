@@ -131,17 +131,19 @@ def genlist(ppfile, header, pumfpath):
     pumfver = float(pumfpatt.search(pumfpath).groups()[0])
     # Verify that the version of pumf is suitable
     try:
-        assert pumfver >= 9.1
+        assert pumfver >= 9.1 and pumfver < 10.9
     except AssertionError:
-        msg = 'The version of pumf selected must vn9.1 or later. '
-        msg += 'Currently attemping to use version {}'.format(str(pumfver))
+        msg = 'This code is compatible with versions of um-pumf from vn9.1 ' + \
+            'until its retirement at vn10.9. '
+        msg += 'Currently attempting to use version {}'.format(str(pumfver))
+        msg += '\n Please ensure Mule is available as an alternative utiltity.'
         utils.log_msg(msg, level='FAIL')
     except AttributeError:
         msg = 'Unable to extract the version of pumf from the path provided.'
         utils.log_msg(msg, level='FAIL')
 
     cmd = '{} -h {} {}'.format(pumfpath, header, ppfile)
-    pumf_rcode, _ = utils.exec_subproc(cmd)
+    pumf_rcode, pumf_out = utils.exec_subproc(cmd)
 
     if pumf_rcode == 0 and os.path.isfile(header):
         patt = re.compile(r'(\d*):\s*([-\d]*)')
@@ -159,7 +161,10 @@ def genlist(ppfile, header, pumfpath):
                 break
         utils.remove_files(header)
     else:
-        msg = 'pumf: Failed to extract header information from file {}'
+        if 'Problem with PUMF' in pumf_out:
+            msg = 'pumf: Failed to extract header information from file {}'
+        else:
+            msg = 'Failed to find pumf executable'
         utils.log_msg(msg.format(ppfile), level='ERROR')
 
 
