@@ -34,14 +34,14 @@ class TransferTest(unittest.TestCase):
     def setUp(self, mock_tidyup):
         self.inputnl = OrderedDict([
             ('&pptransfer', None),
-            ('verify_chksums="False"', None),
+            ('verify_chksums=false', None),
             ('gridftp="False"', None),
             ('transfer_type="Push"', None),
-            ('remote_host="RHOST"', None),
+            ('remote_host=RHOST', None),
             ('transfer_dir="/XDIR"', None),
             ('/', None),
             ('&archer_arch', None),
-            ('archive_root_path="/ArchiveDir"', None),
+            ('archive_root_path=/ArchiveDir', None),
             ('archive_name="NAME"\n/', None),
             ])
 

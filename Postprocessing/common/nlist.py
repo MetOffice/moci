@@ -79,11 +79,11 @@ class ReadNamelist(object):
     @staticmethod
     def _test_val(valstring):
         ''' Returns appropriate Python variable type '''
-        if 'true' in valstring.lower():
+        if valstring.lower().strip('\'"') == 'true':
             return True
-        elif 'false' in valstring.lower():
+        elif valstring.lower().strip('\'"') == 'false':
             return False
-        elif 'none' in valstring.lower():
+        elif valstring.lower().strip('\'"') == 'none':
             return None
         elif re.match(r'^\$\(.*\)$', valstring):
             # Attempt to execute implied shell command
