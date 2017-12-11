@@ -64,7 +64,7 @@
          coupled_dummy_19821001 => postproc_19821001 & coupled_dummy_19821101
          coupled_dummy_19821101 => postproc_19821101 & coupled_dummy_19821201
          coupled_dummy_19821201 => postproc_19821201 & coupled_dummy_19830101
-         coupled_dummy_19830101 => postproc_19830101" + (":succeed-all" if SPLIT_PP else "") + " => pp_verify & verify_final => housekeeping_pp
+         coupled_dummy_19830101 => postproc_19830101" + (":succeed-all" if SPLIT_PP else "") + " => pp_verify " + ("& verify_final " if SITE == 'meto' else "") + " => housekeeping_pp
          postproc_19811001" + (":succeed-all" if SPLIT_PP else "") + " => postproc_19811101" + (":succeed-all" if SPLIT_PP else "") + " => \
          postproc_19811201" + (":succeed-all" if SPLIT_PP else "") + " => postproc_19820101" + (":succeed-all" if SPLIT_PP else "") + " => \
          postproc_19820201" + (":succeed-all" if SPLIT_PP else "") + " => postproc_19820301" + (":succeed-all" if SPLIT_PP else "") + " => \
@@ -77,7 +77,7 @@
          pp_nemomean_19820301 & pp_nemorst_19820301 => pp_verifynemo_19820301
          pp_nemomean_19820601 & pp_nemorst_19820601 => pp_verifynemo_19820601
          pp_nemomean_19820901 & pp_nemorst_19820901 => pp_verifynemo_19820901
-         pp_nemomean_19821201 & pp_nemorst_19821201 => pp_verifynemo_19821201" if SPLIT_PP and SITE == 'meto' else "") + "
+         pp_nemomean_19821201 & pp_nemorst_19821201 => pp_verifynemo_19821201" if (SPLIT_PP and SITE == 'meto') else "") + "
          " + FCMPP_GRAPH2 + "=> pp_unittests",
 
     "default" : "default_task"
@@ -513,7 +513,7 @@ rm -rf {{dir1}}
         inherit=None, PP_TASKS
         [[[environment]]]
             CYCLEPOINT_OVERRIDE = {{ CYCLEPOINT }}
-    {%- if cyclestring[1:3] in ['03', '06', '09', '12'] %}
+    {%- if SITE == 'meto' and cyclestring[1:3] in ['03', '06', '09', '12'] %}
             VERIFY_ARCHIVE = true
     {%- endif %}
 
@@ -529,7 +529,7 @@ rm -rf {{dir1}}
 
     [[{{'pp_nemomean_198%s01' % (cycle)}}]]
         inherit = {{'postproc_198%s01' % (cycle)}}
-        script = """{{TASK_RUN}} \
+        script = """{{TASK_RUN}} --command-key=pp_nemo \
 --define='[namelist:nemo_archiving]archive_restarts=false' """
         [[[environment]]]
            ROSE_APP_COMMAND_KEY = pp_nemo
@@ -538,7 +538,7 @@ rm -rf {{dir1}}
         {%- if cyclestring[1:3] in ['03', '06', '09', '12'] %}
     [[{{'pp_verifynemo_198%s01' % (cycle)}}]]
         inherit = None, {{'postproc_198%s01' % (cycle)}}
-        script = """{{TASK_RUN}} \
+        script = """{{TASK_RUN}} --command-key=verify \
 --define='[namelist:atmosverify]verify_model=false' \
 --define='[namelist:ciceverify]verify_model=false' """
         [[[environment]]]
@@ -547,7 +547,7 @@ rm -rf {{dir1}}
 
     [[{{'pp_cice_198%s01' % (cycle)}}]]
         inherit = {{'postproc_198%s01' % (cycle)}}
-        script = """{{TASK_RUN}} \
+        script = """{{TASK_RUN}} --command-key=pp_cice \
 --define='[namelist:atmosverify]verify_model=false' \
 --define='[namelist:nemoverify]verify_model=false' """
         [[[environment]]]
@@ -555,7 +555,7 @@ rm -rf {{dir1}}
 
     [[{{'pp_atmos_198%s01' % (cycle)}}]]
         inherit = {{'postproc_198%s01' % (cycle)}}
-        script = """{{TASK_RUN}} \
+        script = """{{TASK_RUN}} --command-key=pp_atmos \
 --define='[namelist:ciceverify]verify_model=false' \
 --define='[namelist:nemoverify]verify_model=false' """
         [[[environment]]]
@@ -570,6 +570,7 @@ rm -rf {{dir1}}
 
     [[verify_final]]
        inherit=None, POSTPROC
+       script = """{{TASK_RUN}} --command-key=verify """
        [[[environment]]]
            ROSE_APP_COMMAND_KEY = verify
            CYCLEPOINT_OVERRIDE = 19830101T0000Z
