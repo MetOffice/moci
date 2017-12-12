@@ -167,6 +167,10 @@ class CicePostProc(mt.ModelTemplate):
            # Try again with convention compliant files with base=1d
             raw_output = False
             endfiles = utils.get_subset(self.share, self.end_stencil('1m', ncf))
+            # Filter out files with period greater than 1d.
+            # 2d is expected because CICE raw data is not cf-compliant,
+            # and allowance is made for this in datestamp_period()
+            endfiles = [f for f in endfiles if self.datestamp_period(f) == '2d']
 
         for end in endfiles:
             if raw_output:

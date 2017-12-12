@@ -383,7 +383,7 @@ def _mod_all_calendars_date(indate, delta, cal):
                         level='FAIL')
 
             if rcode == 0:
-                outdate = map(int, output.split(','))
+                outdate = [int(x) for x in output.split(',')]
             else:
                 log_msg('`rose date` command failed:\n' + output, level='WARN')
                 outdate = None
