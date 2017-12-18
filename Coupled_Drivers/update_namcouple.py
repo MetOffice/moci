@@ -36,13 +36,14 @@ class _UpdateComponents(object):
     def __init__(self):
         '''
         Initialise the class. Member models_to_update contains a dictionary,
-        the keys of which are the names for the component models, and the
+        the keys of which are the names for the model components and the
         values are the method to run the update process for that particular
-        model
+        component model
         '''
 
-        self.models_to_update = {'nemo': self.add_nemo_details,
-                                 'um': self.add_um_details}
+        self.models_to_update = {'mct': self.add_mct_details,
+	                         'um': self.add_um_details,
+				 'nemo': self.add_nemo_details,}
 
     def update(self, models):
         '''
@@ -56,80 +57,68 @@ class _UpdateComponents(object):
                 sys.stdout.write('[FAIL] update_namcouple can not update the'
                                  ' %s component' % model)
                 sys.exit(error.INVALID_DRIVER_ARG_ERROR)
-
+ 
     def add_um_details(self):
         '''
-        Add details required for running the UM component
+        Update namcouple details specifcally relevant to the UM.
         '''
+	# Nothing to do currently
         pass
 
     def add_nemo_details(self):
         '''
-        Add details required for running the NEMO component
+        Update namcouple details specifically relevant to NEMO.
         '''
-        nemo_namcouple_envar = common.LoadEnvar()
-        nemo_namcouple_envar.load_envar('NEMO_NL', 'namelist_cfg')
-        nemo_nl = nemo_namcouple_envar['NEMO_NL']
-        #get nemo start timestep
-        _, first_step_val = common.exec_subproc(['grep', 'nn_it000=',
-                                                 nemo_nl])
-        nemo_first_step = int(re.findall(r'.+=(.+),', first_step_val)[0])
+        # Nothing to do currently
+        pass
 
-        #get nemo end timestep
-        _, last_step_val = common.exec_subproc(['grep', 'nn_itend=',
-                                                nemo_nl])
-        nemo_last_step = re.findall(r'.+=(.+),', last_step_val)[0]
-        if 'set_by_system' in nemo_last_step:
-            nemo_last_step = 0
-        else:
-            nemo_last_step = int(nemo_last_step)
-
-        #integer number of seconds per timestep
-        _, nemo_step_int_val = common.exec_subproc(['grep', 'rn_rdt=',
-                                                    nemo_nl])
-        nemo_step_int = int(re.findall(r'.+=(\d*)', nemo_step_int_val)[0])
-
-        # Calculate the total number of timesteps for the run. In this version
-        # we do not add 1 day to allow N+1 coupling exchanges in N days. This
-        # caters for the rearranged model timestepping where there is no final
-        # exchange prior to dump creation.
-        seconds = (nemo_last_step - nemo_first_step + 1) * nemo_step_int
-
+    def add_mct_details(self):
+        '''
+        Update general namcouple details required by OASIS3-MCT.
+        '''
+	
+	# The coupler needs to know the run length of this cycle. 
+        seconds = common.setup_runtime()
+	
         #Edit the namcouple file
-        namc_file_in, namc_file_out = _start_edit_namecouple()
+        namc_file_in, namc_file_out = _start_edit_namcouple()
         edit_runtime = False
         ignore_line = False
 
         for line in namc_file_in.readlines():
-            # Look for the run time header $RUNTIME. This is always indented by
-            # a single space in the namcouple file
-            if re.match(r'^ \$RUNTIME', line):
+            # Look for the run time header $RUNTIME. 
+	    # The namcouple format rules prescribe that each section header should
+	    # startwith the presence of a $ in column 2 thus: " $"
+	    # Thus, triggers are based on testing for this at the start
+	    # of the line.   
+            if re.match(r'^ \$RUNTIME', line ):
                 edit_runtime = True
                 namc_file_out.write(line)
             elif edit_runtime:
                 # Once we've found the line we need to write the run length
                 # on we write it and close the $RUNTIME header section
                 # and ignore all further lines until we find a line
-                # featuring $END at which point we start writing out
-                # lines again to our target file.
-                namc_file_out.write('# Runtime setting automated via NEMO'
-                                    ' namelist values\n')
+                # featuring " $" at the start, at which point we start 
+		# writing out lines again to our target file.
+                namc_file_out.write('# Runtime setting automated via suite'
+                                    ' run length settings\n')
                 namc_file_out.write('  %i\n' % seconds)
-                namc_file_out.write(' $END\n')
+
                 edit_runtime = False
                 ignore_line = True
             elif ignore_line:
-                # Look for the end of the $RUNTIME section signified by $END.
+                # Look for the next keyword which will start with " $".
                 # As for the header this is always indented by a single space
                 # in the namcouple file
-                if re.match(r'^ \$END', line):
+                if re.match(r'^ \$', line ):
                     ignore_line = False
+                    namc_file_out.write(line)
             else:
                 namc_file_out.write(line)
 
         _end_edit_namcouple(namc_file_in, namc_file_out)
-
-def _start_edit_namecouple(fname='namcouple'):
+	
+def _start_edit_namcouple(fname='namcouple'):
     '''
     Open the original namcouple file for input and a new file for output.
     Returns two file handles, the first for the exisiting file to be read,

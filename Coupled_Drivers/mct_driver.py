@@ -120,8 +120,8 @@ def _setup_executable(common_envar):
         SUPPORTED_MODELS[component](common_envar, mct_envar)
 
 
-    # Update the namcouple
-    update_namcouple.update(mct_envar['COUPLING_COMPONENTS'])
+    # Update the general, non-component specific namcouple details 
+    update_namcouple.update('mct')
 
 
 

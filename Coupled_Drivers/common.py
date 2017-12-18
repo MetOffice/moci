@@ -24,6 +24,7 @@ import re
 import os
 import sys
 import subprocess
+import inc_days
 
 class LoadEnvar(object):
     '''
@@ -254,6 +255,61 @@ def remove_file(filename):
         return True
     else:
         return False
+
+def setup_runtime():
+    '''
+    Set up model run length in seconds based on the model suite 
+    env vars (rather than in the manner of the old UM control scripts
+    by interrogating NEMO namelists!) 
+    '''
+    runtime_envar = LoadEnvar()
+
+    if runtime_envar.load_envar('TASKSTART') != 0:
+        sys.stderr.write('[FAIL] setup_runtime: Environment variable'
+	                 ' TASKSTART not set\n')
+        sys.exit(error.MISSING_EVAR_ERROR)
+    if runtime_envar.load_envar('TASKLENGTH') != 0:
+        sys.stderr.write('[FAIL] setup_runtime: Environment variable'
+	                 ' TASKLENGTH not set\n')
+        sys.exit(error.MISSING_EVAR_ERROR)
+
+
+    if runtime_envar.load_envar('CALENDAR') != 0:
+        sys.stderr.write('[WARN] setup_runtime: Environment variable'
+	                 ' CALENDAR not set. Assuming 360 day calendar.\n')
+        calendar = '360'
+        nleapy = 30
+    else:
+        calendar = runtime_envar['CALENDAR']
+        if calendar == '360day':
+            calendar = '360'
+            nleapy = 30
+        elif calendar == '365day':
+            calendar = '365'
+            nleapy = 0
+        elif calendar == 'gregorian':
+            nleapy = 1
+        else:
+            sys.stderr.write('[FAIL] setup_runtime: Calendar type %s not'
+	                     ' recognised\n' % calendar)
+            sys.exit(error.INVALID_EVAR_ERROR)
+   
+
+    # Turn our times into lists of integers
+    run_start = map(int, runtime_envar['TASKSTART'].split(','))
+    run_length = map(int, runtime_envar['TASKLENGTH'].split(','))
+    
+    run_days = inc_days.inc_days(run_start[0], run_start[1], run_start[2],
+                                 run_length[0], run_length[1], run_length[2],
+                                 calendar)
+    				 
+    # Work out the total run length in seconds
+    runlen_sec = (run_days * 86400)     \
+                 + (run_length[3]*3600) \
+                 + (run_length[4]*60)   \
+                 + run_length[5]
+				 				 				 
+    return runlen_sec
 
 
 def exec_subproc(cmd, verbose=True):
