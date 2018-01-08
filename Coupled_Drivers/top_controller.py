@@ -262,7 +262,7 @@ def _setup_top_controller(restart_ctl,
         if top_dump_time != nemo_dump_time:
             sys.stderr.write('[FAIL] top_controller: Mismatch in TOP restart '
                              'file date %s and NEMO restart file date %s\n'
-                             % top_dump_time % nemo_dump_time)
+                             % (top_dump_time, nemo_dump_time))
             sys.exit(error.MISMATCH_RESTART_DATE_ERROR)
 
 

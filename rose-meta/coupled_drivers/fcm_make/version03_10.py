@@ -16,13 +16,16 @@ class UpgradeError(Exception):
       __str__ = __repr__
 
 
-class drivers03_tXXX(rose.upgrade.MacroUpgrade):
+class drivers10(rose.upgrade.MacroUpgrade):
 
-    """Upgrade macro for ticket #XXXX by <author>."""
+    """Upgrade macro for ticket #203 by Harry Shepherd."""
     BEFORE_TAG = "drivers_0.3"
-    AFTER_TAG = "drivers03_tXXX"
+    AFTER_TAG = "drivers_1.0"
 
     def upgrade(self, config, meta_config=None):
-        """Upgrade a Driver make app configuration."""
-        # Input your macro commands here
+        '''Upgrade the tags'''
+        self.change_setting_value(config, ["env", "config_rev"],
+                                  "@drivers_1.0")
+        self.change_setting_value(config, ["env", "driver_rev"],
+                                  "drivers_1.0")
         return config, self.reports

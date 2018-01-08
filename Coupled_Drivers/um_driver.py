@@ -297,11 +297,6 @@ def _finalize_executable(_):
             os.chmod(corefile, current_st.st_mode | stat.S_IRUSR |
                      stat.S_IRGRP | stat.S_IROTH)
 
-            # Check and remove any existing symlink of this name
-            common.remove_file(lnk_dst)
-
-            os.symlink(lnk_src, lnk_dst)
-
 
 def run_driver(common_envar, mode):
     '''
