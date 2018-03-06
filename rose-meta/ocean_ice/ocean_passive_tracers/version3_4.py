@@ -15,18 +15,16 @@ class UpgradeError(Exception):
     __str__ = __repr__
 
 
-class OPTv2v3(rose.upgrade.MacroUpgrade):
+class OPTv3v4(rose.upgrade.MacroUpgrade):
 
-    """Upgrade macro for MOCI ticket #286 by julienpalmieri."""
+    """Upgrade macro for MOCI ticket #299 by julienpalmieri."""
 
-    BEFORE_TAG = "OPT-v2"
-    AFTER_TAG = "OPT-v3"
+    BEFORE_TAG = "OPT-v3"
+    AFTER_TAG = "OPT-v4"
 
     def upgrade(self, config, meta_config=None):
         """Upgrade an Ocean Passive Tracers make app configuration."""
         # Input your macro commands here
-        self.add_setting(config, ["env", "TOP_TO_INIT"], 
-              info="Add restart file path to initialize CFC-Age tracers -- MOCI #286.")
         return config, self.reports
 
 
