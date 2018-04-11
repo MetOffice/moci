@@ -1,10 +1,12 @@
     [[LINUX_DESKTOP]]
+        pre-script = "module load scitools"
         [[[job]]]
             batch system = background
         [[[remote]]]
             host = $(rose host-select {{EXTRACT_HOST}})
     
     [[LINUX_SERVER]]
+        pre-script = "module load scitools"
         [[[job]]]
             batch system = slurm
             execution time limit = PT5M
@@ -15,7 +17,7 @@
 
     [[POSTPROC_RESOURCE]]
         inherit = LINUX
-        pre-script = "ulimit -s unlimited"
+        pre-script = "ulimit -s unlimited; module load scitools; export PYTHONPATH=$PYTHONPATH:$UMDIR/mule/mule-next/python2.7/lib/"
 
     [[VERIFY_RESOURCE]]
         inherit = LINUX
