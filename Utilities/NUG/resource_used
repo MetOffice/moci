@@ -1,0 +1,130 @@
+#!/usr/bin/env python2.7
+
+'''
+*****************************COPYRIGHT******************************
+ (C) Crown copyright 2015 Met Office. All rights reserved.
+
+ Use, duplication or disclosure of this code is subject to the restrictions
+ as set forth in the licence. If no licence has been raised with this copy
+ of the code, the use, duplication or disclosure of it is strictly
+ prohibited. Permission to do so must first be obtained in writing from the
+ Met Office Information Asset Owner at the following address:
+
+ Met Office, FitzRoy Road, Exeter, Devon, EX1 3PB, United Kingdom
+*****************************COPYRIGHT******************************
+NAME
+    resource_used
+
+DESCRIPTION
+    Command used to monitor user resource of the climate priority queues
+    (haswell, urgent and high) across the three clusters (xce, xcf and xcs).
+
+    The function cluster_analysis works as follows
+    It takes as input a list of clusters in the set xce, xcf or xcs.
+    It then extracts from the input clusters raw PBS data and combines
+    the data set as a single file.
+    This single file is analysed to aggregate the
+    total number of nodes in running or queued state in the PBS
+    production queues (haswell, urgent or high) for each subproject
+    present in the combined data set.
+
+    This set of resource used for each subproject is compared to
+    preagreed limits for production. The limits are held in a limit
+    file which path is held in the $NUG_LIMITS_FILE external environment
+    variable.
+
+    An example of limit files is held in aux/limit_examples.lm
+    However the
+    example cannot be used directly by the program.
+
+ENVIRONMENT VARIABLES
+
+NUG_LIMITS_FILE points to the file on the Cray XC40 system holding allocations
+'''
+
+import os
+import os.path
+from src.init_time import init_program_time
+from src.remove_continuation_lines import remove_continuation_lines
+from src.joblist import JobList
+from src.limits import LimitSets, ResourceSet
+
+def fetch_data(host_list):
+    ''' extracts from remote host clusters the PBS data '''
+    remotefile = '/var/spool/qstat/qstat_cache.txt'
+    auxdir = os.path.expandvars('$TMPDIR/aux')
+    qstat_file_name = auxdir+'qstat_data'
+
+    for host in host_list:
+        infile = auxdir+'qstat_cache_'+host+'.txt'
+        if os.path.isfile(infile):
+            os.remove(infile)
+        remotehost = login(host)
+        os.system('scp %s:%s %s' % (remotehost, remotefile, infile))
+
+    onp = open(qstat_file_name, "w")
+
+    for host in host_list:
+        infile = auxdir+'qstat_cache_'+host+'.txt'
+        with open(infile) as inp:
+            for line in inp:
+                onp.write(line)
+        os.remove(infile)
+
+    aux_name = remove_continuation_lines(qstat_file_name)
+    os.remove(qstat_file_name)
+    return aux_name
+
+def login(alias):
+    ''' return the physical login node corresponding to
+        the alias name of a cluster'''
+    user = os.environ["USER"]
+    if alias == 'xce':
+        return user+'@xcel00'
+    elif alias == 'xcf':
+        return user+'@xcfl00'
+    elif alias == 'xcs':
+        return user+'@xcslr0'
+    else:
+        raise UserWarning(" %s unknown cluster alias " % alias)
+
+def cluster_analysis(host_list, limits_file):
+    ''' analyse data from PBS '''
+
+    try:
+        header = 'CLIMATE PRIORITY QUEUES FOR:'
+        for cluster in host_list:
+            header = header +' '+cluster
+
+        init_program_time()
+        file_name = fetch_data(host_list)
+        print header
+
+        joblist = JobList(file_name)
+        limits = LimitSets(host_list, limits_file)
+        newlist = joblist.filtered(account_filter=['climate'])
+        resources = ResourceSet(newlist, limits)
+        resources.display_resource_set()
+
+        os.remove(file_name)
+    except UserWarning as cause:
+        print cause
+    finally:
+        print 'cluster analysis completed'
+
+def main():
+    ''' main funtion for script resource_used '''
+
+    limits_file = os.path.expandvars('$NUG_LIMITS_FILE')
+
+    if os.path.isfile(limits_file):
+        cluster_analysis(['xce', 'xcf'], limits_file)
+        print
+        cluster_analysis(['xcs'], limits_file)
+        print
+        cluster_analysis(['xce', 'xcf', 'xcs'], limits_file)
+        print
+    else:
+        print 'Limit file:'+limits_file+' do not exist'
+
+main()

@@ -1,0 +1,41 @@
+Monitoring for subproject any and users all
+
+PBS data could not be found on the system - Using KGO file aux/qstat_cache.txt instead 
+
+R:1664222.xcs00: climate(ukesmdev)   14   nodes high jane.mulcahy(frjy)
+Q:1660781.xcs00: climate(esms)       37   nodes high spencer.liddicoat(hadsl) queued for 5372 s (64.0% req)
+R:1660963.xcs00: climate(cmip6)      90   nodes high ukcmip6.desktop(ukcmip6)
+R:1661128.xcs00: climate(cmip6)      90   nodes high ukcmip6.desktop(ukcmip6)
+R:1662867.xcs00: climate(esms)       37   nodes high spencer.liddicoat(hadsl)
+R:1662933.xcs00: climate(cmip6)      120  nodes high ukcmip6.desktop(ukcmip6)
+R:1663403.xcs00: climate(cmip6)      62   nodes high dcpp.desktop(dcpp)
+R:1663835.xcs00: climate(cmip6)      90   nodes high ukcmip6.desktop(ukcmip6)
+R:1665254.xcs00: climate(ukesmdev)   25   nodes high julien.palmieri(jpalmier)
+R:1665220.xcs00: climate(esms)       12   nodes high fiona.oconnor(hadfo)
+R:1665449.xcs00: climate(aoil)       91   nodes high dan.copsey(hadco)
+R:1666292.xcs00: climate(ukesmdev)   14   nodes high jane.mulcahy(frjy)
+R:1666544.xcs00: climate(cmip6)      32   nodes high ukcmip6.desktop(ukcmip6)
+R:1667269.xcs00: climate(esms)       37   nodes high spencer.liddicoat(hadsl)
+R:1659102.xcs00: climate(cmip6)      29   nodes urgent dcpp.desktop(dcpp)
+R:1659417.xcs00: climate(cmip6)      29   nodes urgent dcpp.desktop(dcpp)
+R:1659065.xcs00: climate(cmip6)      29   nodes urgent dcpp.desktop(dcpp)
+R:1659273.xcs00: climate(cmip6)      29   nodes urgent dcpp.desktop(dcpp)
+R:1659709.xcs00: climate(cmip6)      29   nodes urgent dcpp.desktop(dcpp)
+R:1660852.xcs00: climate(ukesmdev)   80   nodes urgent ukesm.desktop(ukesm)
+R:1660787.xcs00: climate(cmip6)      29   nodes urgent dcpp.desktop(dcpp)
+R:1662260.xcs00: climate(cmip6)      120  nodes urgent ukesm.desktop(ukesm)
+R:1661818.xcs00: climate(cmip6)      29   nodes urgent dcpp.desktop(dcpp)
+R:1661811.xcs00: climate(cmip6)      29   nodes urgent dcpp.desktop(dcpp)
+R:1662800.xcs00: climate(ukesmdev)   80   nodes urgent ukesm.desktop(ukesm)
+R:1662923.xcs00: climate(cmip6)      29   nodes urgent dcpp.desktop(dcpp)
+R:1662949.xcs00: climate(ukesmdev)   38   nodes urgent ukesm.desktop(ukesm)
+R:1663330.xcs00: climate(highres)    280  nodes urgent malcolm.roberts(hadom)
+R:1663642.xcs00: climate(cmip6)      90   nodes urgent ukcmip6.desktop(ukcmip6)
+R:1663725.xcs00: climate(cmip6)      120  nodes urgent ukcmip6.desktop(ukcmip6)
+R:1663785.xcs00: climate(cmip6)      60   nodes urgent ukcmip6.desktop(ukcmip6)
+R:1665035.xcs00: climate(cmip6)      28   nodes urgent ukcmip6.desktop(ukcmip6)
+R:1666340.xcs00: climate(cmip6)      29   nodes urgent dcpp.desktop(dcpp)
+R:1667065.xcs00: climate(cmip6)      62   nodes urgent dcpp.desktop(dcpp)
+
+Total number of nodes is 1999
+

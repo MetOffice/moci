@@ -1,0 +1,12 @@
+subproject:project1
+    cluster=xcs:queue=urgent:nodes=240
+    cluster=xcs:queue=high:nodes=360
+subproject:project2
+    cluster=xcs:queue=urgent:nodes=120
+subproject:project3
+    cluster=xce:queue=haswell:nodes=400
+    cluster=xcf:queue=haswell:nodes=400
+    cluster=xce:queue=urgent:nodes=340
+    cluster=xcf:queue=urgent:nodes=340
+    cluster=xce:queue=high:nodes=120
+    cluster=xcf:queue=high:nodes=120

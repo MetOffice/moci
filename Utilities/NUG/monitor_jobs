@@ -1,0 +1,116 @@
+#!/usr/bin/env python2.7
+
+'''
+*****************************COPYRIGHT******************************
+ (C) Crown copyright 2018 Met Office. All rights reserved.
+
+ Use, duplication or disclosure of this code is subject to the restrictions
+ as set forth in the licence. If no licence has been raised with this copy
+ of the code, the use, duplication or disclosure of it is strictly
+ prohibited. Permission to do so must first be obtained in writing from the
+ Met Office Information Asset Owner at the following address:
+
+ Met Office, FitzRoy Road, Exeter, Devon, EX1 3PB, United Kingdom
+*****************************COPYRIGHT******************************
+NAME
+    monitor_jobs
+
+DESCRIPTION
+    Command to monitor runtime occupancy of the HPC PBS queues
+    across subprojects, accounts (weather, foundation or climate) and users.
+    The command displays all jobs in Running or Queued state
+    in the list of provided queues
+    and for the subprojects and users specified.
+
+    The command is to be executed on the HPC.
+
+    The program accesses the raw PBS data qstat_cache.txt
+    on the HPC and converts it to
+    an internal representation of type JobList (src/joblist.py)
+
+    The program includes a aux/qstat_cache.txt sample dataset so
+    that it can be tested independently from access to the HPC system.
+    The result of executing the command on the desktop is stored
+    under aux/monitor_jobs_kgo
+
+ENVIRONMENT VARIABLES
+'''
+
+import os
+import os.path
+from argparse import ArgumentParser
+from src.joblist import JobList
+from src.remove_continuation_lines import remove_continuation_lines
+
+def main():
+    ''' main funtion for script monitor_jobs '''
+    usage = "%(prog)s [options]"
+    parser = ArgumentParser(usage=usage, version="%(prog)s 0.1")
+    parser.add_argument("-s", "--subproject",
+                        action="store", type=str, dest="subproject",
+                        default="any",
+                        help="monitor jobs for a particular \
+                              list (comma separated) of subprojects"
+                        " [default: %(default)s]")
+
+    parser.add_argument("-u", "--users",
+                        action="store", type=str, dest="users",
+                        default="all",
+                        help="monitor jobs for a particular list \
+                              (comma separated) of users"
+                        " [default: %(default)s]")
+
+    parser.add_argument("-a", "--account",
+                        action="store", type=str, dest="account",
+                        default="climate",
+                        help="monitor jobs for a particular account \
+                             {climate|foundation|weather}"
+                        " [default: %(default)s]")
+
+    parser.add_argument("-q", "--queues",
+                        action="store", type=str, dest="queues",
+                        default="haswell,high,urgent",
+                        help="monitor jobs for a particular list \
+                         (comma separated) of queues {normal|high|urgent}"
+                        " [default: %(default)s]")
+    options = parser.parse_args()
+
+    print "Monitoring for subproject %s and users %s" % (options.subproject,
+                                                         options.users)
+
+# options are transformed into list of strings to pass to the display routine
+    if not options.subproject == 'any':
+        subproject_filter = options.subproject.split(',')
+    else:
+        subproject_filter = []
+
+    if not options.users == 'all':
+        user_filter = options.users.split(',')
+    else:
+        user_filter = []
+
+    account_filter = options.account.split(',')
+
+    queue_filter = options.queues.split(',')
+
+    if os.path.isfile('/var/spool/qstat/qstat_cache.txt'):
+        job_file = '/var/spool/qstat/qstat_cache.txt'
+    elif os.path.isfile('/critical/qstat/qstat_cache.txt'):
+        job_file = '/critical/qstat/qstat_cache.txt'
+    elif os.path.isfile('aux/qstat_cache.txt'):
+        print '\nPBS data could not be found on the system - Using KGO file aux/qstat_cache.txt instead \n'
+        job_file = 'aux/qstat_cache.txt'
+    else:
+        print 'INPUT FILE NOT AVAILABLE'
+
+    data_file = remove_continuation_lines(job_file)
+
+    joblist = JobList(data_file)
+    newlist = joblist.filtered(subproject_filter, user_filter,
+                     account_filter, queue_filter)
+    print newlist
+    print 'Total number of nodes is '+str(newlist.node_count())
+
+    os.remove(data_file)
+
+main()
