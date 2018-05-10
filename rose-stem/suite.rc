@@ -45,9 +45,9 @@
          buildXios_noOasis => buildNemo_noOasis => testNemo_noOasis => validate_nemo_noOasis => housekeeping_XBS",
     "test_postproc" :
         "
-         test_mule:succeed => !remove_cutout_from_postproc
-         test_mule:fail => remove_cutout_from_postproc
-         test_mule | remove_cutout_from_postproc => fcm_make_pp
+         test_mule:succeed => !remove_mule_from_postproc
+         test_mule:fail => remove_mule_from_postproc & !test_mule
+         test_mule | remove_mule_from_postproc => fcm_make_pp
          pp_clearlog & " + FCMPP_GRAPH + " => coupled_dummy_19811001 => postproc_19811001 & coupled_dummy_19811101
         " + PPTRANSFER_GRAPH + "
          coupled_dummy_19811101 => postproc_19811101 & coupled_dummy_19811201
@@ -569,7 +569,7 @@ rm -rf {{dir1}}
 {%- endfor %}
 
     [[verify_final]]
-       inherit=None, POSTPROC
+       inherit=None, PP_TASKS
        script = """{{TASK_RUN}} --command-key=verify """
        [[[environment]]]
            ROSE_APP_COMMAND_KEY = verify
@@ -589,7 +589,7 @@ rm -rf {{dir1}}
         inherit = None, LINUX
 	script = test_mulepath.py
 
-    [[remove_cutout_from_postproc]]
+    [[remove_mule_from_postproc]]
        inherit = None, LINUX
        script = cylc broadcast $CYLC_SUITE_NAME -n PP_TASKS -s [environment]"ROSE_APP_OPT_CONF_KEYS=disable_mule"
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016-2017 Met Office. All rights reserved.
+ (C) Crown copyright 2016-2018 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -870,6 +870,31 @@ class DiagnosticFilesTests(unittest.TestCase):
         for key in outfiles:
             self.assertListEqual(expected[key][:2], outfiles[key][:2])
             self.assertListEqual(expected[key][-2:], outfiles[key][-2:])
+        self.assertListEqual(sorted(expected.keys()), sorted(outfiles.keys()))
+
+    def test_expected_atmos_periodic(self):
+        ''' Assert correct list of periodically intermittent atmos files '''
+        func.logtest('Assert correct return of intermittent atmos files:')
+        self.files.naml.meanstreams = []
+        self.files.naml.streams_10d = ['pa', 'pb', 'pc']
+        self.files.naml.intermittent_streams = ['pb', 'pc']
+        self.files.naml.intermittent_patterns = ['ox', 'xxoxoox']
+        self.files.edate = [1995, 12, 1]
+        outfiles = {
+            'apa.pp': ['PREFIXa.pa19950811.pp', 'PREFIXa.pa19950821.pp',
+                       'PREFIXa.pa19950901.pp', 'PREFIXa.pa19950911.pp',
+                       'PREFIXa.pa19950921.pp', 'PREFIXa.pa19951001.pp',
+                       'PREFIXa.pa19951011.pp', 'PREFIXa.pa19951021.pp',
+                       'PREFIXa.pa19951101.pp', 'PREFIXa.pa19951111.pp'],
+            'apb.pp': ['PREFIXa.pb19950811.pp', 'PREFIXa.pb19950901.pp',
+                       'PREFIXa.pb19950921.pp', 'PREFIXa.pb19951011.pp',
+                       'PREFIXa.pb19951101.pp'],
+            'apc.pp': ['PREFIXa.pc19950901.pp', 'PREFIXa.pc19950921.pp',
+                       'PREFIXa.pc19951001.pp', 'PREFIXa.pc19951111.pp']
+            }
+        expected = self.files.expected_diags()
+        for key in outfiles:
+            self.assertListEqual(sorted(expected[key]), sorted(outfiles[key]))
         self.assertListEqual(sorted(expected.keys()), sorted(outfiles.keys()))
 
     def test_expected_atmos_final(self):

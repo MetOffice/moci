@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016-2017 Met Office. All rights reserved.
+ (C) Crown copyright 2016-2018 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -93,6 +93,7 @@ class ArchivedFiles(object):
         if self.model == 'atmos':
             naml = atmos_stream_items(naml)
         self.naml = naml
+        self.meanref = None
         self.finalcycle = utils.finalcycle()
 
     def extract_date(self, filename, start=True):
@@ -129,7 +130,7 @@ class ArchivedFiles(object):
                         if month == ssn:
                             month = mth
                             break
-                except AttributeError:
+                except TypeError:
                     utils.log_msg('Mean reference date required for '
                                   'seasonal mean date.', level='FAIL')
                 # Seasonal datestamp year is FINAL month
@@ -448,6 +449,7 @@ class DiagnosticFiles(ArchivedFiles):
     def expected_diags(self):
         ''' Generate a list of expected diagnostic output files '''
         all_files = {}
+        intermittent_coll = {}
 
         all_streams = [a for a in dir(self.naml) if a.startswith('streams')]
         all_streams += utils.ensure_list(self.naml.meanstreams)
@@ -455,6 +457,13 @@ class DiagnosticFiles(ArchivedFiles):
             spawn_ncf = utils.ensure_list(self.naml.spawn_netcdf_streams)
         except AttributeError:
             spawn_ncf = []
+        try:
+            intermittent_streams = \
+                utils.ensure_list(self.naml.intermittent_streams)
+            intermittent_patterns = \
+                utils.ensure_list(self.naml.intermittent_patterns)
+        except AttributeError:
+            intermittent_streams = []
 
         for base, delta, streams, desc in \
                 self.gen_reinit_period(list(set(all_streams))):
@@ -499,6 +508,8 @@ class DiagnosticFiles(ArchivedFiles):
                             continue
 
                         coll = self.get_collection(period=base, stream=stream)
+                        if stream in intermittent_streams:
+                            intermittent_coll[coll] = stream
                         newfile = self.get_filename(base, date, newdate, stream)
                         try:
                             all_files[coll].append(newfile)
@@ -510,6 +521,9 @@ class DiagnosticFiles(ArchivedFiles):
                                 period=stream,
                                 stream=filenames.FIELD_REGEX
                                 )
+                            if stream in intermittent_streams:
+                                intermittent_coll[spawn_coll] = stream
+
                             spawnfile = self.get_filename(
                                 r'\d+[hdmsyx]', date, newdate, stream + 'ncf'
                                 )
@@ -521,8 +535,8 @@ class DiagnosticFiles(ArchivedFiles):
 
                 date = newdate
 
-        if not self.finalcycle:
-            for fileset in all_files:
+        for fileset in all_files:
+            if not self.finalcycle:
                 try:
                     if re.match(r'^a[pmn]([a-zA-Z0-9])\.',
                                 fileset).group(1) not in 'msyx':
@@ -539,6 +553,14 @@ class DiagnosticFiles(ArchivedFiles):
                         all_files[fileset] = self.remove_higher_mean_components(
                             all_files[fileset], fileset[2]
                             )
+
+            if fileset in intermittent_coll:
+                pattern = intermittent_patterns[
+                    intermittent_streams.index(intermittent_coll[fileset])
+                    ]
+                for i, fname in enumerate(all_files[fileset][:]):
+                    if pattern[i % len(pattern)] == 'x':
+                        all_files[fileset].remove(fname)
 
         all_files.update(self.iceberg_trajectory())
 
@@ -746,7 +768,7 @@ class DiagnosticFiles(ArchivedFiles):
             if start[3] == end[3]:
                 # Hour not required
                 start[3] = end[3] = ''
-            
+
             if self.model == 'atmos':
                 stream = filenames.FIELD_REGEX
 

@@ -50,6 +50,8 @@ class AtmosVerify(object):
     streams_1d = None
     ff_streams = None
     spawn_netcdf_streams = None
+    intermittent_streams = None
+    intermittent_patterns = None
     timelimitedstreams = False
     tlim_streams = None
     tlim_starts = None
