@@ -1,0 +1,50 @@
+table, td, th {
+    border: 1px solid green;
+}
+
+th {
+    background-color: green;
+    color: white;
+}
+fail {
+    color: red
+}
+warn {
+    color: orange
+}
+succeed {
+    color: green
+}
+other {
+    color: yellow
+}
+.column {
+    float: left;
+    width: 50%;
+    padding: 10px;
+}
+
+
+
+img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.header_logo_cell
+{
+    width: 30%
+}
+
+.header_text_cell
+{
+    width: 40%
+}
+
+.row {
+    display: flex;
+    width: 1200px;
+border: 2px solid black;
+padding: 5px;
+}
