@@ -118,12 +118,13 @@ def _verify_top_rst(cyclepointstr, nemo_nproc, top_restart_files):
     top_rst_regex = r'%s_restart_trc(_\d+)?\.nc' % cyclepointstr
     current_rst_files = [f for f in top_restart_files if
                          re.findall(top_rst_regex, f)]
-    if len(current_rst_files) not in (1, nemo_nproc):
+    if len(current_rst_files) not in (1, nemo_nproc, nemo_nproc+1):
         sys.stderr.write('[FAIL] Unable to find top restart files for'
-                         ' this cycle. Must either have one, or as many'
-                         ' as there are nemo processors (%i)\n'
-                         '[FAIL] Found %i iceberg restart files\n'
-                         % (len(current_rst_files), nemo_nproc))
+                         ' this cycle. Must either have one rebuilt file,'
+                         ' as many as there are nemo processors (%i) or'
+                         ' both rebuilt and processor files.'
+                         '[FAIL] Found %i top restart files\n'
+                         % (nemo_nproc, len(current_rst_files)))
         sys.exit(error.MISSING_MODEL_FILE_ERROR)
     
 

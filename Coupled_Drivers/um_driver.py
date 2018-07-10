@@ -58,7 +58,6 @@ def _verify_fix_rst(xhistfile, cyclepoint, workdir, task_name):
             '   Cycle time is %s\n' \
             '   UM restart time is %s\n' % (cycle_date_string, checkpoint_date)
         sys.stdout.write(msg)
-        sys.stderr.write(msg)
         #find the work directory for the previous cycle
         prev_work_dir = common.find_previous_workdir(cyclepoint, workdir,
                                                     task_name)
