@@ -327,6 +327,9 @@ def __get_nemo_io(nemo_timing_output='timing.output'):
     NEMO timing.output file for NEMO/CICE. Returns the time spent in the
     restart file writing routines (not including file writing in XIOS)
     '''
+    # Both put and get may not necessarily be in the timing.output file
+    rstget_measurement = False
+    rstput_measurement = False
     total_time_regex = re.compile(r"\s*Total\s*\|\s*(\d+.\d+)")
     # These regexes will pull out a percentage
     iom_rstget_regex = re.compile(r"\s*iom_rstget\s*\d+.\d+\s*(\d+.\d+)")
@@ -340,16 +343,18 @@ def __get_nemo_io(nemo_timing_output='timing.output'):
                 total_time = float(tot_match.group(1))
             if iom_rstget_match:
                 iom_rstget_percentage = float(iom_rstget_match.group(1))
+                rstget_measurement = True
             if iom_rstput_match:
                 iom_rstput_percentage = float(iom_rstput_match.group(1))
-        try:
-            restart_io_time = total_time * \
-                (iom_rstget_percentage + iom_rstput_percentage) * 0.01
-        except NameError:
-            sys.stderr.write('[FAIL] Unable to determine NEMO restart IO'
-                             ' timings from the NEMO standard output\n')
-            sys.exit(error.MISSING_CONTROLLER_FILE_ERROR)
-        return restart_io_time
+                rstput_measurement = True
+    restart_io_time = 0.0
+    if rstget_measurement:
+        rstget_io_time = total_time * iom_rstget_percentage * 0.01
+        restart_io_time += rstget_io_time
+    if rstput_measurement:
+        rstput_io_time = total_time * iom_rstput_percentage * 0.01
+        restart_io_time += rstput_io_time
+    return restart_io_time
 
 
 def __get_nemo_info(nemo_timing_output='timing.output'):
