@@ -433,8 +433,8 @@ def main():
             # no exception type specified as whatever the error,
             # I want the dashboard to report an error for that suite and
             # continue looking at the other suites.
-            print('<br><b><font color=red>ERROR: test suite output '
-                  'not found or corrupt.</font></b><br>')
+            print('<br><b><font color=red>ERROR: test suite output {0} '
+                  'not found or corrupt.</font></b><br>'.format(suite1))
         print('</div>\n')
 
 
