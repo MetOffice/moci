@@ -87,7 +87,7 @@ class NemoPostProc(mt.ModelTemplate):
         Tuple( Filetype tag immediately following "RUNIDo_" in filename,
                Filetype tag immediately following "restart" in filename )
         '''
-        return (('', ''), ('icebergs', ''), ('', '_trc'))
+        return (('', ''), ('', '_ice'), ('icebergs', ''), ('', '_trc'))
 
     @property
     def model_components(self):
@@ -96,13 +96,9 @@ class NemoPostProc(mt.ModelTemplate):
             'nemo': ['grid_T', 'grid_U', 'grid_V',
                      'grid_W', 'diaptr', 'trnd3d', 'scalar',
                      'UK_shelf_T', 'UK_shelf_U', 'UK_shelf_V'],
+            'lim': ['icemod'],
             'medusa': ['ptrc_T', 'diad_T', 'ptrd_T']
             }
-
-    @property
-    def model_realm(self):
-        ''' Return the standard realm ID character for the model: o=ocean '''
-        return 'o'
 
     @property
     def cfcompliant_output(self):
@@ -156,6 +152,10 @@ class NemoPostProc(mt.ModelTemplate):
         Return a regular expression matching iceberg trajecoty restart files
         '''
         return r'trajectory_icebergs_\d{6,8}(-\d{8})?'
+
+    def model_realm(self, field):
+        ''' Return the standard realm ID character for the model: o=ocean '''
+        return 'i' if field in self.model_components['lim'] else 'o'
 
     def rst_set_stencil(self, rsttype):
         '''
@@ -218,10 +218,10 @@ class NemoPostProc(mt.ModelTemplate):
     @timer.run_timer
     def rebuild_diagnostics(self, fieldtypes, bases=r'\d+[hdmsyx]{1}'):
         '''Rebuild partial diagnostic fields files'''
-        ncfname = netcdf_filenames.NCFilename('[a-z]*', self.suite.prefix,
-                                              self.model_realm)
         for field in fieldtypes:
-            ncfname.custom = '_' + field
+            ncfname = netcdf_filenames.NCFilename('[a-z]*', self.suite.prefix,
+                                                  self.model_realm(field),
+                                                  custom='_' + field)
             for base in utils.ensure_list(bases):
                 ncfname.base = base
                 pattern = self.mean_stencil(ncfname).rstrip('.nc')
@@ -526,11 +526,10 @@ class NemoPostProc(mt.ModelTemplate):
         ''' Extract a region from global netCDF files '''
         utils.create_dir(self.diagsdir)
 
-        ncfname = netcdf_filenames.NCFilename('[a-z]*', self.suite.prefix,
-                                              self.model_realm)
-
         for field in self.region_fields:
-            ncfname.custom = '_' + field
+            ncfname = netcdf_filenames.NCFilename('[a-z]*', self.suite.prefix,
+                                                  self.model_realm(field),
+                                                  custom='_' + field)
             pattern = self.mean_stencil(ncfname)
             for filename in utils.get_subset(self.share, pattern):
                 try:
@@ -580,11 +579,10 @@ class NemoPostProc(mt.ModelTemplate):
     @timer.run_timer
     def archive_regional_extraction(self):
         ''' Archive a regional extraction from global netCDF files '''
-        ncfname = netcdf_filenames.NCFilename('[a-z]*', self.suite.prefix,
-                                              self.model_realm)
-
         for field in self.region_fields:
-            ncfname.custom = '_' + field
+            ncfname = netcdf_filenames.NCFilename('[a-z]*', self.suite.prefix,
+                                                  self.model_realm(field),
+                                                  custom='_' + field)
             pattern = '^{}$'.format(self.mean_stencil(ncfname))
             a_files = utils.get_subset(self.diagsdir, pattern)
             a_files = utils.add_path(a_files, self.diagsdir)

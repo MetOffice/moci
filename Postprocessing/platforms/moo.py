@@ -38,7 +38,7 @@ import utils
 import timer
 
 # Dictionary of models which Moose is set up to accept
-MODELS = ['atmos', 'jules', 'nemo', 'medusa', 'cice']
+MODELS = ['atmos', 'jules', 'nemo', 'medusa', 'cice', 'lim']
 
 
 @timer.run_timer

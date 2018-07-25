@@ -34,10 +34,26 @@ class pp22_t282(rose.upgrade.MacroUpgrade):
 
         return config, self.reports
 
+
+class pp22_t289(rose.upgrade.MacroUpgrade):
+
+    """Upgrade macro for ticket #289 by DaveStorkey."""
+    BEFORE_TAG = "pp22_t282"
+    AFTER_TAG = "pp22_t289"
+
+    def upgrade(self, config, meta_config=None):
+        """Upgrade a Postproc app configuration."""
+        self.add_setting(config,
+                         ["namelist:nemoverify", "nemo_ice_rst",],
+                         "false")
+
+        return config, self.reports
+
+
 class pp22_tXXX(rose.upgrade.MacroUpgrade):
 
     """Upgrade macro for ticket #XXX by <Author>."""
-    BEFORE_TAG = "postproc_2.2"
+    BEFORE_TAG = "pp22_t289"
     AFTER_TAG = "pp22_tXXX"
 
     def upgrade(self, config, meta_config=None):

@@ -763,7 +763,7 @@ class ArchiveTests(unittest.TestCase):
         self.model.naml.archiving.archive_means = True
 
         with mock.patch('modeltemplate.ModelTemplate.model_realm',
-                        new_callable=mock.PropertyMock, return_value='x'):
+                        return_value='x'):
             with mock.patch('modeltemplate.ModelTemplate.prefix',
                             new_callable=mock.PropertyMock,
                             return_value='RUNID'):
@@ -784,7 +784,7 @@ class ArchiveTests(unittest.TestCase):
         self.model.periodfiles = mock.Mock(side_effect=[[]])
         self.model.naml.archiving.archive_means = True
         with mock.patch('modeltemplate.ModelTemplate.model_realm',
-                        new_callable=mock.PropertyMock, return_value='x'):
+                        return_value='x'):
             with mock.patch('modeltemplate.ModelTemplate.prefix',
                             new_callable=mock.PropertyMock,
                             return_value='RUNID'):
@@ -811,7 +811,7 @@ class ArchiveTests(unittest.TestCase):
         self.model.mean_fields = ['F1', 'F2']
         self.model.naml.archiving.archive_means = True
         with mock.patch('modeltemplate.ModelTemplate.model_realm',
-                        new_callable=mock.PropertyMock, return_value='x'):
+                        return_value='x'):
             with mock.patch('modeltemplate.ModelTemplate.prefix',
                             new_callable=mock.PropertyMock,
                             return_value='RUNID'):
@@ -840,7 +840,7 @@ class ArchiveTests(unittest.TestCase):
         self.model.suite.finalcycle = True
 
         with mock.patch('modeltemplate.ModelTemplate.model_realm',
-                        new_callable=mock.PropertyMock, return_value='x'):
+                        return_value='x'):
             with mock.patch('modeltemplate.ModelTemplate.prefix',
                             new_callable=mock.PropertyMock,
                             return_value='RUNID'):
@@ -869,7 +869,7 @@ class ArchiveTests(unittest.TestCase):
         self.model.suite.finalcycle = True
 
         with mock.patch('modeltemplate.ModelTemplate.model_realm',
-                        new_callable=mock.PropertyMock, return_value='x'):
+                        return_value='x'):
             with mock.patch('modeltemplate.ModelTemplate.prefix',
                             new_callable=mock.PropertyMock,
                             return_value='RUNID'):
@@ -892,7 +892,7 @@ class ArchiveTests(unittest.TestCase):
         self.model.naml.processing.compression_level = 5
 
         with mock.patch('modeltemplate.ModelTemplate.model_realm',
-                        new_callable=mock.PropertyMock, return_value='x'):
+                        return_value='x'):
             self.model.prepare_archive()
 
         self.model.compress_netcdf_files.\
@@ -913,7 +913,7 @@ class ArchiveTests(unittest.TestCase):
         mock_utils.add_path.return_value = ['f1', 'f2_COMPRESS_FAILED']
 
         with mock.patch('modeltemplate.ModelTemplate.model_realm',
-                        new_callable=mock.PropertyMock, return_value='x'):
+                        return_value='x'):
             with mock.patch('modeltemplate.ModelTemplate.prefix',
                             new_callable=mock.PropertyMock,
                             return_value='RUNID'):
@@ -947,7 +947,7 @@ class ArchiveTests(unittest.TestCase):
         mock_utils.add_path.return_value = ['f1']
 
         with mock.patch('modeltemplate.ModelTemplate.model_realm',
-                        new_callable=mock.PropertyMock, return_value='x'):
+                        return_value='x'):
             with mock.patch('modeltemplate.ModelTemplate.prefix',
                             new_callable=mock.PropertyMock,
                             return_value='RUNID'):
@@ -1436,7 +1436,6 @@ class MethodsTests(unittest.TestCase):
                         new_callable=mock.PropertyMock,
                         return_value={'mod1': ['g1'], 'mod2': ['g2']}):
             with mock.patch('modeltemplate.ModelTemplate.model_realm',
-                            new_callable=mock.PropertyMock,
                             return_value='X'):
                 for loop_yield in self.model.loop_inputs(['f1']):
                     yield_prefix.append(loop_yield.prefix)
@@ -1464,7 +1463,6 @@ class MethodsTests(unittest.TestCase):
                         new_callable=mock.PropertyMock,
                         return_value={'mod1': ['g1'], 'mod2': ['g2']}):
             with mock.patch('modeltemplate.ModelTemplate.model_realm',
-                            new_callable=mock.PropertyMock,
                             return_value='X'):
                 for loop_yield in self.model.loop_inputs(['f1', 'f2']):
                     yield_prefix.append(loop_yield.prefix)
@@ -1485,7 +1483,6 @@ class MethodsTests(unittest.TestCase):
                         new_callable=mock.PropertyMock,
                         return_value={'model': ['F_1', 'F_2']}):
             with mock.patch('modeltemplate.ModelTemplate.model_realm',
-                            new_callable=mock.PropertyMock,
                             return_value='x'):
                 _ = self.model.filename_components(
                     'u_RUNIDx.1x.11112233_44445566_F_1.nc'
@@ -1502,7 +1499,6 @@ class MethodsTests(unittest.TestCase):
                         new_callable=mock.PropertyMock,
                         return_value={'model': ['']}):
             with mock.patch('modeltemplate.ModelTemplate.model_realm',
-                            new_callable=mock.PropertyMock,
                             return_value='x'):
                 _ = self.model.filename_components(
                     'RUNIDx.10x.11112233.44445566.nc'
@@ -1520,7 +1516,6 @@ class MethodsTests(unittest.TestCase):
                         new_callable=mock.PropertyMock,
                         return_value={'model': ['F_1']}):
             with mock.patch('modeltemplate.ModelTemplate.model_realm',
-                            new_callable=mock.PropertyMock,
                             return_value='x'):
                 with mock.patch('modeltemplate.ModelTemplate.rebuild_suffix',
                                 new_callable=mock.PropertyMock,

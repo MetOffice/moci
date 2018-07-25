@@ -101,6 +101,10 @@ class ArchivedFilesTests(unittest.TestCase):
             [1988, 1, 1]
             )
         self.assertListEqual(
+            self.files.extract_date('lim_runidi_1s_198812-198903_grid.nc'),
+            [1988, 12, 1]
+            )
+        self.assertListEqual(
             self.files.extract_date('nemo_runido_10d_19880115-19881115'
                                     '_grid.nc'), [1988, 1, 15]
             )
@@ -118,6 +122,10 @@ class ArchivedFilesTests(unittest.TestCase):
         self.assertListEqual(
             self.files.extract_date('medusa_runido_1m_198801-198802_grid.nc',
                                     start=False), [1988, 2, 1]
+            )
+        self.assertListEqual(
+            self.files.extract_date('lim_runidi_1s_198812-198903_grid.nc',
+                                    start=False), [1989, 3, 1]
             )
         self.assertListEqual(
             self.files.extract_date('nemo_runido_10d_19880115-19881115'
@@ -226,6 +234,9 @@ class ArchivedFilesTests(unittest.TestCase):
         mock_cmp.return_value = ('ncf_mean', 'o', 'medusa')
         self.assertEqual(self.files.get_collection(period='1m', stream='grid'),
                          'onm.nc.file')
+        mock_cmp.return_value = ('ncf_mean', 'i', 'lim')
+        self.assertEqual(self.files.get_collection(period='1s', stream='grid'),
+                         'ins.nc.file')
 
     @mock.patch('expected_content.ArchivedFiles.get_fn_components')
     def test_collection_cice(self, mock_cmp):
@@ -237,7 +248,7 @@ class ArchivedFilesTests(unittest.TestCase):
         mock_cmp.return_value = ('ncf_mean', 'i', 'cice')
         self.assertEqual(self.files.get_collection(period='1s', stream=''),
                          'ins.nc.file')
-        mock_cmp.return_value = ('ncf_mean', 'i', 'medusa')
+        mock_cmp.return_value = ('ncf_mean', 'i', 'cice')
         self.assertEqual(self.files.get_collection(period='1y', stream=''),
                          'iny.nc.file')
 
@@ -936,7 +947,7 @@ class DiagnosticFilesTests(unittest.TestCase):
     def test_expected_nemo(self):
         ''' Assert correct list of expected nemo files'''
         func.logtest('Assert correct return of expected nemo files:')
-        self.files.meanfields = ['grid-W', 'diad-T']
+        self.files.meanfields = ['grid-W', 'diad-T', 'icemod']
         self.files.naml.streams_1d_10d = 'UK-shelf-V'
         self.files.naml.streams_1m = 'UK-shelf'
         self.files.edate = [1996, 1, 1]
@@ -969,7 +980,12 @@ class DiagnosticFilesTests(unittest.TestCase):
                             'medusa_prefixo_1m_19951201-19960101_diad-T.nc',
                            ],
             'ons.nc.file': ['nemo_prefixo_1s_19950901-19951201_grid-W.nc',
-                            'medusa_prefixo_1s_19950901-19951201_diad-T.nc']
+                            'medusa_prefixo_1s_19950901-19951201_diad-T.nc'],
+            'inm.nc.file': ['lim_prefixi_1m_19950901-19951001_icemod.nc',
+                            'lim_prefixi_1m_19951001-19951101_icemod.nc',
+                            'lim_prefixi_1m_19951101-19951201_icemod.nc',
+                            'lim_prefixi_1m_19951201-19960101_icemod.nc'],
+            'ins.nc.file': ['lim_prefixi_1s_19950901-19951201_icemod.nc']
             }
 
         expected = self.files.expected_diags()
@@ -977,6 +993,9 @@ class DiagnosticFilesTests(unittest.TestCase):
                              sorted(outfiles['onm.nc.file'][:-2]))
         self.assertListEqual(sorted(expected['ons.nc.file']),
                              sorted(outfiles['ons.nc.file']))
+        self.assertListEqual(expected['inm.nc.file'],
+                             outfiles['inm.nc.file'][:-1])
+        self.assertListEqual(expected['ins.nc.file'], outfiles['ins.nc.file'])
 
         self.files.finalcycle = True
         expected = self.files.expected_diags()

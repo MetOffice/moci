@@ -25,12 +25,13 @@ FIELD_REGEX = r'[a-zA-Z0-9\-]*'
 MODEL_COMPONENTS = {
     # Key=model name
     # Value=tuple(realm, dict(fields associated with netCDF model component(s)))
-    'atmos': ('a', {'atmos': [FIELD_REGEX]}),
-    'nemo': ('o', {'nemo': ['grid-U', 'grid-V', 'grid-W', 'grid-T',
+    'atmos': {'atmos': ('a', [FIELD_REGEX])},
+    'nemo': {'nemo': ('o', ['grid-U', 'grid-V', 'grid-W', 'grid-T',
                             'diaptr', 'trnd3d', 'scalar',
-                            'UK-shelf-T', 'UK-shelf-U', 'UK-shelf-V'],
-                   'medusa': ['ptrc-T', 'diad-T', 'ptrd-T']}),
-    'cice': ('i', {'cice': ''}),
+                            'UK-shelf-T', 'UK-shelf-U', 'UK-shelf-V']),
+             'medusa': ('o', ['ptrc-T', 'diad-T', 'ptrd-T']),
+             'lim': ('i', ['icemod'])},
+    'cice': {'cice': ('i', '')},
     }
 
 FNAMES = {
@@ -42,6 +43,7 @@ FNAMES = {
     'cice_age_rst': r'{P}i.restart.age.{Y1:04d}-{M1:02d}-{D1:02d}-00000{S}',
 
     'nemo_rst': r'{P}o_{Y1:04d}{M1:02d}{D1:02d}_restart.nc',
+    'nemo_icerst': r'{P}o_{Y1:04d}{M1:02d}{D1:02d}_restart_ice.nc',
     'nemo_icebergs_rst': r'{P}o_icebergs_{Y1:04d}{M1:02d}{D1:02d}_restart.nc',
     'nemo_ptracer_rst': r'{P}o_{Y1:04d}{M1:02d}{D1:02d}_restart_trc.nc',
     'nemo_ibergs_traj': r'{P}o_trajectory_icebergs_{TS}.nc',
@@ -59,16 +61,17 @@ COLLECTIONS = {
 
 def model_components(model, field):
     ''' Return realm and model component for given model and field '''
-    realm = MODEL_COMPONENTS[model][0]
+    realm = MODEL_COMPONENTS[model][model][0]
     if not isinstance(field, str) or re.match('^[pm][a-z0-9]$', field):
         # Restart files (field=None) or Atmosphere 2char fields
         component = None
     else:
         # netCDF file - component required.  Initialise with model name.
         component = model
-        for comp in MODEL_COMPONENTS[model][1]:
-            if field in MODEL_COMPONENTS[model][1][comp]:
+        for comp in MODEL_COMPONENTS[model]:
+            if field in MODEL_COMPONENTS[model][comp][1]:
                 component = comp
+                realm = MODEL_COMPONENTS[model][comp][0]
                 break
 
     return realm, component

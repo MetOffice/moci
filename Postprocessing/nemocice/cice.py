@@ -37,11 +37,6 @@ class CicePostProc(mt.ModelTemplate):
         return {'cice': ''}
 
     @property
-    def model_realm(self):
-        ''' Return the standard realm ID character for the model: i=ice '''
-        return 'i'
-
-    @property
     def cfcompliant_output(self):
         '''
         Return "True" if the raw model output datestamp is CF-compliant.
@@ -62,6 +57,10 @@ class CicePostProc(mt.ModelTemplate):
            (<type str> method_name, <type bool>)
         '''
         return [('concat_daily_means', self.naml.processing.cat_daily_means)]
+
+    def model_realm(self, _):
+        ''' Return the standard realm ID character for the model: i=ice '''
+        return 'i'
 
     def rst_set_stencil(self, rsttype):
         '''
@@ -150,7 +149,7 @@ class CicePostProc(mt.ModelTemplate):
         '''
         ncf = netcdf_filenames.NCFilename('cice',
                                           self.suite.prefix,
-                                          self.model_realm,
+                                          self.model_realm(None),
                                           base='1d')
 
         patt = r'^{P}i\.[0-9hdm]*_?24h\.{{Y}}-{{M}}-{{D}}(-\d{{{{5}}}})?\.nc$'.\
@@ -223,7 +222,7 @@ class CicePostProc(mt.ModelTemplate):
         to_archive = utils.get_subset(self.share,
                                       r'cice_{}{}_1d_\d{{8}}-\d{{8}}\.nc'.
                                       format(self.suite.prefix.lower(),
-                                             self.model_realm))
+                                             self.model_realm(None)))
         if to_archive:
             arch_files = self.archive_files(to_archive)
 

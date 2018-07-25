@@ -39,6 +39,7 @@ class StencilTests(unittest.TestCase):
             'RUNIDo_19951130_restart.nc',
             'RUNIDo_icebergs_19951130_restart.nc',
             'RUNIDo_19951130_restart_trc.nc',
+            'RUNIDo_19951130_restart_ice.nc',
             'RUNIDo_6h_1995090101_1995090106_FIELD.nc',
             'RUNIDo_2d_19950902_19950903_FIELD_0000.nc',
             'RUNIDo_10d_19910601_19910630_FIELD_19910610-19910620_9999.nc',
@@ -63,12 +64,21 @@ class StencilTests(unittest.TestCase):
         nemo_rst = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(nemo_rst,
                          [fname for fname in self.files if 'restart' in fname
-                          and 'iceberg' not in fname and '_trc' not in fname])
+                          and '_ice' not in fname and '_trc' not in fname])
+
+    def test_rst_set_stencil_lim(self):
+        '''Test the regex of the rst_set_stencil method - lim restarts'''
+        func.logtest('Assert tracer pattern matching of rst_set_stencil:')
+        patt = re.compile(self.nemo.rst_set_stencil(self.nemo.rsttypes[1]))
+        lim_rst = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(
+            lim_rst, [fname for fname in self.files if 'restart_ice' in fname]
+            )
 
     def test_rst_set_stencil_iceberg(self):
         '''Test the regex of the rst_set_stencil method - iceberg restarts'''
         func.logtest('Assert iceberg pattern matching of rst_set_stencil:')
-        patt = re.compile(self.nemo.rst_set_stencil(self.nemo.rsttypes[1]))
+        patt = re.compile(self.nemo.rst_set_stencil(self.nemo.rsttypes[2]))
         ice_rst = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(ice_rst,
                          [fname for fname in self.files if 'iceberg' in fname])
@@ -76,9 +86,9 @@ class StencilTests(unittest.TestCase):
     def test_rst_set_stencil_tracer(self):
         '''Test the regex of the rst_set_stencil method - tracer restarts'''
         func.logtest('Assert tracer pattern matching of rst_set_stencil:')
-        patt = re.compile(self.nemo.rst_set_stencil(self.nemo.rsttypes[2]))
-        ice_rst = [fname for fname in self.files if patt.search(fname)]
-        self.assertEqual(ice_rst,
+        patt = re.compile(self.nemo.rst_set_stencil(self.nemo.rsttypes[3]))
+        trc_rst = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(trc_rst,
                          [fname for fname in self.files if '_trc' in fname])
 
     def test_general_mean_stencil(self):
@@ -120,6 +130,7 @@ class Propertytests(unittest.TestCase):
         self.assertListEqual(self.nemo.mean_fields,
                              ['diad_T', 'diaptr', 'grid_T',
                               'grid_U', 'grid_V', 'grid_W',
+                              'icemod',
                               'ptrc_T', 'ptrd_T', 'scalar', 'trnd3d'])
         self.assertEqual(self.nemo.naml.processing.region_fieldsfiles, None)
         self.assertListEqual(self.nemo.inst_fields, [])
@@ -185,14 +196,28 @@ class RebuildTests(unittest.TestCase):
             mock_fs.assert_called_once_with('ShareDir',
                                             r'RUNIDo__?\d{8}_restart(\.nc)?')
 
-    def test_call_rebuild_iceberg_rsts(self):
-        '''Test call to rebuild_restarts method with iceberg restart files'''
+    def test_call_rebuild_ice_rsts(self):
+        '''Test call to rebuild_restarts method with ice restart files'''
         func.logtest('Assert call to rebuild_fileset from rebuild_restarts:')
-        self.assertIn('icebergs', self.nemo.rsttypes[1])
+        self.assertIn('_ice', self.nemo.rsttypes[1])
         with mock.patch('nemo.NemoPostProc.rebuild_fileset') as mock_fs:
             with mock.patch('nemo.NemoPostProc.rsttypes',
                             new_callable=mock.PropertyMock,
                             return_value=(self.nemo.rsttypes[1],)):
+                self.nemo.rebuild_restarts()
+            mock_fs.assert_called_once_with(
+                'ShareDir',
+                r'RUNIDo__?\d{8}_restart_ice(\.nc)?'
+                )
+
+    def test_call_rebuild_iceberg_rsts(self):
+        '''Test call to rebuild_restarts method with iceberg restart files'''
+        func.logtest('Assert call to rebuild_fileset from rebuild_restarts:')
+        self.assertIn('icebergs', self.nemo.rsttypes[2])
+        with mock.patch('nemo.NemoPostProc.rebuild_fileset') as mock_fs:
+            with mock.patch('nemo.NemoPostProc.rsttypes',
+                            new_callable=mock.PropertyMock,
+                            return_value=(self.nemo.rsttypes[2],)):
                 self.nemo.rebuild_restarts()
             mock_fs.assert_called_once_with(
                 'ShareDir',
@@ -202,11 +227,11 @@ class RebuildTests(unittest.TestCase):
     def test_call_rebuild_tracer_rsts(self):
         '''Test call to rebuild_restarts method with tracer restart files'''
         func.logtest('Assert call to rebuild_fileset from rebuild_restarts:')
-        self.assertIn('_trc', self.nemo.rsttypes[2])
+        self.assertIn('_trc', self.nemo.rsttypes[3])
         with mock.patch('nemo.NemoPostProc.rebuild_fileset') as mock_fs:
             with mock.patch('nemo.NemoPostProc.rsttypes',
                             new_callable=mock.PropertyMock,
-                            return_value=(self.nemo.rsttypes[2],)):
+                            return_value=(self.nemo.rsttypes[3],)):
                 self.nemo.rebuild_restarts()
             mock_fs.assert_called_once_with(
                 'ShareDir',
@@ -1261,7 +1286,7 @@ class UtilityMethodTests(unittest.TestCase):
         func.logtest('Assert NEMO in model identification:')
         with mock.patch('nemo.NemoPostProc.model_components',
                         new_callable=mock.PropertyMock,
-                        return_value={'nemo': ['GRID', 'FIELD']}):
+                        return_value={'nemo': ['GRID', 'FIELD'], 'lim': []}):
             ncf = self.nemo.filename_components(
                 'RUNIDo_10d_20001201_20011210_FIELD.nc'
                 )
@@ -1276,11 +1301,25 @@ class UtilityMethodTests(unittest.TestCase):
         func.logtest('Assert MEDUSA in model identification:')
         with mock.patch('nemo.NemoPostProc.model_components',
                         new_callable=mock.PropertyMock,
-                        return_value={'medusa': ['GRID', 'FIELD']}):
+                        return_value={'medusa': ['GRID', 'FIELD'], 'lim': []}):
             self.nemo.filename_components(
                 'RUNIDo_1m_11112233_44445566_FIELD.nc'
                 )
         mock_ncf.assert_called_once_with('medusa', 'RUNID', 'o', base='1m',
+                                         start_date=('1111', '22', '33'),
+                                         custom='FIELD')
+
+    @mock.patch('nemo.netcdf_filenames.NCFilename')
+    def test_components_lim_model(self, mock_ncf):
+        '''Test component extraction - lim model identification'''
+        func.logtest('Assert LIM in model identification:')
+        with mock.patch('nemo.NemoPostProc.model_components',
+                        new_callable=mock.PropertyMock,
+                        return_value={'lim': ['GRID', 'FIELD']}):
+            self.nemo.filename_components(
+                'RUNIDo_1m_11112233_44445566_FIELD.nc'
+                )
+        mock_ncf.assert_called_once_with('lim', 'RUNID', 'i', base='1m',
                                          start_date=('1111', '22', '33'),
                                          custom='FIELD')
 

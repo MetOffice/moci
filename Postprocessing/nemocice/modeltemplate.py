@@ -148,22 +148,6 @@ class ModelTemplate(control.RunPostProc):
         utils.log_msg(msg, level='WARN')
         raise NotImplementedError
 
-    @abc.abstractproperty
-    def model_realm(self):
-        '''
-        Returns a single lowercase character representing the data realm.
-        Permitted realms are:
-           a = atmosphere
-           i = seaice
-           l = land
-           o = ocean
-        Overriding method in the calling model is required.
-        '''
-        msg = 'Model specific model_realm property not implemented.\n\t'
-        msg += 'return single lowercase char from permitted list: [a, i, l, o]'
-        utils.log_msg(msg, level='WARN')
-        raise NotImplementedError
-
     @property
     def rsttypes(self):
         ''' Returns a tuple of restart file types available '''
@@ -192,6 +176,97 @@ class ModelTemplate(control.RunPostProc):
     def base_component(self):
         '''Base component used to create the first mean file'''
         return self.naml.processing.base_component
+
+    @abc.abstractmethod
+    def model_realm(self, field):
+        '''
+        Returns a single lowercase character representing the data realm.
+        Permitted realms are:
+           a = atmosphere
+           i = seaice
+           l = land
+           o = ocean
+        Overriding method in the calling model is required.
+        '''
+        msg = 'Model specific model_realm property not implemented.\n\t'
+        msg += 'return single lowercase char from permitted list: [a, i, l, o]'
+        utils.log_msg(msg, level='WARN')
+        raise NotImplementedError
+
+    def _mean_bases(self):
+        '''
+        Return a dictionary of base periods for each mean:
+           { <PERIOD>: tuple(<PERIOD BASE>, <SET LENGTH> }
+             <PERIOD>      = MM,SS,AA,DD
+             <PERIOD BASE> = Base component used to create the mean
+             <SET LENGTH>  = Number of base component files to create the mean
+        '''
+        basecmpt = self.base_component
+        multiplier = float(basecmpt[:-1])
+
+        if utils.calendar() == '360day':
+            cal_hd = 'hd'
+        else:
+            cal_hd = ''
+
+        all_periods = {
+            '1m': [None, 1 if (basecmpt == '1m') else
+                   (30 if (basecmpt[-1] == 'd' and cal_hd) else
+                    (720 if (basecmpt[-1] == 'h' and cal_hd) else 0))],
+            '1s': [None, 1 if (basecmpt == '1s') else
+                   (3 if (basecmpt[-1] in cal_hd + 'm') else 0)],
+            '1y': [None, 1 if (basecmpt == '1y') else
+                   (4 if (basecmpt[-1] in cal_hd + 'ms') else 0)],
+            '1x': [None, 1 if (basecmpt == '10y') else
+                   (10 if (basecmpt[-1] in cal_hd + 'msy') else 0)],
+            }
+
+        base_mean = None
+        for i, period in enumerate(MEANPERIODS):
+            if all_periods[period][1] == 0:
+                # This period mean has already been assessed as not possible
+                continue
+
+            try:
+                nextp = MEANPERIODS[i + 1]
+                all_periods[nextp][0] = period
+            except IndexError:
+                # No further means possible
+                nextp = None
+
+            if base_mean:
+                all_periods[period][0] = basecmpt
+            else:
+                if all_periods[period][1] % multiplier == 0 and \
+                        all_periods[period][1] >= multiplier:
+                    all_periods[period] = [
+                        basecmpt, int(all_periods[period][1] / multiplier)
+                        ]
+                    base_mean = period
+                else:
+                    # mean is not possible on the given base
+                    if nextp:
+                        all_periods[nextp][0] = basecmpt
+                        all_periods[nextp][1] *= \
+                            all_periods[period][1]
+                    all_periods[period] = [None, 0]
+                    continue
+
+            meantitles = {'1m': 'monthly',
+                          '1s': 'seasonal',
+                          '1y': 'annual',
+                          '1x': 'decadal'}
+            if getattr(self.naml.processing,
+                       'create_{}_mean'.format(meantitles[period])):
+                # Update the base component for the next mean
+                basecmpt = period
+            else:
+                if nextp:
+                    all_periods[nextp][0] = period
+                    all_periods[nextp][1] *= all_periods[period][1]
+                all_periods[period] = [None, 0]
+
+        return all_periods
 
     def set_stencil(self, period, fn_vars):
         '''
@@ -481,7 +556,7 @@ class ModelTemplate(control.RunPostProc):
 
         try:
             ncf = netcdf_filenames.NCFilename(
-                component, self.prefix, self.model_realm,
+                component, self.prefix, self.model_realm(field),
                 base=base, start_date=startdate, custom=field
                 )
         except UnboundLocalError as exc:
@@ -542,9 +617,11 @@ class ModelTemplate(control.RunPostProc):
           * Periods (years, seasons, months)
         '''
         for cmpt in self.model_components:
-            inputs = netcdf_filenames.NCFilename(cmpt, self.prefix,
-                                                 self.model_realm)
             for field in fields:
+                inputs = netcdf_filenames.NCFilename(
+                    cmpt, self.prefix, self.model_realm(field),
+                    custom='_' + field if field else ''
+                    )
                 inputs.custom = '_' + field if field else ''
                 for mean in self.requested_means.keys():
                     # Yield NCFilename object for required mean periods
@@ -648,7 +725,7 @@ class ModelTemplate(control.RunPostProc):
             custom = '' if match_fields == '()' else '_' + match_fields
             ncf = netcdf_filenames.NCFilename('.*',
                                               self.prefix,
-                                              self.model_realm,
+                                              self.model_realm(custom),
                                               custom=custom)
 
             # Select additional means files, not in base_component
@@ -708,7 +785,7 @@ class ModelTemplate(control.RunPostProc):
         custom = '_' + fieldtype if fieldtype else ''
         ncf = netcdf_filenames.NCFilename(self.component(fieldtype),
                                           self.prefix,
-                                          self.model_realm,
+                                          self.model_realm(custom),
                                           base=base,
                                           custom=custom)
         pattern = '{}({})?$'.format(self.mean_stencil(ncf), fail_tag)

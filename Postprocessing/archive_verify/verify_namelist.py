@@ -59,7 +59,7 @@ class AtmosVerify(object):
 
 
 class NemoVerify(object):
-    ''' Default namelist for atmosphere archive verification '''
+    ''' Default namelist for NEMO archive verification '''
     def __init__(self):
         pass
 
@@ -68,6 +68,7 @@ class NemoVerify(object):
     buffer_restart = 1
     buffer_mean = 0
     base_mean = '10d'
+    nemo_ice_rst = False
     nemo_icebergs_rst = False
     nemo_ptracer_rst = False
     meanfields = ['grid-U', 'grid-T', 'grid-W', 'grid-V']
@@ -82,7 +83,7 @@ class NemoVerify(object):
 
 
 class CiceVerify(object):
-    ''' Default namelist for atmosphere archive verification '''
+    ''' Default namelist for CICE archive verification '''
     def __init__(self):
         pass
 
