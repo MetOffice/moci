@@ -27,6 +27,15 @@ import time
 import common
 import error
 
+try:
+    # Mule is not part of the standard Python package
+    import mule
+    MULE_AVAIL = True
+except ImportError:
+    sys.stdout.write('[WARN] Mule utility is unavaliable, unable to calculate'
+                     ' complexity for UM\n')
+    MULE_AVAIL = False
+
 
 CORES_PER_NODE_UKMO_XC40 = {'broadwell': 36,
                             'haswell': 32}
@@ -177,6 +186,27 @@ def get_allocated_cpus(cpmip_envar):
             allocated_cpu[model] = 0
             mpi_tasks[model] = 0
     return allocated_cpu, mpi_tasks
+
+
+def jpsy_metric(total_power, total_hpc_nodes, number_nodes,
+                aprun_time, years_run):
+    '''
+    Calculate the Joules per simulated year metric, and return an appropriate
+    message to be written to stdout and the cpmip.out file. Takes arguments
+    of total machine power (MW), total number of nodes, core hours per
+    simulated year and the number of allocated nodes
+    '''
+    if total_power == '' or total_hpc_nodes == '':
+        sys.stdout.write('[INFO] Unable to determine the JPSY metric')
+        message = ''
+    else:
+        power_for_run_w = (float(total_power) / float(total_hpc_nodes)) * \
+            (float(number_nodes) * 1000 * 1000)
+        energy_for_run_joules = float(aprun_time) * power_for_run_w
+        jpsy = energy_for_run_joules / years_run
+        message = 'Energy cost for run %.2E Joules per simulated year\n' % \
+            jpsy
+    return message
 
 
 def chsy_metric(allocated_cpus, run_cpus, years_run_cycle, cycle_runtime_hr):
@@ -462,6 +492,107 @@ def __update_namelists_for_timing(cpmip_envar):
     mod_namelist_cfg.replace()
 
 
+def _get_component_resolution(nlist_file, resolution_variables):
+    '''
+    Get the total componenet resolution nx x ny x nz from a given namelist
+    file. The arguments are a namelist file, and a list of the resolution
+    variables within that namelist. Returns a single value
+    '''
+    resolution = 1
+    for res_var in resolution_variables:
+        _, out = common.exec_subproc(['grep', res_var, nlist_file],
+                                     verbose=True)
+        i_res = int(re.search(r'(\d+)', out).group(0))
+        resolution *= i_res
+    return resolution
+
+
+def __increment_dump(datestr, resub, resub_units):
+    '''
+    Increment the dump date to end of cycle, so it can be found to
+    calculate complexity
+    '''
+    resub = int(resub)
+    if 'm' in resub_units.lower():
+        resub *= 30
+    year = int(datestr[:4])
+    month = int(datestr[4:6])
+    day = int(datestr[6:])
+    day += resub
+    if day > 30:
+        day = day - 30
+        month += 1
+    if month > 12:
+        month = month - 12
+        year += 1
+    return '%04d%02d%02d' % (year, month, day)
+
+
+def _get_complexity(common_envar, cpmip_envar):
+    '''
+    Calculate the model complexity. Takes in the cpmip_envar object and
+    returns a message containing the complexity and resolution of indivdual
+    models, and the total complexity of the coupled configuration to be
+    written to standard output and cpmip.output
+    '''
+    cycle_date = cpmip_envar['CYLC_TASK_CYCLE_POINT'].split('T')[0]
+    msg = ''
+    total_complexity = 0.0
+
+    cycle_date = __increment_dump(cycle_date, cpmip_envar['RESUB'],
+                                  cpmip_envar['CYCLE'])
+    if 'um' in cpmip_envar['models']:
+        dump_name = '%sa.da%s_00' % (common_envar['RUNID'], cycle_date)
+        dump_path = os.path.join(cpmip_envar['DATAM'], dump_name)
+        # Get the fraction of fields within the model that are prognostic
+        if MULE_AVAIL and os.path.isfile(dump_path):
+            umfile = mule.UMFile.from_file(dump_path,
+                                           remove_empty_lookups=True)
+            # What number of our fields are prognostics?
+            prog_fields = umfile.fixed_length_header.raw[153]
+            # how many levels are in the model (p_levels)
+            number_p_levels = umfile.integer_constants.raw[8]
+            # what is the resolution of the model?
+            um_res = umfile.integer_constants.raw[6] * \
+                umfile.integer_constants.raw[7] * number_p_levels
+            um_complexity = float(prog_fields) / float(number_p_levels)
+            msg += 'The UM complexity is %i, and total resolution %i\n' % \
+                (um_complexity, um_res)
+            total_complexity += um_complexity
+        else:
+            msg += 'Unable to calculate UM complexity and UM resolution\n'
+
+    if 'nemo' in cpmip_envar['models']:
+        nemo_res = _get_component_resolution(cpmip_envar['NEMO_NL'],
+                                             ('jpiglo', 'jpjglo', 'jpkdta'))
+        rcode, out = common.__exec_subproc_true_shell( \
+            'du -c %s/NEMOhist/*%s*' % (cpmip_envar['DATAM'], cycle_date),
+            verbose=False)
+        if rcode == 0:
+            nemo_words = (int(out.split()[-2])) * (1024./8)
+            nemo_complexity = nemo_words / float(nemo_res)
+            msg += 'NEMO complexity is %i, and total resolution %i\n' % \
+                (nemo_complexity, nemo_res)
+            total_complexity += nemo_complexity
+
+    if 'cice' in cpmip_envar['models']:
+        cice_cycle_date = '%s-%s-%s' % (cycle_date[:4],
+                                        cycle_date[4:6], cycle_date[6:])
+        cice_res = int(cpmip_envar['CICE_COL']) * int(cpmip_envar['CICE_ROW'])
+        rcode, out = common.__exec_subproc_true_shell( \
+            'du -c %s/CICEhist/*%s*' % (cpmip_envar['DATAM'], cice_cycle_date),
+            verbose=False)
+        if rcode == 0:
+            cice_words = (int(out.split()[-2])) * (1024./8)
+            cice_complexity = cice_words / float(cice_res)
+            msg += 'CICE complexity is %i, and total resolution %i\n' % \
+                (cice_complexity, cice_res)
+            total_complexity += cice_complexity
+
+    msg += 'Total model complexity is %i\n' % (total_complexity)
+    return msg
+
+
 def _load_environment_variables(cpmip_envar):
     '''
     Load the CPMIP environment variables required for the model run
@@ -483,6 +614,36 @@ def _load_environment_variables_finalise(cpmip_envar):
     Load the CPMIP environment variables required for the model finalize
     into the cpmip_envar container
     '''
+    _ = cpmip_envar.load_envar('NEMO_NL', 'namelist_cfg')
+
+    _ = cpmip_envar.load_envar('TOTAL_POWER_CONSUMPTION', '')
+    _ = cpmip_envar.load_envar('NODES_IN_HPC', '')
+
+    _ = cpmip_envar.load_envar('COMPLEXITY', 'False')
+
+    if cpmip_envar.load_envar('DATAM') != 0:
+        sys.stderr.write('[FAIL] Environment variable DATAM is not set\n')
+        sys.exit(error.MISSING_EVAR_ERROR)
+
+    # Get the cyclepoint
+    if cpmip_envar.load_envar('CYLC_TASK_CYCLE_POINT') != 0:
+        sys.stderr.write('[FAIL] Environment variable CYLC_TASK_CYCLE_POINT'
+                         '  is not set\n')
+        sys.exit(error.MISSING_EVAR_ERROR)
+
+    if cpmip_envar.load_envar('CYCLE') != 0:
+        sys.stderr.write('[FAIL] Environment variable CYCLE is not set\n')
+        sys.exit(error.MISSING_EVAR_ERROR)
+
+    if cpmip_envar.load_envar('RESUB') != 0:
+        sys.stderr.write('[FAIL] Environment variable RESUB is not set\n')
+        sys.exit(error.MISSING_EVAR_ERROR)
+
+    # Get the component models
+    if cpmip_envar.load_envar('models') != 0:
+        sys.stderr.write('[FAIL] Environment variable models containing a list'
+                         ' of component models is not set\n')
+        sys.exit(error.MISSING_EVAR_ERROR)
 
     # Get the number of processors the components run on
     # UM
@@ -504,6 +665,10 @@ def _load_environment_variables_finalise(cpmip_envar):
         sys.exit(error.MISSING_EVAR_ERROR)
     # XIOS (If applicable)
     _ = cpmip_envar.load_envar('XIOS_NPROC', '0')
+
+    # CICE (If applicable)
+    _ = cpmip_envar.load_envar('CICE_ROW', '0')
+    _ = cpmip_envar.load_envar('CICE_COL', '0')
 
     # Get the preopts for the various components
     if cpmip_envar.load_envar('ROSE_LAUNCHER_PREOPTS_UM') != 0:
@@ -735,6 +900,15 @@ def _finalize_cpmip_controller(common_envar):
         data_intensity_msg = ''
 
 
+    if 'true' in cpmip_envar['COMPLEXITY'].lower():
+        complexity_msg = _get_complexity(common_envar, cpmip_envar)
+    else:
+        complexity_msg = ''
+    jpsy_msg = jpsy_metric(cpmip_envar['TOTAL_POWER_CONSUMPTION'],
+                           cpmip_envar['NODES_IN_HPC'], number_nodes,
+                           cpmip_envar['time_in_aprun'], years_run)
+
+
 
     # Produce a nice summary of the coupling metric and various information
     sys.stdout.write('\nSUMMARY FROM CPMIP CONTROLLER\n')
@@ -760,6 +934,8 @@ def _finalize_cpmip_controller(common_envar):
                      ' run\n' %
                      (coupling_metric * total_resource * secs_to_hours,))
     sys.stdout.write(chsy_message)
+    sys.stdout.write(complexity_msg)
+    sys.stdout.write(jpsy_msg)
     sys.stdout.write(data_intensity_msg)
     sys.stdout.write('\n%s' % um_io_frac_mess)
     sys.stdout.write('\n%s' % nemo_io_frac_mess)
@@ -785,6 +961,8 @@ def _finalize_cpmip_controller(common_envar):
         cpmip_f.write('NEMO Processors: %i\n' % nemo_cpus)
         if xios_cpus:
             cpmip_f.write('XIOS Processors: %i\n' % xios_cpus)
+        cpmip_f.write(complexity_msg)
+        cpmip_f.write(jpsy_msg)
 
 
 
