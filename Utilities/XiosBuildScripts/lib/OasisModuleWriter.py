@@ -125,7 +125,7 @@ class OasisCrayModuleWriter(OasisModuleWriter):
                                    moduleName,
                                    platform,
                                    prerequisites,
-                                   compiler_module)
+                                   )
 
     Parameters:
     * version - The module file version number (a string)
@@ -152,8 +152,7 @@ class OasisCrayModuleWriter(OasisModuleWriter):
                  suite_rev_num,
                  moduleName,
                  platform,
-                 prerequisites,
-                 compiler_module):
+                 prerequisites):
         OasisModuleWriter.__init__(self,
                                    version=version,
                                    modulePath=modulePath,
@@ -167,7 +166,6 @@ class OasisCrayModuleWriter(OasisModuleWriter):
                                    moduleName=moduleName,
                                    parents='',
                                    platform=platform)
-        self.compiler_module = compiler_module
 
 class OasisCrayRemoteModuleWriter(OasisModuleWriter):
 

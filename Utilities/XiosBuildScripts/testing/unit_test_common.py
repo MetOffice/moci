@@ -117,8 +117,12 @@ def run_tests(test_list_dict):
     date_time_str = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
     working_dir = os.path.join(cmd_args.working_dir,
                                SCRATCH_DIR_NAME + '_' + date_time_str)
+    print('working directory: {testDir}'.format(testDir=working_dir))
     if not (os.path.exists(working_dir) and os.path.isdir(working_dir)):
+        print('creating working directory')
         os.mkdir(working_dir)
+        if os.path.isdir(working_dir):
+            print('working directory created')
     os.chdir(working_dir)
     print 'test files will be created in {testDir}'.format(testDir=os.getcwd())
 

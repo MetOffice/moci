@@ -6,6 +6,9 @@ import unittest
 import os
 import filecmp
 import abc
+import copy
+
+import mock
 
 # this must be imported before the other local imports as it sets up the path
 # to import the main scripts
@@ -37,20 +40,20 @@ class OasisBuildTests(unittest.TestCase):
         self.config_list = OasisBuildTests.CONFIG_LIST
         self.settings_dir = unit_test_common.get_settings_dir()
 
-        settings_dict = unit_test_common.get_settings(self.config_list,
-                                                      self.settings_dir,
-                                                      self.system_name)
+        self.settings_dict = unit_test_common.get_settings(self.config_list,
+                                                           self.settings_dir,
+                                                           self.system_name)
 
 
-        self.library_name = settings_dict['OASIS3_MCT']
-        self.oasis_repository_url = settings_dict['OASIS_REPO_URL']
-        self.oasis_revision_number = settings_dict['OASIS_REV_NO']
+        self.library_name = self.settings_dict['OASIS3_MCT']
+        self.oasis_repository_url = self.settings_dict['OASIS_REPO_URL']
+        self.oasis_revision_number = self.settings_dict['OASIS_REV_NO']
 
-        self.verbose = settings_dict['VERBOSE'] == 'true'
+        self.verbose = self.settings_dict['VERBOSE'] == 'true'
 
         self.build_system = \
             OasisBuildSystem.create_build_system(self.system_name,
-                                                 settings_dict)
+                                                 self.settings_dict)
 
     def tearDown(self):
         """
@@ -80,66 +83,69 @@ class OasisBuildTests(unittest.TestCase):
                             self.oasis_repository_url,
                             self.build_system.oasis_repository_url))
 
-    def test_code_extraction(self):
+    def test_prereq_modules(self):
+        """
+        Unit test for checking that the prerequisite_modules are correctly
+        read in by the build system class.
+        """
+        tmp_settings = copy.deepcopy(self.settings_dict)
+        mod_list = ['mod_a/001', 'mod_b/002']
+        mod_list_str = "['" + "','".join(mod_list) + "']"
+        tmp_settings['XBS_PREREQ_MODULES_SWAP'] = mod_list_str
+
+        build_system_test = \
+            OasisBuildSystem.create_build_system(self.system_name,
+                                                 tmp_settings,
+                                                )
+
+        for mod1 in mod_list:
+            self.assertIn(mod1, build_system_test.prerequisite_swaps)
+
+    @mock.patch('OasisBuildSystem.subprocess.call', return_value=0)
+    def test_code_extraction_url(self, mock_sp):
         """
         Test the OasisBuildSystem.extract_source_code() function.
         """
+        self.build_system.source_code_location_type = 'URL'
         self.build_system.extract_source_code()
         #only check extract script if using a repository URL
-        if self.build_system.source_code_location_type == 'URL':
-            script_file_path = '{working_dir}/{fileName}'
-            script_file_path = script_file_path.format(
-                working_dir=self.build_system.working_dir,
-                fileName=OasisBuildSystem.EXTRACT_SCRIPT_FILE_NAME)
-            self.assertTrue(
-                os.path.exists(script_file_path),
-                'script file {0} not found!'.format(script_file_path))
-            # compare contents to reference file
-            ref_file_path = '{0}/oasisBuild_{1}_reference_extractScript.sh'
-            ref_file_path = ref_file_path.format(self.build_system.working_dir,
-                                                 self.system_name)
+        ref_file_str = \
+            'fcm co {oasis_repository_url}@{oasis_revision_number} '\
+            '{oasis_src_dir}\n'
 
-            ref_file_str = \
-                'fcm co {oasis_repository_url}@{oasis_revision_number} '\
-                '{oasis_src_dir}\n'
+        if self.build_system.separate_make_file:
+            ref_file_str += \
+                'fcm export {make_config_repo_url}'\
+                '/{make_config_file_name}@{make_config_rev_no}'\
+                ' {oasis_src_dir}/util/make_dir/'\
+                '{make_config_file_name}\n'
+        if self.build_system.build_tutorial and \
+            self.build_system.separate_tutorial_location:
+            ref_file_str += \
+                'rm -rf {oasis_src_dir}/examples/tutorial/\n'
+            ref_file_str += \
+                'fcm export {tutorial_repository_url}@'\
+                '{tutorial_revision_number} '\
+                '{oasis_src_dir}/examples/tutorial/ \n'
 
-            if self.build_system.separate_make_file:
-                ref_file_str += \
-                    'fcm export {make_config_repo_url}'\
-                    '/{make_config_file_name}@{make_config_rev_no}'\
-                    ' {oasis_src_dir}/util/make_dir/'\
-                    '{make_config_file_name}\n'
-            if self.build_system.build_tutorial and \
-                self.build_system.separate_tutorial_location:
-                ref_file_str += \
-                    'rm -rf {oasis_src_dir}/examples/tutorial/\n'
-                ref_file_str += \
-                    'fcm export {tutorial_repository_url}@'\
-                    '{tutorial_revision_number} '\
-                    '{oasis_src_dir}/examples/tutorial/ \n'
+        ref_file_str = ref_file_str.format(**self.build_system.__dict__)
 
-            ref_file_str = ref_file_str.format(**self.build_system.__dict__)
+        # check the mock calls
+        mock_sp.assert_called_once_with(ref_file_str, shell=True)
 
-            with open(ref_file_path, 'w') as ref_file:
-                ref_file.write(ref_file_str)
-            self.assertTrue(filecmp.cmp(script_file_path,
-                                        ref_file_path),
-                            'script file {0} differs from reference file {1}'
-                            .format(script_file_path, ref_file_path))
+    @mock.patch('OasisBuildSystem.shutil.copytree', return_value=0)
+    def test_code_extraction_local_dir(self, mock_copy):
+        """
+        Test the OasisBuildSystem.extract_source_code() function.
+        """
+        self.build_system.source_code_location_type = 'local'
+        self.build_system.oasis_src_code_dir = '/path/to/source/code'
+        self.build_system.extract_source_code()
 
-        # check extracted source code for existence of some files
-        self.assertTrue(os.path.exists(self.build_system.oasis_src_dir))
-        self.assertTrue(os.path.isdir(self.build_system.oasis_src_dir))
-        file_check_list = [
-            '{0}/lib/mct/Makefile'.format(self.build_system.oasis_src_dir),
-            '{0}/lib/mct/mct/mct_mod.F90'
-            .format(self.build_system.oasis_src_dir),
-            '{0}/util/make_dir/{1}'\
-            .format(self.build_system.oasis_src_dir,
-                    self.build_system.make_config_file_name)]
-        for file_path1 in file_check_list:
-            self.assertTrue(os.path.exists(file_path1),
-                            ' file {0} not found'.format(file_path1))
+        mock_copy.assert_called_once_with(
+            self.build_system.oasis_src_code_dir,
+            self.build_system.oasis_src_dir,
+        )
 
     @abc.abstractmethod
     def create_reference_build_cmd(self):
@@ -154,7 +160,7 @@ class OasisBuildTests(unittest.TestCase):
         """
         verbose_old = self.build_system.verbose
         self.build_system.verbose = True
-        build_cmd = self.build_system.create_build_command()
+        _ = self.build_system.create_build_command()
         self.build_system.verbose = verbose_old
 
         script_file_path = '{working_dir}/{fileName}'
@@ -230,14 +236,14 @@ class OasisBuildCrayTests(OasisBuildTests):
             self.build_system.module_root_dir,
             self.build_system.oasis_repository_url,
             self.build_system.oasis_revision_number,
-            self.oasis_repository_url,             
+            self.oasis_repository_url,
             self.oasis_revision_number,
             self.build_system.suite_url,
             self.build_system.suite_revision_number,
             self.build_system.library_name,
             self.build_system.system_name,
-            self.build_system.prerequisite_modules,
-            self.build_system.compiler_module)
+            self.build_system.all_prerequisites,
+        )
         return mw1
 
 
@@ -255,11 +261,13 @@ class OasisBuildCrayTests(OasisBuildTests):
         ref_file_str += 'echo CURRENT MODULES:\n'
         ref_file_str += 'module list\n'
 
-        if self.build_system.specify_compiler:
+        for swap_mod_name in self.build_system.prerequisite_swaps:
             ref_file_str += \
-                'module swap {0}\n'.format(self.build_system.compiler_module)
+                'module swap {mod_in}\n'.format(mod_in=swap_mod_name)
+
         for mod_name in self.build_system.prerequisite_modules:
             ref_file_str += 'module load {0}\n'.format(mod_name)
+
         ref_file_str += 'echo MODULES AFTER LOAD:\n'
         ref_file_str += 'module list\n'
         ref_file_str += '''
@@ -318,9 +326,7 @@ set module_base {module_root_dir}
 set oasisdir $module_base/packages/{rel_path}
 
 '''
-        mod_file_string += \
-            'prereq {0}\n'.format(self.build_system.compiler_module)
-        for mod_name in self.build_system.prerequisite_modules:
+        for mod_name in self.build_system.all_prerequisites:
             mod_file_string += 'prereq {0}\n'.format(mod_name)
         mod_file_string += '''
 setenv OASIS_ROOT $oasisdir

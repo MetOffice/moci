@@ -604,8 +604,9 @@ class XiosCrayBuildSystem(XiosBuildSystem):
         build_cmd1 += 'echo CURRENT MODULES:\n'
         build_cmd1 += 'module list\n'
 
-        if self.specify_compiler:
-            build_cmd1 += 'module swap {0}\n'.format(self.compiler_module)
+        for mod_swap in self.prerequisite_swaps:
+            build_cmd1 += 'module swap {swap}\n'.format(swap=mod_swap)
+
         for mod_1 in self.prerequisite_modules:
             build_cmd1 += 'module load {0}\n'.format(mod_1)
 
@@ -766,7 +767,7 @@ export NETCDF_LIB_DIR=""
                 moduleName=self.oasis_module_name,
                 platform=self.system_name,
                 prerequisites=[],
-                compiler_module=self.compiler_module)
+                )
         omw1.setup_file_path()
         return omw1.module_relative_path
 
@@ -785,8 +786,8 @@ export NETCDF_LIB_DIR=""
                                                   self.suite_url,
                                                   self.suite_revision_number,
                                                   self.system_name,
-                                                  self.prerequisite_modules,
-                                                  self.compiler_module)
+                                                  self.all_prerequisites,
+                                                )
 
         mod_writer1.write_module()
 
@@ -812,8 +813,9 @@ export NETCDF_LIB_DIR=""
                 platform=self.system_name,
                 suiteUrl=self.suite_url,
                 suite_revision_number=self.suite_revision_number,
-                prerequisites=self.prerequisite_modules,
-                compiler_module=self.compiler_module)
+                prerequisite_loads=self.prerequisite_modules,
+                prerequisite_swaps=self.prerequisite_swaps,
+                )
         # Create the PrgEnv module with 2 names, first XIOS-PrgEnv and then
         # GC3-PrgEnv
         prg_env_writer1.write_module()

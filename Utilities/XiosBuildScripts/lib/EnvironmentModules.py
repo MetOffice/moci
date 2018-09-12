@@ -71,7 +71,6 @@ class ModuleWriterBase(object):
 
         self.module_relative_path = None
         self.module_file_path = None
-        self.compiler_module = None
 
     @abstractmethod
     def write_module(self):
@@ -186,9 +185,6 @@ class SingleModuleWriter(ModuleWriterBase):
                 module_file.write('set {0} {1}\n'.format(*local_var1))
             module_file.write('\n')
 
-            if self.compiler_module:
-                module_file.write('prereq {0}\n'.format(self.compiler_module))
-
             for prereq1 in self.prerequisite_list:
                 module_file.write('prereq {0}\n'.format(prereq1))
             module_file.write('\n')
@@ -224,6 +220,7 @@ class PrgEnvModuleWriter(ModuleWriterBase):
         '''
         ModuleWriterBase.__init__(self)
         self.modules_to_load = []
+        self.modules_to_swap = []
         self.default_compiler = None
 
     def write_module(self):
@@ -251,11 +248,10 @@ class PrgEnvModuleWriter(ModuleWriterBase):
             for path1 in self.prerequisite_list:
                 module_file.write('prepend-path {0}\n'.format(path1))
             module_file.write('\n')
-            if not self.compiler_module is None:
-                comp_str = 'module swap {0} {1}\n\n'
-                comp_str = comp_str.format(self.default_compiler,
-                                           self.compiler_module)
-                module_file.write(comp_str)
+
+
+            for mod1 in self.modules_to_swap:
+                module_file.write('module swap {swap}\n'.format(swap=mod1))
 
             for mod1 in self.modules_to_load:
                 module_file.write('module load {0}\n'.format(mod1))

@@ -57,7 +57,7 @@ class NemoTestSystem(common.XbsBase):
         self.tasks_per_node = int(settings_dict['TASKS_PER_NODE'])
         self.xios_tasks_per_node = int(settings_dict['XIOS_TASKS_PER_NODE'])
         self.nemo_exec_name = 'opa'
-        
+
         self.xios_version = settings_dict['XIOS_VERSION']
         if self.xios_version == '2.0':
             self.nemo_config = 'GYRE_XIOS'
@@ -65,10 +65,10 @@ class NemoTestSystem(common.XbsBase):
         elif self.xios_version == '1.0':
             self.nemo_config = 'GYRE'
             self.jpcfg = '1'
-        
+
         try:
             self.xios_use_server = settings_dict['XIOS_USE_SERVER'] == 'true'
-        except:
+        except KeyError:
             self.xios_use_server = False
 
         if self.xios_use_server:

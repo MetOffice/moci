@@ -69,7 +69,7 @@ class NemoBuildSystem(common.XbsBuild):
             self.oasis_directory = settings_dict['OASIS_ROOT']
         else:
             self.oasis_directory = ''
-        
+
         build_key_list = []
         self.xios_version = settings_dict['XIOS_VERSION']
         if self.xios_version == '2.0':
@@ -89,9 +89,10 @@ class NemoBuildSystem(common.XbsBuild):
         self.arch_file_name = None
         self.do_post_build_cleanup = \
             settings_dict['NEMO_POST_BUILD_CLEANUP'] == 'true'
-        self.number_of_build_processors = 4
-
-
+        try:
+            self.number_of_build_processors = settings_dict['NEMO_BUILD_TASKS']
+        except KeyError:
+            self.number_of_build_processors = 1
 
         remove_key_list = []
         self.remove_keys = ' '.join(remove_key_list)
@@ -138,6 +139,7 @@ class NemoBuildSystem(common.XbsBuild):
         self.repository_url @ self.revision_number
         """
         destination_dir = self.source_directory
+        print('destination dir = {0}'.format(destination_dir))
         if os.path.exists(destination_dir) and os.path.isdir(destination_dir):
             shutil.rmtree(destination_dir)
 
@@ -352,6 +354,7 @@ class NemoCrayXC40BuildSystem(NemoBuildSystem):
 
         arch_str1 = arch_str1.format(**self.__dict__)
 
+        print('source_directory={0}'.format(self.source_directory))
         arch_file_path = os.path.join(self.source_directory,
                                       'ARCH',
                                       self.arch_file_name)

@@ -63,19 +63,23 @@ class XbsBuild(XbsBase):
     """
     def __init__(self, settings_dict):
         XbsBase.__init__(self, settings_dict)
+        # load the prerequisite modules. each of these environment
+        # variables is specified as a python list of strings.
         try:
-            self.specify_compiler = \
-                settings_dict['XBS_SPECIFY_COMPILER_PRGENV'] == 'true'
-            self.compiler_module = \
-                settings_dict['XBS_COMPILER_PRGENV']
+            prereq_module_str = settings_dict['XBS_PREREQ_MODULES']
+            self.prerequisite_modules = eval(prereq_module_str)
         except KeyError:
-            self.specify_compiler = False
-            self.compiler_module = None
+            self.prerequisite_modules = []
 
-        prereq_module_str = settings_dict['XBS_PREREQ_MODULES']
-        prereq_module_str = \
-            ''.join([s1 for s1 in prereq_module_str if "'[] ".count(s1) == 0])
-        self.prerequisite_modules = prereq_module_str.split(',')
+        try:
+            prereq_swap_str = settings_dict['XBS_PREREQ_MODULES_SWAP']
+            self.prerequisite_swaps = eval(prereq_swap_str)
+        except KeyError:
+            self.prerequisite_swaps = []
+
+        self.all_prerequisites = self.prerequisite_modules + \
+                                 self.prerequisite_swaps
+
 
 class MissingVariableError(Exception):
 

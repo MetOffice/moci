@@ -74,9 +74,9 @@
 {% if USE_RAMDISK %}
     export WORKING_DIR=$RAMTMP
 {% endif %}            
-{% if XBS_SPECIFY_COMPILER_PRGENV %}
-    module swap PrgEnv-cray {{XBS_COMPILER_PRGENV}}
-{% endif %}
+{% for mod_name in XBS_PREREQ_MODULES_SWAP %}
+      module swap {{mod_name}} 
+{% endfor %}
 {% for mod_name in XBS_PREREQ_MODULES %}
     module load {{mod_name}}
 {% endfor %}
@@ -101,9 +101,9 @@
 
     [[TEST_OASIS_SETUP]]
         pre-script = """
-{% if XBS_SPECIFY_COMPILER_PRGENV %}
-    module swap PrgEnv-cray {{XBS_COMPILER_PRGENV}}
-{% endif %}
+{% for mod_name in XBS_PREREQ_MODULES_SWAP %}
+      module swap {{mod_name}}
+{% endfor %}
 {% for mod_name in XBS_PREREQ_MODULES %}
     module load {{mod_name}}
 {% endfor %}
@@ -125,9 +125,9 @@ module load {{OASIS3_MCT}}/{{OASIS_MODULE_VERSION}}/{{ROSE_SUITE_REV_NO}}/{{OASI
 {% if USE_RAMDISK %}
     export WORKING_DIR=$RAMTMP
 {% endif %}            
-{% if XBS_SPECIFY_COMPILER_PRGENV %}
-    module swap PrgEnv-cray {{XBS_COMPILER_PRGENV}}
-{% endif %}
+{% for mod_name in XBS_PREREQ_MODULES_SWAP %}
+      module swap {{mod_name}} 
+{% endfor %}
 {% for mod_name in XBS_PREREQ_MODULES %}
     module load {{mod_name}}
 {% endfor %}
@@ -148,9 +148,9 @@ module load {{OASIS3_MCT}}/{{OASIS_MODULE_VERSION}}/{{ROSE_SUITE_REV_NO}}/{{OASI
     {% else %}
             -l ncpus=1
     {% endif %}
-            -l mem=16GB
+            -l mem=24GB
 {% if USE_RAMDISK %}
-            -l tmpsize=8gb
+            -l tmpsize=16gb
 {% endif %}            
 
     [[BUILD_PRGENV_USER]]
@@ -159,9 +159,9 @@ module load {{OASIS3_MCT}}/{{OASIS_MODULE_VERSION}}/{{ROSE_SUITE_REV_NO}}/{{OASI
 module use {{MODULE_INSTALL_PATH}}/modules; 
 module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}/{{ROSE_SUITE_REV_NO}}
 {% else %}
-{% if XBS_SPECIFY_COMPILER_PRGENV %}
-    module swap PrgEnv-cray {{XBS_COMPILER_PRGENV}}
-{% endif %}
+{% for mod_name in XBS_PREREQ_MODULES_SWAP %}
+      module swap {{mod_name}} 
+{% endfor %}
 {% for mod_name in XBS_PREREQ_MODULES %}
     module load {{mod_name}}
 {% endfor %}
@@ -177,9 +177,9 @@ module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}/{{ROSE_SUITE_REV_NO}}
 module use {{MODULE_INSTALL_PATH}}/modules; 
 module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}/{{ROSE_SUITE_REV_NO}}
 {% else %}
-{% if XBS_SPECIFY_COMPILER_PRGENV %}
-    module swap PrgEnv-cray {{XBS_COMPILER_PRGENV}}
-{% endif %}
+{% for mod_name in XBS_PREREQ_MODULES_SWAP %}
+      module swap {{mod_name}} 
+{% endfor %}
 {% for mod_name in XBS_PREREQ_MODULES %}
     module load {{mod_name}}
 {% endfor %}
@@ -191,9 +191,9 @@ module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}/{{ROSE_SUITE_REV_NO}}
 module use {{MODULE_INSTALL_PATH}}/modules; 
 module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}-nooasis/{{ROSE_SUITE_REV_NO}}
 {% else %}
-{% if XBS_SPECIFY_COMPILER_PRGENV %}
-    module swap PrgEnv-cray {{XBS_COMPILER_PRGENV}}
-{% endif %}
+{% for mod_name in XBS_PREREQ_MODULES_SWAP %}
+      module swap {{mod_name}} 
+{% endfor %}
 {% for mod_name in XBS_PREREQ_MODULES %}
     module load {{mod_name}}
 {% endfor %}
@@ -209,9 +209,9 @@ module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}-nooasis/{{ROSE_SUITE_REV_NO}
 module use {{MODULE_INSTALL_PATH}}/modules; 
 module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}-nooasis/{{ROSE_SUITE_REV_NO}}
 {% else %}
-{% if XBS_SPECIFY_COMPILER_PRGENV %}
-    module swap PrgEnv-cray {{XBS_COMPILER_PRGENV}}
-{% endif %}
+{% for mod_name in XBS_PREREQ_MODULES_SWAP %}
+      module swap {{mod_name}} 
+{% endfor %}
 {% for mod_name in XBS_PREREQ_MODULES %}
     module load {{mod_name}}
 {% endfor %}

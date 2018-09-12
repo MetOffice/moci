@@ -410,8 +410,9 @@ class OasisCrayBuildSystem(OasisBuildSystem):
         build_str_1 = '#!/bin/sh\n\n'
         build_str_1 += 'echo CURRENT MODULES:\n'
         build_str_1 += 'module list\n'
-        if self.specify_compiler:
-            build_str_1 += 'module swap {0}\n'.format(self.compiler_module)
+        for prereq_swap in self.prerequisite_swaps:
+            build_str_1 += 'module swap {swap}\n'.format(swap=prereq_swap)
+
         for prereq_module in self.prerequisite_modules:
             build_str_1 += 'module load {0}\n'.format(prereq_module)
 
@@ -465,8 +466,8 @@ make model2
             suite_rev_num=self.suite_revision_number,
             moduleName=self.library_name,
             platform=self.SYSTEM_NAME,
-            prerequisites=self.prerequisite_modules,
-            compiler_module=self.compiler_module)
+            prerequisites=self.all_prerequisites,
+        )
 
         module_writer_1.write_module()
 

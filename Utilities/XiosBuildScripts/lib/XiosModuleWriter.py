@@ -140,11 +140,6 @@ Suite Revision Number: {revno}
         self.what_is_msg = 'The XIOS I/O server for use with '\
             'weather/climate models '
 
-        self.local_variables_list = []
-        self.prerequisite_list = []
-        self.modules_to_load = []
-
-
 class XiosCrayModuleWriter(XiosModuleWriter):
 
     """
@@ -186,7 +181,7 @@ class XiosCrayModuleWriter(XiosModuleWriter):
                  suite_revision_number,
                  platform,
                  prerequisites,
-                 compiler_module):
+                ):
         XiosModuleWriter.__init__(self,
                                   module_name,
                                   version,
@@ -199,7 +194,6 @@ class XiosCrayModuleWriter(XiosModuleWriter):
                                   suite_revision_number,
                                   '',
                                   platform)
-        self.compiler_module = compiler_module
 
 class XiosCrayPrgEnvWriter(XiosPrgEnvWriter):
 
@@ -215,7 +209,8 @@ class XiosCrayPrgEnvWriter(XiosPrgEnvWriter):
                          platform,
                          suiteUrl,
                          suite_revision_number,
-                         prerequisites)
+                         prerequisite_loads,
+                         prerequisite_swaps)
     Parameters:
      * version - The module file version number (a string)
      * modulePath - The path to the root directory for the Environment Modules
@@ -225,8 +220,12 @@ class XiosCrayPrgEnvWriter(XiosPrgEnvWriter):
      * suiteUrl - The repository URL of the suite used to build the library
      * suite_revision_number - The revision number of the suite used to build
                                the library
-     * prerequisites - List of modules to be loaded before library modules are
-                       loaded.
+     * prerequisite_loads - List of modules to be loaded before library
+                            modules are loaded. Each module is a string,
+                            so the input is a list of strings.
+     * prerequisite_swaps - List of modules to be swapped before library
+                            modules are loaded. Each module is a string,
+                            so the input is a list of strings.
 
 
 
@@ -239,8 +238,9 @@ class XiosCrayPrgEnvWriter(XiosPrgEnvWriter):
                  platform,
                  suiteUrl,
                  suite_revision_number,
-                 prerequisites,
-                 compiler_module):
+                 prerequisite_loads,
+                 prerequisite_swaps,
+                ):
         XiosPrgEnvWriter.__init__(self,
                                   version,
                                   modulePath,
@@ -248,12 +248,13 @@ class XiosCrayPrgEnvWriter(XiosPrgEnvWriter):
                                   platform,
                                   suiteUrl,
                                   suite_revision_number)
-        self.compiler_module = compiler_module
         self.default_compiler = 'PrgEnv-cray'
-        self.modules_to_load = []
 
-        for mod1 in prerequisites:
+        for mod1 in prerequisite_loads:
             self.modules_to_load += [mod1]
+
+        for mod1 in prerequisite_swaps:
+            self.modules_to_swap += [mod1]
 
         for mod1 in module_list:
             self.modules_to_load += [mod1]
@@ -324,7 +325,9 @@ class XiosCrayRemotePrgEnvWriter(XiosPrgEnvWriter):
      * version - The module file version number (a string)
      * modulePath - The path to the root directory for the Environment Modules
      * prerequisites - List of modules to be loaded before library modules are
-                       loaded.
+                       loaded. Each module is a string, so the input is a
+                       list of strings.
+
      * srcUrl - The repository URL of the source code for XIOS
      * revNo - The revision number of the source code for XIOS (a string)
      * external_url - The external URL of the source code for XIOS
@@ -369,7 +372,7 @@ class XiosLinuxIntelModuleWriter(XiosModuleWriter):
                  srcUrl,
                  revNo,
                  platform,
-                 compiler_module):
+                ):
         prereq = ['fortran/intel/15.0.0',
                   'mpi/mpich/3.1.2/ifort/15.0.0',
                   'hdf5/1.8.12/ifort/15.0.0',
@@ -383,4 +386,3 @@ class XiosLinuxIntelModuleWriter(XiosModuleWriter):
                                   revNo,
                                   '',
                                   platform)
-        self.compiler_module = compiler_module
