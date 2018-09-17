@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 
 '''
 *****************************COPYRIGHT******************************
@@ -21,6 +21,7 @@ DESCRIPTION
     indicators
 '''
 
+from __future__ import absolute_import
 import os
 import re
 import sys
@@ -85,7 +86,7 @@ def _gather_metrics(cpmip_output_file):
             if 'The data intensity metric' in line:
                 metric = float(re.search(r'(\d+.\d+)', line).group(0))
                 metrics['DATA_INTENSITY'].add_val(metric)
-            if 'UM complexity' in line:
+            if 'UM complexity' in line and 'Unable to calculate' not in line:
                 metric = float(re.search(r'(\d+)', line).group(1))
                 metrics['COMPLEXITY_UM'].add_val(metric)
             if 'NEMO complexity' in line:

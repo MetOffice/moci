@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
  (C) Crown copyright 2016 Met Office. All rights reserved.
@@ -20,6 +20,8 @@ DESCRIPTION
     follwing error codes be used for self consistancy. Any error codes <100
     are to be used within the drivers themselves, for specific errors.
 '''
+# Python errors
+VERSION_ERROR = 1
 
 # File I/O errors
 IOERROR = 100

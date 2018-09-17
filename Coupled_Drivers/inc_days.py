@@ -1,4 +1,4 @@
-#!/usr/bin/evn python2.7
+#!/usr/bin/evn python
 '''
 *****************************COPYRIGHT******************************
  (C) Crown copyright 2016 Met Office. All rights reserved.
@@ -19,6 +19,9 @@ DESCRIPTION
     date, when the increment is given in terms of years/months/days
 '''
 
+#The from __future__ imports ensure compatibility between python2.7 and 3.x
+from __future__ import absolute_import
+from __future__ import division
 import error
 import time2days
 import sys
@@ -53,7 +56,7 @@ def inc_days(y_start, m_start, d_start, y_inc, m_inc, d_inc, calendar):
 
     #Deal with monthly rollovers
     if m_end > 12:
-        add_years = (m_end - 1)/12
+        add_years = (m_end - 1)//12
         y_end += add_years
         m_end = ((m_end - 1) % 12) + 1
 

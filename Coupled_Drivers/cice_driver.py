@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
  (C) Crown copyright 2016 Met Office. All rights reserved.
@@ -20,7 +20,9 @@ DESCRIPTION
     with the NEMO driver
 '''
 
-
+#The from __future__ imports ensure compatibility between python2.7 and 3.x
+from __future__ import absolute_import
+from __future__ import division
 import os
 import sys
 import re
@@ -29,7 +31,6 @@ import time2days
 import inc_days
 import common
 import error
-
 
 def __expand_array(short_array):
     '''
@@ -174,9 +175,9 @@ def _setup_executable(common_envar):
         cice_leap_years = ".true."
 
     #turn our times into lists of integers
-    model_basis = map(int, cice_envar['MODELBASIS'].split(','))
-    run_start = map(int, cice_envar['TASKSTART'].split(','))
-    run_length = map(int, cice_envar['TASKLENGTH'].split(','))
+    model_basis = [int(i) for i in cice_envar['MODELBASIS'].split(',')]
+    run_start = [int(i) for i in cice_envar['TASKSTART'].split(',')]
+    run_length = [int(i) for i in cice_envar['TASKLENGTH'].split(',')]
 
     run_days = inc_days.inc_days(run_start[0], run_start[1], run_start[2],
                                  run_length[0], run_length[1], run_length[2],
@@ -192,7 +193,7 @@ def _setup_executable(common_envar):
     _, step_int_val = common.exec_subproc(['grep', gl_step_int_match,
                                            cice_nl])
     cice_step_int = int(re.findall(r'^dt=(\d*)\.?', step_int_val)[0])
-    cice_steps = tot_runlen_sec / cice_step_int
+    cice_steps = tot_runlen_sec // cice_step_int
 
     _, cice_histfreq_val = common.exec_subproc(['grep', 'histfreq', cice_nl])
     cice_histfreq_val = re.findall(r'histfreq\s*=\s*(.*)', cice_histfreq_val)[0]
@@ -225,7 +226,7 @@ def _setup_executable(common_envar):
                                                     cice_envar['SHARED_FNAME'])
             modelbasis_val = re.findall(r'model_basis_time\s*=\s*(.*)',
                                         modelbasis_val)
-            modelbasis = map(int, __expand_array(modelbasis_val))
+            modelbasis = [int(i) for i in __expand_array(modelbasis_val)]
             cice_envar.add('MODELBASIS', modelbasis)
         if not cice_envar['TASKSTART']:
             cice_envar.add('TASKSTART', cice_envar['MODELBASIS'])
@@ -234,13 +235,13 @@ def _setup_executable(common_envar):
                                                     cice_envar['SHARED_FNAME'])
             tasklength_val = re.findall(r'run_target_end\s*=\s*(.*)',
                                         tasklength_val)
-            tasklength = map(int, __expand_array(tasklength_val))
+            tasklength = [int(i) for i in __expand_array(tasklength_val)]
             cice_envar.add('TASKLENGTH', tasklength)
 
     days_to_year_init = time2days.time2days(model_basis[0], 1, 1, calendar)
     days_to_start = time2days.time2days(run_start[0], run_start[1],
                                         run_start[2], calendar)
-    cice_istep0 = (days_to_start - days_to_year_init) * 86400 / cice_step_int
+    cice_istep0 = (days_to_start - days_to_year_init) * 86400 // cice_step_int
 
     _, cice_rst_val = common.exec_subproc(['grep', 'restart_dir', cice_nl])
     cice_rst = re.findall(r'restart_dir\s*=\s*\'(.*)\',', cice_rst_val)[0]

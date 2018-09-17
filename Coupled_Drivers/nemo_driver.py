@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
  (C) Crown copyright 2016 Met Office. All rights reserved.
@@ -19,7 +19,9 @@ DESCRIPTION
     does not cater for any earlier versions of NEMO
 '''
 
-
+#The from __future__ imports ensure compatibility between python2.7 and 3.x
+from __future__ import absolute_import
+from __future__ import division
 import re
 import os
 import time
@@ -60,7 +62,7 @@ def _get_nemorst(nemo_nl_file):
     ocerst_rcode, ocerst_val = common.exec_subproc([ \
             'grep', 'cn_ocerst_outdir', nemo_nl_file])
     if ocerst_rcode == 0:
-        nemo_rst = re.findall('[\"\'](.*?)[\"\']', ocerst_val)[0]
+        nemo_rst = re.findall(r'[\"\'](.*?)[\"\']', ocerst_val)[0]
         if nemo_rst[-1] == '/':
             nemo_rst = nemo_rst[:-1]
         return nemo_rst
@@ -223,9 +225,9 @@ def _setup_dates(nemo_envar):
         sys.exit(error.INVALID_EVAR_ERROR)
 
     #turn our times into lists of integers
-    model_basis = map(int, nemo_envar['MODELBASIS'].split(','))
-    run_start = map(int, nemo_envar['TASKSTART'].split(','))
-    run_length = map(int, nemo_envar['TASKLENGTH'].split(','))
+    model_basis = [int(i) for i in nemo_envar['MODELBASIS'].split(',')]
+    run_start = [int(i) for i in nemo_envar['TASKSTART'].split(',')]
+    run_length = [int(i) for i in nemo_envar['TASKLENGTH'].split(',')]
 
     run_days = inc_days.inc_days(run_start[0], run_start[1], run_start[2],
                                  run_length[0], run_length[1], run_length[2],
@@ -267,7 +269,7 @@ def _setup_executable(common_envar):
     icerst_rcode, icerst_val = common.exec_subproc([ \
             'grep', 'cn_icerst_dir', nemo_envar['NEMO_NL']])
     if icerst_rcode == 0:
-        ice_rst = re.findall('[\"\'](.*?)[\"\']', icerst_val)[0]
+        ice_rst = re.findall(r'[\"\'](.*?)[\"\']', icerst_val)[0]
         if ice_rst[-1] == '/':
             ice_rst = ice_rst[:-1]
         restart_direcs.append(ice_rst)
@@ -416,7 +418,7 @@ def _setup_executable(common_envar):
             iceberg_restart_count = 0
 
             # Nemo has multiple processors
-            for i_proc in xrange(int(nemo_envar['NEMO_NPROC'])):
+            for i_proc in range(int(nemo_envar['NEMO_NPROC'])):
                 tag = str(i_proc).zfill(4)
                 nemo_rst_source = '%s/%so_%s_restart_%s.nc' % \
                     (nemo_init_dir, common_envar['RUNID'], \
@@ -497,7 +499,7 @@ def _setup_executable(common_envar):
             #nemo_dump_time is relative to start of model run and is an
             #integer
             nemo_dump_time = int(nemo_dump_time)
-            completed_days = nemo_dump_time * (nemo_step_int / 86400)
+            completed_days = nemo_dump_time * (nemo_step_int // 86400)
             sys.stdout.write('[INFO] Nemo has previously completed %i days\n' %
                              completed_days)
         ln_restart = ".true."
@@ -570,7 +572,7 @@ def _setup_executable(common_envar):
 
     tot_runlen_sec = run_days * 86400 + run_length[3]*3600 + run_length[4]*60 \
         + run_length[5]
-    nemo_final_step = (tot_runlen_sec / nemo_step_int) + nemo_last_step
+    nemo_final_step = (tot_runlen_sec // nemo_step_int) + nemo_last_step
 
     #Make our call to update the nemo namelist. First generate the list
     #of commands

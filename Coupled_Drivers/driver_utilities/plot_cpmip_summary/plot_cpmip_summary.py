@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 
 '''
 *****************************COPYRIGHT******************************
@@ -20,6 +20,8 @@ DESCRIPTION
     the CPMIP driver in cpmip.output file.
 '''
 
+#The from __future__ imports ensure compatibility between python2.7 and 3.x
+from __future__ import absolute_import
 import argparse
 import re
 import os

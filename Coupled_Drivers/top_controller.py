@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
  (C) Crown copyright 2016 Met Office. All rights reserved.
@@ -61,7 +61,8 @@ DESCRIPTION
     Version compatibility: NEMO vn3.6
 '''
 
-
+#The from __future__ imports ensure compatibility between python2.7 and 3.x
+from __future__ import absolute_import
 import re
 import os
 import sys
@@ -279,7 +280,7 @@ def _setup_top_controller(restart_ctl,
         # restart file.
         top_restart_count = 0
 
-        for i_proc in xrange(nemo_nproc):
+        for i_proc in range(nemo_nproc):
             tag = str(i_proc).zfill(4)
             top_rst_source = '%s/%so_%s_restart_trc_%s.nc' % \
                 (top_init_dir, runid, top_dump_time, tag)

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
  (C) Crown copyright 2016 Met Office. All rights reserved.
@@ -18,7 +18,8 @@ DESCRIPTION
     Common functions and classes required by multiple model drivers
 '''
 
-
+#The from __future__ imports ensure compatibility between python2.7 and 3.x
+from __future__ import absolute_import
 import error
 import re
 import os
@@ -91,7 +92,7 @@ class LoadEnvar(object):
         '''
         Export environment variable to the calling process
         '''
-        for i_key in self.env_vars.iterkeys():
+        for i_key in self.env_vars.keys():
             os.environ[i_key] = self.env_vars[i_key]
 
     def __getitem__(self, var_name):
@@ -151,7 +152,7 @@ class ModNamelist(object):
             variable_name = re.findall(r'\s*(\S*)\s*=\s*', line)
             if variable_name:
                 variable_name = variable_name[0]
-            if variable_name in self.replace_vars.keys():
+            if variable_name in list(self.replace_vars.keys()):
                 output_file.write('%s=%s,\n' %
                                   (variable_name,
                                    self.replace_vars[variable_name]))
@@ -221,7 +222,7 @@ def open_text_file(name, mode):
              'r+':'updating (reading)',
              'w+':'updating (writing)',
              'a+':'updating (appending)'}
-    if mode not in modes.keys():
+    if mode not in list(modes.keys()):
         options = ''
         for k in modes.keys():
             options += '  %s: %s\n' % (k, modes[k])
@@ -299,8 +300,8 @@ def setup_runtime():
    
 
     # Turn our times into lists of integers
-    run_start = map(int, runtime_envar['TASKSTART'].split(','))
-    run_length = map(int, runtime_envar['TASKLENGTH'].split(','))
+    run_start = [int(i) for i in runtime_envar['TASKSTART'].split(',')]
+    run_length = [int(i) for i in runtime_envar['TASKLENGTH'].split(',')]
     
     run_days = inc_days.inc_days(run_start[0], run_start[1], run_start[2],
                                  run_length[0], run_length[1], run_length[2],
@@ -334,7 +335,11 @@ def exec_subproc_timeout(cmd, timeout_sec=10):
         rcode = process.returncode
     finally:
         timer.cancel()
-    return rcode, stdout
+    if sys.version_info[0] >= 3:
+        output = stdout.decode()
+    else:
+        output = stdout
+    return rcode, output
 
 
 def exec_subproc(cmd, verbose=True):
@@ -352,6 +357,8 @@ def exec_subproc(cmd, verbose=True):
         sys.stdout.write('[SUBPROCESS OUTPUT] %s\n' % output)
     if err:
         sys.stderr.write('[SUBPROCESS ERROR] %s\n' % error)
+    if sys.version_info[0] >= 3:
+        output = output.decode()
     return process.returncode, output
 
 
@@ -371,4 +378,6 @@ def __exec_subproc_true_shell(cmd, verbose=True):
         sys.stdout.write('[SUBPROCESS OUTPUT] %s\n' % output)
     if err:
         sys.stderr.write('[SUBPROCESS ERROR] %s\n' % error)
+    if sys.version_info[0] >= 3:
+        output = output.decode()
     return process.returncode, output

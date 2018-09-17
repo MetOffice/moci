@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
  (C) Crown copyright 2018 Met Office. All rights reserved.
@@ -18,6 +18,9 @@ DESCRIPTION
     Controller for the generation of CPMIP metrics
 '''
 
+#The from __future__ imports ensure compatibility between python2.7 and 3.x
+from __future__ import absolute_import
+from __future__ import division
 import math
 import re
 import sys
@@ -235,7 +238,7 @@ def tasklength_to_years(tasklength):
     an integer value of the equivalent number of years for a 360 day
     calendar.
     '''
-    length = map(int, tasklength.split(','))
+    length = [int(i) for i in tasklength.split(',')]
     to_years = (1, 1./30., 1./360., 1./(360.*24.),
                 1./(360.*24.*60.), 1./(360.*24.*3600.))
     years = sum([x*y for x, y in zip(to_years, length)])
@@ -794,7 +797,7 @@ def _finalize_cpmip_controller(common_envar):
     number_nodes = int(pbs_l_dict['select'])
     plat_cores_per_node = \
         CORES_PER_NODE_UKMO_XC40[pbs_l_dict['coretype'].lower()]
-    if pbs_l_dict.has_key('coretype'):
+    if 'coretype' in pbs_l_dict:
         allocated_cpus = number_nodes * plat_cores_per_node
         allocated_um = int(math.ceil(um_cpus/float(plat_cores_per_node))) \
             * plat_cores_per_node

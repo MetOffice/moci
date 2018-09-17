@@ -17,6 +17,8 @@ NAME
 DESCRIPTION
     Driver for the UM component, called from link_drivers
 '''
+#The from __future__ imports ensure compatibility between python2.7 and 3.x
+from __future__ import absolute_import
 import os
 import sys
 import shutil

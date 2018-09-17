@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
  (C) Crown copyright 2017 Met Office. All rights reserved.
@@ -20,6 +20,9 @@ DESCRIPTION
     that if the model fails climate meaning data can be restored.
 '''
 
+#The from __future__ imports ensure compatibility between python2.7 and 3.x
+from __future__ import absolute_import
+from __future__ import division
 import os
 import shutil
 import re
@@ -52,7 +55,7 @@ def save_state(common_envar, iscrun):
     partial_sum_files = [f for f in datam_files if \
                              re.match(partial_sum_regex, f)]
     # as each mean period has an a and b file
-    num_mean_period = len(partial_sum_files) / 2
+    num_mean_period = len(partial_sum_files) // 2
     if len(partial_sum_files) != 0:
         # If there are no partial sum files we either have an NRUN, or no
         # climate meaning is engaged, so we don't need to do the following

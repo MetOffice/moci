@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
  (C) Crown copyright 2016 Met Office. All rights reserved.
@@ -18,6 +18,8 @@ DESCRIPTION
     Driver for OASIS3-MCT
 '''
 
+#The from __future__ imports ensure compatibility between python2.7 and 3.x
+from __future__ import absolute_import
 import os
 import sys
 import glob
@@ -111,7 +113,7 @@ def _setup_executable(common_envar):
                              ' however this component is not being run in'
                              ' this configuration\n' % component)
             sys.exit(999)
-        if not component in SUPPORTED_MODELS.keys():
+        if not component in list(SUPPORTED_MODELS.keys()):
             sys.stderr.write('[FAIL] The component %s is not supported by the'
                              ' mct driver\n' % component)
             sys.exit(999)

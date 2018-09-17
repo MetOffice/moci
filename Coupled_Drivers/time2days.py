@@ -1,4 +1,4 @@
-#!/usr/bin/evn python2.7
+#!/usr/bin/evn python
 '''
 *****************************COPYRIGHT******************************
  (C) Crown copyright 2016 Met Office. All rights reserved.
@@ -18,6 +18,9 @@ DESCRIPTION
     Converts the date to seconds since calendar zero
 '''
 
+#The from __future__ imports ensure compatibility between python2.7 and 3.x
+from __future__ import absolute_import
+from __future__ import division
 import error
 import sys
 
@@ -77,16 +80,16 @@ def time2days(year, month, day, calendar):
 
         # Add days from preceding years, note we make use of integer division
         # Number for 4 centuries first
-        days_since_calz += days_per_4c*(years_since_calz/400)
-        years_since_calz -= 400*(years_since_calz/400)
+        days_since_calz += days_per_4c*(years_since_calz//400)
+        years_since_calz -= 400*(years_since_calz//400)
 
         # Count number of centuries
-        days_since_calz += days_per_c*(years_since_calz/100)
-        years_since_calz -= 100*(years_since_calz/100)
+        days_since_calz += days_per_c*(years_since_calz//100)
+        years_since_calz -= 100*(years_since_calz//100)
 
         # Count number of four year periods
-        days_since_calz += days_per_4y*(years_since_calz/4)
-        years_since_calz -= 4*(years_since_calz/4)
+        days_since_calz += days_per_4y*(years_since_calz//4)
+        years_since_calz -= 4*(years_since_calz//4)
 
         # Count the remaining years
         days_since_calz += years_since_calz*days_per_y

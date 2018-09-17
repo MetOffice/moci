@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
  (C) Crown copyright 2016 Met Office. All rights reserved.
@@ -19,6 +19,9 @@ DESCRIPTION
     to run a given configuration
 '''
 
+#The from __future__ imports ensure compatibility between python2.7 and 3.x
+from __future__ import absolute_import
+import importlib
 import sys
 import os
 import argparse
@@ -59,14 +62,14 @@ def _run_drivers(common_envars, mode):
     envinsts = [common_envars]
     launchcmds = []
     for model in models:
-        modelname = model
-        drivername = '%s_driver' % modelname
-        exec 'import %s' % drivername
-        exec 'model_envars, model_launch_cmd = %s.run_driver' \
-            '(common_envars,\'%s\')' % (drivername, mode)
+        # namespace dictionary for exec function
+        driver_name = '%s_driver' % model
+        driver_mod = importlib.import_module(driver_name)
+        model_envars, model_launch_cmd = driver_mod.run_driver(common_envars,
+                                                               mode)
         envinsts.append(model_envars)
         launchcmds.append(model_launch_cmd)
-        exec 'del %s' % drivername
+        del driver_mod
     return envinsts, launchcmds
 
 
@@ -135,7 +138,7 @@ def _export_envar_str(envinsts):
     '''
     envar_str = ''
     for inst in envinsts:
-        for var, val in inst.env_vars.iteritems():
+        for var, val in inst.env_vars.items():
 	    # If there is a space in the environment variable string and
             # it isn't already in quotes, we need to place it in quotes.
             # Note some environment variables may be unset currently
@@ -168,6 +171,17 @@ if __name__ == '__main__':
     # shell and the python drivers, prepare two command files, one containing
     # an aprun command to execute, the other containing a command allowing
     # environment variables to be exported
+
+    try:
+        assert sys.version_info >= (2, 7)
+        sys.stdout.write('Using python version %i.%i\n' %
+                         (sys.version_info[0], sys.version_info[1]))
+    except AssertionError:
+        sys.stderr.write('Python version must be 2.7 or later. Currently'
+                         ' using %i.%i\n' % (sys.version_info[0],
+                                             sys.version_info[1]))
+        sys.exit(error.VERSION_ERROR)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--run", help="run the coupled model",
                         action="store_true")
