@@ -432,6 +432,65 @@ class FileManipulationTests(unittest.TestCase):
         utils.remove_files('testfile')
         self.assertFalse(os.path.exists('testfile'))
 
+    def test_copy_files_new_dir_single(self):
+        '''Test copying a single file to a new directory'''
+        func.logtest('Assert copy of a single file to a new directory:')
+        tmpfiles = utils.copy_files(os.path.join(self.dir1, DUMMY[0]),
+                                    self.dir2)
+        self.assertTrue(os.path.isfile(os.path.join(self.dir2, DUMMY[0])))
+        self.assertListEqual(tmpfiles, [os.path.join(self.dir2, DUMMY[0])])
+
+    def test_copy_files_new_dir_list(self):
+        '''Test copying a list of files to a new directory'''
+        func.logtest('Assert copy of a list of files to a new directory:')
+        srcfiles = [os.path.join(self.dir1, d) for d in DUMMY]
+        tmpfiles = utils.copy_files(srcfiles, self.dir2)
+        for fname in DUMMY:
+            self.assertTrue(os.path.isfile(os.path.join(self.dir2, fname)))
+            self.assertIn(os.path.join(self.dir2, fname), tmpfiles)
+
+    def test_copy_files_dottmp_single(self):
+        '''Test copying a single file to .tmp in  the same directory'''
+        func.logtest('Assert copy of a single file to a .tmp file:')
+        srcfile = os.path.join(self.dir1, DUMMY[0])
+        tmpfiles = utils.copy_files(srcfile)
+        self.assertTrue(os.path.isfile(srcfile + '.tmp'))
+        self.assertListEqual(tmpfiles, [srcfile + '.tmp'])
+
+    def test_copy_files_dottmp_list(self):
+        '''Test copying a list of files to .tmp in  the same directory'''
+        func.logtest('Assert copy of a list of files to a .tmp file:')
+        srcfiles = [os.path.join(self.dir1, d) for d in DUMMY]
+        tmpfiles = utils.copy_files(srcfiles, tmp_ext='.ext')
+        for fname in srcfiles:
+            self.assertTrue(os.path.isfile(fname + '.ext'))
+            self.assertIn(fname + '.ext', tmpfiles)
+
+    def test_copy_files_no_such_dir(self):
+        '''Test failure mode of copy_files - no such directory'''
+        func.logtest('Assert failure to copy file to a new directory:')
+        with self.assertRaises(SystemExit):
+            _ = utils.copy_files(os.path.join(self.dir1, DUMMY[0]), 'NoSuchDir')
+        self.assertIn('Directory does not exist', func.capture('err'))
+
+    def test_copy_files_unreadable(self):
+        '''Test failure mode of copy_files - unreadable source'''
+        func.logtest('Assert failure to copy file - unreadable source:')
+        with self.assertRaises(SystemExit):
+            _ = utils.copy_files(DUMMY[0], self.dir1)
+        self.assertIn('Failed to read from source file: fileone'
+                      ' - No such file or directory',
+                      func.capture('err'))
+
+    def test_copy_files_unwritable(self):
+        '''Test failure mode of copy_files - unwritable target'''
+        func.logtest('Assert failure to copy file - unwritable target:')
+        with self.assertRaises(SystemExit):
+            utils.copy_files(os.path.join(self.dir1, DUMMY[0]), '/')
+        self.assertIn('Failed to write to target file: /fileone'
+                      ' - Permission denied',
+                      func.capture('err'))
+
     def test_catch_failure(self):
         '''Test performance of catch_failure method'''
         func.logtest('Assert correct failure mode handling:')

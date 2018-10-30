@@ -1344,16 +1344,22 @@ class UtilityMethodTests(unittest.TestCase):
                                          start_date=('2222', '22', '22', '22'),
                                          custom='grid-V')
 
+    @mock.patch('nemo.utils.copy_files', return_value=['file1.tmp'])
+    @mock.patch('nemo.os.rename')
     @mock.patch('nemo.netcdf_utils.get_dataset')
-    def test_fix_nemo_cell_methods_none(self, mock_ncid):
+    def test_fix_nemo_cell_methods_none(self, mock_ncid, mock_mv, mock_cp):
         '''Test fix_nemo_cell_methods - no relevant variables'''
         func.logtest('Assert changes reported by fix_nemo_cell_methods:')
         mock_ncid.return_value = self.ncid
         msgs = nemo.fix_nemo_cell_methods(['file1'])
         self.assertListEqual(msgs, [])
+        mock_cp.assert_called_once_with(['file1'], tmp_ext='.tmp')
+        mock_mv.assert_called_once_with('file1.tmp', 'file1')
 
+    @mock.patch('nemo.utils.copy_files', return_value=['file1.tmp'])
+    @mock.patch('nemo.os.rename')
     @mock.patch('nemo.netcdf_utils.get_dataset')
-    def test_fix_nemo_cell_methods(self, mock_ncid):
+    def test_fix_nemo_cell_methods(self, mock_ncid, mock_mv, mock_cp):
         '''Test fix_nemo_cell_methods - one variable type each'''
         func.logtest('Assert changes reported by fix_nemo_cell_methods:')
         self.ncid.variables['ttrd_iso'] = nemo.utils.Variables()
@@ -1371,6 +1377,8 @@ class UtilityMethodTests(unittest.TestCase):
         self.assertIn('volume weighted', sorted(msgs)[0])
         self.assertEqual(self.ncid.variables['temptot'].cell_methods,
                          nemo.VOL_WEIGHT_CELL_METHODS)
+        mock_cp.assert_called_once_with(['file1'], tmp_ext='.tmp')
+        mock_mv.assert_called_once_with('file1.tmp', 'file1')
 
     @mock.patch('nemo.fix_nemo_cell_methods')
     def test_preprocess_meanset(self, mock_fix):

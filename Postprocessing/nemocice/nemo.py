@@ -596,6 +596,8 @@ class NemoPostProc(mt.ModelTemplate):
         filenames = utils.add_path(meanset, self.share)
         changes = fix_nemo_cell_methods(filenames)
         if changes:
+            utils.log_msg('Corrected cell_methods on NEMO means files:',
+                          level='INFO')
             utils.log_msg('\n'.join(changes), level='INFO')
 
 
@@ -608,7 +610,10 @@ def fix_nemo_cell_methods(filenames):
     Variables: filenames = iterable of file names to be operated on.
     '''
     msgs = []
-    for filename in filenames:
+    # Set file extension for temporary files to ".tmp"
+    tmpext = '.tmp'
+    tmp_files = utils.copy_files(filenames, tmp_ext=tmpext)
+    for filename in tmp_files:
         ncid = netcdf_utils.get_dataset(filename, action='r+')
         for var in ncid.variables:
             msg = None
@@ -625,6 +630,11 @@ def fix_nemo_cell_methods(filenames):
             if msg is not None:
                 msgs.append(msg)
         ncid.close()
+        try:
+            os.rename(filename, os.path.splitext(filename)[0])
+        except OSError:
+            err = 'fix_nemo_cell_methods: Failed to rename modifed mean file'
+            utils.log_msg(err, level='ERROR')
 
     return msgs
 

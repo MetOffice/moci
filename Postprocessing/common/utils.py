@@ -254,6 +254,48 @@ def create_dir(dirname, path=None):
 
 
 @timer.run_timer
+def copy_files(cpfiles, destination=None, tmp_ext='.tmp'):
+    '''
+    Copy file(s).
+    Optional arguments:
+        destination  - Where provided destination must be a writable
+                       directory location
+                     - Default behaviour: If not present, file(s) will be
+                       copied to the  original directory
+                       (os.path.dirname(filename)) with a "tmp_ext" extension
+        tmp_ext      - Extension used when copying to the same directory
+    '''
+    if destination:
+        destination = check_directory(destination)
+
+    cpfiles = ensure_list(cpfiles)
+    outputfiles = []
+    for srcfile in cpfiles:
+        if destination:
+            output = os.path.join(destination, os.path.basename(srcfile))
+        else:
+            output = srcfile + tmp_ext
+
+        try:
+            src = open(srcfile, 'rb')
+        except IOError as exc:
+            msg = 'copy_files: Failed to read from source file: ' + srcfile
+            log_msg(' - '.join([msg, exc.strerror]), level='ERROR')
+
+        try:
+            out = open(output, 'wb')
+        except IOError as exc:
+            msg = 'copy_files: Failed to write to target file: ' + output
+            log_msg(' - '.join([msg, exc.strerror]), level='ERROR')
+
+        shutil.copyfileobj(src, out)
+        src.close()
+        out.close()
+        outputfiles.append(output)
+
+    return outputfiles
+
+@timer.run_timer
 def remove_files(delfiles, path=None, ignore_non_exist=False):
     '''
     Delete files.
