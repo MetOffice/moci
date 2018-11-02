@@ -269,7 +269,7 @@ module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}-nooasis/{{ROSE_SUITE_REV_NO}
 
     [[VALIDATE_APP]]
         inherit=None, XBS, XC40_serial
-        pre-script="""module load scitools/production
+        pre-script="""module load scitools/production-os41-1
 """
         [[[environment]]]
             KGO_DIR={{KGO_DIR}}
@@ -280,10 +280,12 @@ module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}-nooasis/{{ROSE_SUITE_REV_NO}
 {% if PYTHON3 %}
 module load scitools/experimental-current > /dev/null 2>&1 ;
 module swap scitools scitools/experimental-current ;
-module list;
-echo PLEASE NOTE:  Mule is not compatible with Python3, so is cannot be used. ;
+source $UMDIR/mule/modules/setup ;
+module swap ifort/16.0_64 ;
+module load um_tools ;
 {% else %}
-module load scitools/default-current
+module load scitools/production-os41-1
 {% endif %}
+module list ;
 echo ;
 """

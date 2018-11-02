@@ -13,14 +13,20 @@
 *****************************COPYRIGHT******************************
 '''
 import unittest
+# mock is integrated into unittest as of Python3.3, but is a stand alone
+# package (back-ported) at earlier versions.
 try:
-    # mock is integrated into unittest as of Python 3.3
     import unittest.mock as mock
 except ImportError:
-    # mock is a standalone package (back-ported)
     import mock
 import numpy
-from netCDF4 import netcdftime
+
+# netcdftime has been superseeded by the cftime, but one is avaliable
+# with python2.7 and the other with python3 in the Met Office
+try:
+    import cftime as NCDF_time_module
+except ImportError:
+    from netCDF4 import netcdftime as NCDF_time_module
 
 import runtime_environment
 import testing_functions as func
@@ -100,13 +106,13 @@ class FixTimeTests(unittest.TestCase):
             date = netcdf_utils.time_bounds_var_to_date('fname', 'timevar')
             # assertEqual doesn't work for dates so test string representation
             try:
-                # netcdftime.__version__ >= 1.4.1
-                rtnval = str([netcdftime._netcdftime.DatetimeNoLeap
+                # NCDF_time_module.__version__ >= 1.4.1
+                rtnval = str([NCDF_time_module._cftime.DatetimeNoLeap
                               (1950, 1, 1, 0, 0, 0, 0, 6, 1),
-                              netcdftime._netcdftime.DatetimeNoLeap
+                              NCDF_time_module._cftime.DatetimeNoLeap
                               (1950, 1, 2, 0, 0, 0, 0, 0, 2)])
             except AttributeError:
-                # Prior to introduction of netcdftime._netcdftime attribute
+                # Prior to introduction of NCDF_time_module._NCDF_time_module attribute
                 rtnval = '[1950-01-01 00:00:00, 1950-01-02 00:00:00]'
             self.assertEqual(date.__repr__(), rtnval)
 
@@ -132,10 +138,10 @@ class FixTimeTests(unittest.TestCase):
     def test_first_and_last(self):
         '''Test of results from first_and_last_dates'''
         func.logtest('Assert correct return from first_and_last_dates:')
-        dates = [netcdftime.datetime(2000, 1, 1),
-                 netcdftime.datetime(2000, 2, 1),
-                 netcdftime.datetime(1999, 3, 1),
-                 netcdftime.datetime(1999, 4, 1)]
+        dates = [NCDF_time_module.datetime(2000, 1, 1),
+                 NCDF_time_module.datetime(2000, 2, 1),
+                 NCDF_time_module.datetime(1999, 3, 1),
+                 NCDF_time_module.datetime(1999, 4, 1)]
         values = netcdf_utils.first_and_last_dates(
             dates, 'seconds since 2000-01-01 00:00:00', '360_day')
         self.assertEqual(values[0], -25920000.)

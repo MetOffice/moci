@@ -495,8 +495,8 @@ class HeaderTests(unittest.TestCase):
         mock_mule.UMFile.from_file().fixed_length_header.raw = range(50)
         mock_mule.UMFile.from_file().fields = ['f1', 'f2', 'f3']
         headers, empty_file = validation.mule_headers('Filename')
-        self.assertListEqual(headers.keys(), range(1, 40))
-        self.assertListEqual(headers.values(),
+        self.assertListEqual(list(headers.keys()), list(range(1, 40)))
+        self.assertListEqual(list(headers.values()),
                              [str(x).zfill(2) for x in range(1, 40)])
         self.assertFalse(empty_file)
 
@@ -509,8 +509,8 @@ class HeaderTests(unittest.TestCase):
         mock_mule.UMFile.from_file().fixed_length_header.raw = range(50)
         mock_mule.UMFile.from_file().fields = []
         headers, empty_file = validation.mule_headers('Filename')
-        self.assertListEqual(headers.keys(), range(1, 40))
-        self.assertListEqual(headers.values(),
+        self.assertListEqual(list(headers.keys()), list(range(1, 40)))
+        self.assertListEqual(list(headers.values()),
                              [str(x).zfill(2) for x in range(1, 40)])
         self.assertTrue(empty_file)
 
