@@ -315,9 +315,10 @@ class NemoPostProc(mt.ModelTemplate):
         '''
         XIOS_v1.x has a bug which results in incorrect representation of
         mean data in some NEMO fields.
-        Fix netcdf meta data in given file[s] so that they represent
-        zonal mean data and not global data.
+        Fix netcdf meta data in 2-dimensional given file[s] so that they
+        represent zonal mean data and not global data.
         '''
+        printtag = 'global_attr_to_zonal -'
         if not isinstance(fileset, list):
             fileset = [fileset]
 
@@ -326,7 +327,8 @@ class NemoPostProc(mt.ModelTemplate):
 
             # Run ncdump to interrogate the netcdf file
             output = self.suite.preprocess_file('ncdump', full_file, h='')
-            global_ny = 'DOMAIN_size_global'
+            global_ny = 'DOMAIN_size_globaly'
+            global_nx = 'DOMAIN_size_globalx'
             pos_first_y = 'DOMAIN_position_first'
             pos_last_y = 'DOMAIN_position_last'
 
@@ -334,39 +336,51 @@ class NemoPostProc(mt.ModelTemplate):
                 # Split lines on '=', then ',' to get y dimension
                 if ':DOMAIN_size_global' in line:
                     global_ny = re.split('=|,', line)[-1].strip(';').strip()
+                    global_nx = re.split('=|,', line)[-2].strip()
                 elif ':DOMAIN_position_first' in line:
                     pos_first_y = re.split('=|,', line)[-1].strip(';').strip()
                 elif ':DOMAIN_position_last' in line:
                     pos_last_y = re.split('=|,', line)[-1].strip(';').strip()
 
-            notfound = [x for x in [global_ny, pos_first_y, pos_last_y] if
-                        'DOMAIN' in x]
-            if any(notfound):
-                msg = 'global_attr_to_zonal - attribute(s) {} not found in: '.\
-                    format(','.join(notfound))
-                utils.log_msg(msg + full_file, level='ERROR')
+            # Only process ncatted if there is an x dimension to the data
+            # For GC2 this is false (the data does not need correcting)
+            # For GC3 this is true and the data needs correcting using ncatted
+            if global_nx.isdigit():
+                notfound = [x for x in [global_ny, pos_first_y, pos_last_y] if
+                            'DOMAIN' in x]
+                if any(notfound):
+                    msg = '{} attribute(s) {} not found in: '.\
+                        format(printtag, ','.join(notfound))
+                    utils.log_msg(msg + full_file, level='ERROR')
 
-            cmd = ' '.join([
-                self.ncatted_cmd,
-                '-a DOMAIN_size_global,global,m,l,1,{}'.format(global_ny),
-                '-a DOMAIN_position_first,global,m,l,1,{}'.format(pos_first_y),
-                '-a DOMAIN_position_last,global,m,l,1,{}'.format(pos_last_y),
-                '-a ibegin,global,m,l,1',
-                full_file
-                ])
+                cmd = ' '.join([
+                    self.ncatted_cmd,
+                    '-a DOMAIN_size_global,global,m,l,1,{}'.format(global_ny),
+                    '-a DOMAIN_position_first,global,m,l,1,{}'.\
+                        format(pos_first_y),
+                    '-a DOMAIN_position_last,global,m,l,1,{}'.\
+                        format(pos_last_y),
+                    '-a ibegin,global,m,l,1',
+                    full_file
+                    ])
 
-            # Use ncatted to change the attributes
-            msg = 'global_attr_to_zonal - Changing nc file attributes ' \
-                'using command: ' + cmd
-            ret_code, output = utils.exec_subproc(cmd)
-            if ret_code == 0:
-                msg = msg + '\nncatted - Successful for file {}'.\
-                    format(full_file)
-                level = 'OK'
+                # Use ncatted to change the attributes
+                msg = '{} Changing nc file attributes using command: {}'.\
+                    format(printtag, cmd)
+                ret_code, output = utils.exec_subproc(cmd)
+                if ret_code == 0:
+                    msg = msg + '\nncatted - Successful for file {}'.\
+                        format(full_file)
+                    level = 'OK'
+                else:
+                    msg = msg + '\nncatted - Failed for file {}'.\
+                        format(full_file)
+                    level = 'ERROR'
+                utils.log_msg(msg, level=level)
             else:
-                msg = msg + '\nncatted - Failed for file {}'.format(full_file)
-                level = 'ERROR'
-            utils.log_msg(msg, level=level)
+                utils.log_msg('{} 1D data, global attributes OK.'.\
+                                  format(printtag),
+                              level='OK')
 
     @timer.run_timer
     def rebuild_namelist(self, datadir, filebase, bldset,

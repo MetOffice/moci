@@ -731,10 +731,10 @@ class MeansProcessingTests(unittest.TestCase):
         self.nemo.suite = mock.Mock()
         self.defaults = nemo_namelist.Processing()
         self.ncdumpout = '''
-  :DOMAIN_size_global = x, 1207;
+  :DOMAIN_size_global = 123, 1207;
   :dummy arg = some value;
-  :DOMAIN_position_last = x, 151;
-  :DOMAIN_position_first = x, 1;
+  :DOMAIN_position_last = 12, 151;
+  :DOMAIN_position_first = 1, 1;
   :dummy arg2 = some other value;
   :history = "Wed Jul 20 18:06:21 2016: \
 /projects/ocean/hadgem3/nco/nco-4.4.7/bin/ncatted \
@@ -802,8 +802,8 @@ History_Data/NEMOhist/ae710o_10d_19780901_19780910_diaptr_0000.nc";
         func.logtest('Assert missing attributes with global_attr_to_zonal:')
         ncdumpout = '''
   :dummy arg = some value;
-  :DOMAIN_position_last = x, 151;
-  :DOMAIN_position_first = x, 1;
+  :DOMAIN_size_global = 123, 1207;
+  :DOMAIN_position_last = 12, 151;
   :dummy arg2 = some other value;
 '''
         self.nemo.suite.preprocess_file.return_value = ncdumpout
@@ -813,9 +813,26 @@ History_Data/NEMOhist/ae710o_10d_19780901_19780910_diaptr_0000.nc";
                 self.nemo.global_attr_to_zonal('TestDir', 'File1')
             self.assertEqual(mock_exec.mock_calls, [])
 
-        self.assertIn('attribute(s) DOMAIN_size_global not found',
+        self.assertIn('attribute(s) DOMAIN_position_first not found',
                       func.capture('err'))
         self.assertEqual(len(mock_exec.mock_calls), 0)
+
+    def test_global_to_zonal_1d(self):
+        '''Test method global attributes to zonal ones - missing attributes'''
+        func.logtest('Assert missing attributes with global_attr_to_zonal:')
+        ncdumpout = '''
+  :dummy arg = some value;
+  :DOMAIN_size_global = 1207;
+  :DOMAIN_position_last = 151;
+  :DOMAIN_position_first = 1;
+;
+'''
+        self.nemo.suite.preprocess_file.return_value = ncdumpout
+        with mock.patch('nemo.utils.exec_subproc') as mock_exec:
+            self.nemo.global_attr_to_zonal('TestDir', 'File1')
+            self.assertListEqual(mock_exec.mock_calls, [])
+
+        self.assertIn('1D data, global attributes OK', func.capture())
 
 
 class AdditionalArchiveTests(unittest.TestCase):
