@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2017 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2018 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -47,7 +47,8 @@ class SuiteEnvironment(object):
                 '&suitegen namelist from namelist file: ' + input_nl
             utils.log_msg(msg, level='FAIL')
 
-        if self.naml.archive_command.lower() == 'moose':
+        self.archive_system = str(self.naml.archive_command).lower()
+        if self.archive_system == 'moose':
             try:
                 self.nl_arch = load_nl.moose_arch
             except AttributeError:
@@ -55,13 +56,24 @@ class SuiteEnvironment(object):
                     '&moose_arch namelist from namelist file: ' + input_nl
                 utils.log_msg(msg, level='FAIL')
 
-        elif self.naml.archive_command.lower() in ['archer', 'nexcs']:
+        elif self.archive_system in ['archer', 'nexcs']:
             try:
                 self.nl_arch = load_nl.archer_arch
             except AttributeError:
                 msg = 'SuiteEnvironment: Failed to load ' \
                     '&archer_arch namelist from namelist file: ' + input_nl
                 utils.log_msg(msg, level='FAIL')
+
+        elif self.archive_system == 'script':
+            try:
+                self.nl_arch = load_nl.script_arch
+            except AttributeError:
+                msg = 'SuiteEnvironment: Failed to load ' \
+                    '&script_arch namelist from namelist file: ' + input_nl
+                utils.log_msg(msg, level='FAIL')
+        else:
+            self.nl_arch = None
+
         self.sourcedir = sourcedir
         self.envars = {
             'CYLC_TASK_LOG_ROOT':
@@ -127,13 +139,26 @@ class SuiteEnvironment(object):
         '''
         rcode = None
 
-        if self.naml.archive_command.lower() == 'moose':
+        if self.archive_system == 'moose':
             # MOOSE Archiving
             rcode = moo.archive_to_moose(filename, self.prefix, self.sourcedir,
                                          self.nl_arch, preproc)
-        elif self.naml.archive_command.lower() in ['archer', 'nexcs']:
+        elif self.archive_system in ['archer', 'nexcs']:
             # ARCHER/NEXCS Archiving
-            rcode = archer.archive_to_rdf(filename, self.sourcedir, self.nl_arch)
+            rcode = archer.archive_to_rdf(filename, self.sourcedir,
+                                          self.nl_arch)
+
+        elif self.archive_system == 'script':
+            # Archive using a user defined script
+            if self.nl_arch.archive_script and \
+                    os.path.isfile(self.nl_arch.archive_script.split()[0]):
+                cmd = ' '.join([self.nl_arch.archive_script,
+                                filename,
+                                self.sourcedir])
+                rcode, _ = utils.exec_subproc(cmd)
+            else:
+                utils.log_msg('Archive script not found: ' +
+                              str(self.nl_arch.archive_script), level='WARN')
         else:
             utils.log_msg('Archive command not yet implemented', level='ERROR')
 
@@ -150,8 +175,7 @@ class SuiteEnvironment(object):
             arch_rcode = self._archive_command(archfile, preproc)
             if arch_rcode == 0:
                 log_line += ' ARCHIVE OK\n'
-            elif self.naml.archive_command.lower() == 'moose' and \
-                    arch_rcode == 11:
+            elif self.archive_system == 'moose' and arch_rcode == 11:
                 log_line += ' FILE NOT ARCHIVED. File contains no fields\n'
                 arch_rcode = 0
             else:
@@ -319,7 +343,7 @@ class SuitePostProc(object):
     ''' Default namelist for model independent properties '''
     prefix = os.environ['RUNID']
     umtask_name = 'atmos'
-    archive_command = 'Moose'
+    archive_command = None
     nccopy_path = ''
     ncdump_path = ''
     ncrcat_path = ''
@@ -328,13 +352,18 @@ class SuitePostProc(object):
     process_toplevel = False
     archive_toplevel = False
 
+class ScriptArch(object):
+    ''' Default namelist for the generic archiving script '''
+    archive_script = None
 
 class TimerInfo(object):
     '''Default namelist for timer'''
     ltimer = False
 
 
-NAMELISTS = {'suitegen': SuitePostProc, 'monitoring': TimerInfo}
+NAMELISTS = {'suitegen': SuitePostProc,
+             'script_arch': ScriptArch,
+             'monitoring': TimerInfo}
 
 
 if __name__ == '__main__':

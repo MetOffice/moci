@@ -167,7 +167,8 @@ def exec_subproc(cmd, verbose=True, cwd=os.getcwd()):
 
     for cmd in cmd_array:
         try:
-            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT,
+            output = subprocess.check_output(cmd,
+                                             stderr=subprocess.STDOUT,
                                              universal_newlines=True, cwd=cwd)
             rcode = 0
             if verbose:
@@ -484,7 +485,7 @@ def _mod_360day_calendar_date(indate, delta):
         if len(outdate) <= i:
             outdate.append(1 if i in [1, 2] else 0)
 
-    for i in range(len(outdate)):
+    for i, _ in enumerate(outdate):
         outdate[i] += diff_hours // multiplier[i]
         diff_hours = diff_hours % multiplier[i]
 

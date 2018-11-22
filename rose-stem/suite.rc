@@ -481,7 +481,6 @@ rm -rf {{dir1}}
             INITCYCLE_OVERRIDE = '19811001T0000Z'
             FINALCYCLE_OVERRIDE = '19830101T0000Z'
             ARCHIVE_SET = 'dummy'
-            PP_TESTING_LOG = "python2.7 $CYLC_SUITE_RUN_DIR/app/postproc/bin/process_log.py"
             DATE1 = 19811001
             DATE2 = $(rose date $(echo $CYLC_TASK_NAME | tr '_' '\n' | tail -n1) --calendar 360day -s P1M -f '%Y%m%d')
             

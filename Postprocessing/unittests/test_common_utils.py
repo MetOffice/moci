@@ -144,6 +144,23 @@ class ExecTests(unittest.TestCase):
         self.assertEqual(rcode, 0)
         self.assertIn('MyFile', output)
 
+    def test_subproc_options(self):
+        '''Test subprocess calls optional arguments with default settings'''
+        func.logtest('Test optional arguments to subprocess calls:')
+        with mock.patch('subprocess.check_output') as mock_check:
+            mock_check.side_effect = ['CMD1 output', 'CMD2 output']
+            _, _ = utils.exec_subproc('cmd 1')
+            _, _ = utils.exec_subproc('cmd2', verbose=False, cwd='MyDir')
+
+            self.assertListEqual(
+                mock_check.mock_calls,
+                [mock.call(['cmd', '1'], stderr=mock.ANY, cwd=os.getcwd(),
+                           universal_newlines=True),
+                 mock.call(['cmd2'], stderr=mock.ANY, cwd='MyDir',
+                           universal_newlines=True)])
+
+        self.assertIn('CMD1 output', func.capture())
+        self.assertNotIn('CMD2 output', func.capture())
 
 class LogTests(unittest.TestCase):
     '''Unit tests for logging output messages'''

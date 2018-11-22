@@ -93,13 +93,6 @@ def run_postproc():
 def run_archive_integrity():
     '''Main function for Archive Verification App'''
     try:
-        # For rose stem (testing) purposes - process archive log
-        testing_log = os.environ['PP_TESTING_LOG']
-        utils.exec_subproc(testing_log, verbose=False)
-    except KeyError:
-        pass
-
-    try:
         run_verify = os.environ['VERIFY_ARCHIVE'].lower() == 'true'
     except KeyError:
         run_verify = False

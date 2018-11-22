@@ -99,11 +99,26 @@ class pp22_t291(rose.upgrade.MacroUpgrade):
 
         return config, self.reports
 
+class pp22_t301(rose.upgrade.MacroUpgrade):
+
+    """Upgrade macro for ticket #301 by <Erica Neininger>."""
+    BEFORE_TAG = "pp22_t291"
+    AFTER_TAG = "pp22_t301"
+
+    def upgrade(self, config, meta_config=None):
+        """Upgrade a Postproc app configuration."""
+        self.add_setting(config, ["namelist:script_arch", "archive_script"], "")
+        for arch in ["file:atmospp.nl", "file:nemocicepp.nl"]:
+              val = self.get_setting_value(config, [arch, "source"])
+              self.change_setting_value(config, [arch, "source"], val + " (namelist:script_arch)")
+
+        return config, self.reports
+
 
 class pp22_tXXX(rose.upgrade.MacroUpgrade):
 
     """Upgrade macro for ticket #XXX by <Author>."""
-    BEFORE_TAG = "pp22_t291"
+    BEFORE_TAG = "pp22_t301"
     AFTER_TAG = "pp22_tXXX"
 
     def upgrade(self, config, meta_config=None):

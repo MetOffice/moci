@@ -69,9 +69,9 @@ multiline_var=1,
         self.assertTrue(os.path.exists(self.newnlfile),
                         msg='Failed to create new namelist file: {}'.
                         format(self.newnlfile))
-        self.assertEqual(namelists.suitegen.archive_command, 'Moose',
+        self.assertEqual(namelists.suitegen.umtask_name, 'atmos',
                          msg='Failed to load default &suitegen '
-                         '(archive_command=Moose)')
+                         '(umtask_name=atmos)')
 
     def test_load_blank_file(self):
         '''Test load one blank file'''
