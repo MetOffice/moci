@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016 Met Office. All rights reserved.
+ (C) Crown copyright 2016-2018 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -20,12 +20,12 @@ DESCRIPTION
 
 #The from __future__ imports ensure compatibility between python2.7 and 3.x
 from __future__ import absolute_import
-import error
 import re
 import os
 import sys
 import subprocess
 import threading
+import error
 import inc_days
 
 class LoadEnvar(object):
@@ -174,17 +174,15 @@ def find_previous_workdir(cyclepoint, workdir, taskname):
     #find the work directory for the previous cycle
     work_cycles = os.listdir(cyclesdir)
     work_cycles.sort()
-    # remove the current cyclepoint if present, and any future cyclepoints
-    # that may mess up the automatic restart
-    for work_cycle in work_cycles:
-        if work_cycle >= cyclepoint:
-            work_cycles.remove(cyclepoint)
-            
+
     # find the last restart directory for the task we are interested in
     # initialise previous_task_cycle to None
     previous_task_cycle = None
     for work_cycle in work_cycles[::-1]:
-        if taskname in os.listdir(os.path.join(cyclesdir, work_cycle)):
+        # If this is an ensemble run we need to ensure that we're not looking
+        # at a future cycle, or the current cycle.
+        if (work_cycle < cyclepoint) and \
+                (taskname in os.listdir(os.path.join(cyclesdir, work_cycle))):
             previous_task_cycle = work_cycle
             break
 
@@ -192,7 +190,7 @@ def find_previous_workdir(cyclepoint, workdir, taskname):
         sys.stderr.write('[FAIL] Can not find previous work directory for'
                          ' task %s\n' % taskname)
         sys.exit(error.MISSING_DRIVER_FILE_ERROR)
-    
+
     return os.path.join(cyclesdir, previous_task_cycle, taskname)
 
 
@@ -262,57 +260,52 @@ def remove_file(filename):
 
 def setup_runtime():
     '''
-    Set up model run length in seconds based on the model suite 
+    Set up model run length in seconds based on the model suite
     env vars (rather than in the manner of the old UM control scripts
-    by interrogating NEMO namelists!) 
+    by interrogating NEMO namelists!)
     '''
     runtime_envar = LoadEnvar()
 
     if runtime_envar.load_envar('TASKSTART') != 0:
-        sys.stderr.write('[FAIL] setup_runtime: Environment variable'
-	                 ' TASKSTART not set\n')
+        sys.stderr.write('[FAIL] setup_runtime: Environment variable' \
+                             ' TASKSTART not set\n')
         sys.exit(error.MISSING_EVAR_ERROR)
     if runtime_envar.load_envar('TASKLENGTH') != 0:
-        sys.stderr.write('[FAIL] setup_runtime: Environment variable'
-	                 ' TASKLENGTH not set\n')
+        sys.stderr.write('[FAIL] setup_runtime: Environment variable' \
+                             ' TASKLENGTH not set\n')
         sys.exit(error.MISSING_EVAR_ERROR)
 
 
     if runtime_envar.load_envar('CALENDAR') != 0:
-        sys.stderr.write('[WARN] setup_runtime: Environment variable'
-	                 ' CALENDAR not set. Assuming 360 day calendar.\n')
+        sys.stderr.write('[WARN] setup_runtime: Environment variable' \
+                             ' CALENDAR not set. Assuming 360 day calendar.\n')
         calendar = '360'
-        nleapy = 30
     else:
         calendar = runtime_envar['CALENDAR']
         if calendar == '360day':
             calendar = '360'
-            nleapy = 30
         elif calendar == '365day':
             calendar = '365'
-            nleapy = 0
-        elif calendar == 'gregorian':
-            nleapy = 1
         else:
-            sys.stderr.write('[FAIL] setup_runtime: Calendar type %s not'
-	                     ' recognised\n' % calendar)
+            sys.stderr.write('[FAIL] setup_runtime: Calendar type %s not' \
+                                 ' recognised\n' % calendar)
             sys.exit(error.INVALID_EVAR_ERROR)
-   
+
 
     # Turn our times into lists of integers
     run_start = [int(i) for i in runtime_envar['TASKSTART'].split(',')]
     run_length = [int(i) for i in runtime_envar['TASKLENGTH'].split(',')]
-    
+
     run_days = inc_days.inc_days(run_start[0], run_start[1], run_start[2],
                                  run_length[0], run_length[1], run_length[2],
                                  calendar)
-    				 
+
     # Work out the total run length in seconds
     runlen_sec = (run_days * 86400)     \
                  + (run_length[3]*3600) \
                  + (run_length[4]*60)   \
                  + run_length[5]
-				 				 				 
+
     return runlen_sec
 
 def exec_subproc_timeout(cmd, timeout_sec=10):
