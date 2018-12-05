@@ -173,6 +173,12 @@ class RebuildTests(unittest.TestCase):
             nemo.utils.CylcCycle(cyclepoint='20000901T0000Z')
         self.defaults = nemo_namelist.Processing()
 
+        self.nemo.naml.processing.xchunk = 2
+        self.nemo.naml.processing.ychunk = 4
+        self.nemo.naml.processing.zchunk = 6
+        self.nemo.naml.processing.tchunk = 8
+        self.nemo.naml.processing.rebu_cache = 1234
+
     def tearDown(self):
         for fname in runtime_environment.RUNTIME_FILES:
             try:
@@ -355,9 +361,13 @@ class RebuildTests(unittest.TestCase):
         self.nemo.rebuild_fileset('SourceDir', 'field')
         self.assertListEqual(
             mock_nl.mock_calls, [mock.call('SourceDir', 'file_19980530_ymd',
-                                           rebuild_set1, omp=1, msk=False),
+                                           rebuild_set1, omp=1, deflate_lev=0,
+                                           rebu_cache=1234, xchunk=2, ychunk=4,
+                                           zchunk=6, tchunk=8, msk=False),
                                  mock.call('SourceDir', 'file_19980630_ymd',
-                                           rebuild_set2, omp=1, msk=False)]
+                                           rebuild_set2, omp=1, deflate_lev=0,
+                                           rebu_cache=1234, xchunk=2, ychunk=4,
+                                           zchunk=6, tchunk=8, msk=False)]
             )
         self.assertEqual(mock_attr.mock_calls, [])
 
@@ -378,9 +388,13 @@ class RebuildTests(unittest.TestCase):
         self.nemo.rebuild_fileset('SourceDir', 'field')
         self.assertListEqual(
             mock_nl.mock_calls, [mock.call('SourceDir', 'file_199805_yyyymmdd',
-                                           rebuild_set1, omp=1, msk=False),
+                                           rebuild_set1, omp=1, deflate_lev=0,
+                                           rebu_cache=1234, xchunk=2, ychunk=4,
+                                           zchunk=6, tchunk=8, msk=False),
                                  mock.call('SourceDir', 'file_199806_yyyymmdd',
-                                           rebuild_set2, omp=1, msk=False)]
+                                           rebuild_set2, omp=1, deflate_lev=0,
+                                           rebu_cache=1234, xchunk=2, ychunk=4,
+                                           zchunk=6, tchunk=8, msk=False)]
             )
 
     @mock.patch('nemo.NemoPostProc.rebuild_namelist')
@@ -400,7 +414,9 @@ class RebuildTests(unittest.TestCase):
         self.nemo.rebuild_fileset(os.getcwd(), 'field')
         mock_nl.assert_called_once_with(os.getcwd(),
                                         'RUNIDo_19980530_yyyymmdd_field',
-                                        cmpts, omp=1, msk=False)
+                                        cmpts, omp=1, deflate_lev=0,
+                                        rebu_cache=1234, xchunk=2, ychunk=4,
+                                        zchunk=6, tchunk=8, msk=False)
         for fname in myfiles:
             os.remove(fname)
 
@@ -423,7 +439,9 @@ class RebuildTests(unittest.TestCase):
                                   'RUNIDo_19980530_restart')
         mock_nl.assert_called_once_with(os.getcwd(),
                                         'RUNIDo_19980530_restart',
-                                        cmpts, omp=1, msk=False)
+                                        cmpts, omp=1, deflate_lev=0,
+                                        rebu_cache=1234, xchunk=2, ychunk=4,
+                                        zchunk=6, tchunk=8, msk=False)
         for fname in myfiles:
             os.remove(fname)
 
@@ -445,7 +463,9 @@ class RebuildTests(unittest.TestCase):
                                   'RUNIDo_icebergs_19980530_restart')
         mock_nl.assert_called_once_with(os.getcwd(),
                                         'RUNIDo_icebergs_19980530_restart',
-                                        cmpts, omp=1, msk=False)
+                                        cmpts, omp=1, deflate_lev=0,
+                                        rebu_cache=1234, xchunk=2, ychunk=4,
+                                        zchunk=6, tchunk=8, msk=False)
         for fname in myfiles:
             os.remove(fname)
 
@@ -466,7 +486,9 @@ class RebuildTests(unittest.TestCase):
                                         'RUNIDo_19980530_restart_trc',
                                         ['RUNIDo_19980530_restart_trc_0000.nc',
                                          'RUNIDo_19980530_restart_trc_0001.nc'],
-                                        omp=1, msk=False)
+                                        omp=1, deflate_lev=0, rebu_cache=1234,
+                                        xchunk=2, ychunk=4, zchunk=6, tchunk=8,
+                                        msk=False)
         for fname in myfiles:
             os.remove(fname)
 
@@ -484,7 +506,9 @@ class RebuildTests(unittest.TestCase):
         self.nemo.suite.finalcycle = True
         self.nemo.rebuild_fileset('SourceDir', 'yyyymmdd_restart')
         mock_nl.assert_called_once_with('SourceDir', 'file_11112233_restart',
-                                        rebuild_set, omp=1, msk=False)
+                                        rebuild_set, omp=1, deflate_lev=0,
+                                        rebu_cache=1234, xchunk=2, ychunk=4,
+                                        zchunk=6, tchunk=8, msk=False)
         self.assertNotIn('deleting component files', func.capture().lower())
 
     @mock.patch('nemo.NemoPostProc.rebuild_namelist')
@@ -506,9 +530,13 @@ class RebuildTests(unittest.TestCase):
 
         self.assertIn('deleting component files', func.capture().lower())
         nl_calls = [mock.call('SourceDir', 'file_11112233_mean1',
-                              rebuild_set1, omp=1, msk=False),
+                              rebuild_set1, omp=1, deflate_lev=0,
+                              rebu_cache=1234, xchunk=2, ychunk=4, zchunk=6,
+                              tchunk=8, msk=False),
                     mock.call('SourceDir', 'file_11112233_mean2',
-                              rebuild_set2, omp=1, msk=False)]
+                              rebuild_set2, omp=1, deflate_lev=0,
+                              rebu_cache=1234, xchunk=2, ychunk=4, zchunk=6,
+                              tchunk=8, msk=False)]
         self.assertListEqual(mock_nl.mock_calls, nl_calls)
         rm_calls = [mock.call(rebuild_set1, path='SourceDir'),
                     mock.call(rebuild_set2, path='SourceDir')]
@@ -529,7 +557,9 @@ class RebuildTests(unittest.TestCase):
         self.nemo.rebuild_fileset('SourceDir', 'f_diaptr')
         mock_nl.assert_called_once_with('SourceDir',
                                         'file_19980530_yyyymmdd_diaptr',
-                                        rebuild_set, omp=1, msk=False)
+                                        rebuild_set, omp=1, deflate_lev=0,
+                                        rebu_cache=1234, xchunk=2, ychunk=4,
+                                        zchunk=6, tchunk=8, msk=False)
         mock_attr.assert_called_once_with(
             'SourceDir', ['component_file1', 'component_file2']
             )
@@ -621,15 +651,54 @@ class RebuildTests(unittest.TestCase):
                     rtn = self.nemo.rebuild_namelist(
                         os.getcwd(), 'file_19980530_ymd',
                         ['f1', 'f2', 'f3'],
-                        omp=1, chunk='opt_chunk', dims=[1, 2], msk=True
+                        omp=1, chunk='opt_chunk', dims=[1, 2], msk=True,
+                        deflate_lev=0, rebu_cache=54321
                         )
         self.assertEqual(int(os.environ['OMP_NUM_THREADS']), 1)
         self.assertEqual(rtn, 0)
         txt = open(os.path.join('rebuilding_FILE_19980530_YMD',
                                 'nam_rebuild'), 'r').read()
-        self.assertIn('dims=\'1\',\'2\'', txt)
-        self.assertIn('nchunksize=opt_chunk', txt)
-        self.assertIn('l_maskout=.true.', txt)
+        expected = '''&nam_rebuild
+filebase='file_19980530_ymd'
+ndomain=3
+l_maskout=.true.
+dims='1','2'
+nchunksize=opt_chunk
+/
+'''
+        self.assertEqual(expected, txt)
+
+    @mock.patch('nemo.utils.exec_subproc')
+    @mock.patch('nemo.os.path.isfile')
+    def test_rebuild_namelist_compress(self, mock_isfile, mock_exec):
+        '''Test rebuild namelist function with options'''
+        func.logtest('Assert rebuild_namelist function with options:')
+        mock_exec.return_value = (0, '')
+        mock_isfile.return_value = True
+        with mock.patch('nemo.utils.move_files'):
+            with mock.patch('nemo.utils.remove_files'):
+                with mock.patch('nemo.shutil.rmtree'):
+                    rtn = self.nemo.rebuild_namelist(
+                        os.getcwd(), 'file_19980530_ymd',
+                        ['f1', 'f2', 'f3'],
+                        deflate_lev=5, rebu_cache=54321, ychunk=5, tchunk=15
+                        )
+        self.assertEqual(int(os.environ['OMP_NUM_THREADS']), 16)
+        self.assertEqual(rtn, 0)
+        txt = open(os.path.join('rebuilding_FILE_19980530_YMD',
+                                'nam_rebuild'), 'r').read()
+        expected = '''&nam_rebuild
+filebase='file_19980530_ymd'
+ndomain=3
+deflate_level=5
+nc4_xchunk=None
+nc4_ychunk=5
+nc4_zchunk=None
+nc4_tchunk=15
+fchunksize=54321
+/
+'''
+        self.assertEqual(expected, txt)
 
     @mock.patch('nemo.NemoPostProc.rebuild_namelist')
     @mock.patch('nemo.utils.get_subset')
@@ -647,7 +716,31 @@ class RebuildTests(unittest.TestCase):
         self.nemo.rebuild_fileset(os.getcwd(), 'field')
         mock_nl.assert_called_once_with(os.getcwd(), 'file_19980530',
                                         rebuild_set,
-                                        omp=1, msk=True)
+                                        omp=1, deflate_lev=0, rebu_cache=1234,
+                                        xchunk=2, ychunk=4, zchunk=6, tchunk=8,
+                                        msk=True)
+
+    @mock.patch('nemo.NemoPostProc.rebuild_namelist')
+    @mock.patch('nemo.utils.get_subset')
+    def test_rebuild_compress(self, mock_subset, mock_nl):
+        '''Test rebuild all function with compress option'''
+        func.logtest('Assert rebuild all function with compress option:')
+        self.nemo.naml.processing.rebuild_mean_buffer = 1
+        self.nemo.naml.processing.rebuild_compress = True
+        self.nemo.naml.processing.compression_level = 5
+
+        tmp_dirs = []
+        rebuild_zero = ['file_19980530', 'file_19980630']
+        rebuild_set = ['file_19980530_0000.nc', 'file_19980530_0001.nc',
+                       'file_19980530_0002.nc']
+        mock_subset.side_effect = [tmp_dirs, rebuild_zero, rebuild_set]
+
+        self.nemo.rebuild_fileset(os.getcwd(), 'field')
+        mock_nl.assert_called_once_with(os.getcwd(), 'file_19980530',
+                                        rebuild_set,
+                                        omp=1, deflate_lev=5, rebu_cache=1234,
+                                        xchunk=2, ychunk=4, zchunk=6, tchunk=8,
+                                        msk=False)
 
     @mock.patch('nemo.utils.exec_subproc')
     @mock.patch('nemo.os.path.isfile')

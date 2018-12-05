@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2017 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2018 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -37,8 +37,15 @@ class Processing(template_namelist.Processing):
         '/fcm_make_pp/build/bin/icb_pp.py'
     msk_rebuild = False
     rebuild_restart_timestamps = '05-30', '11-30', '06-01', '12-01'
+    rebuild_omp_numthreads = 1
+    rebuild_compress = False
+    xchunk = None
+    ychunk = None
+    zchunk = None
+    tchunk = None
     rebuild_restart_buffer = None
     rebuild_mean_buffer = None
+    rebu_cache = None
 
     means_cmd = '/projects/ocean/hadgem3/scripts/GC2.0/mean_nemo.exe'
     ncatted_cmd = '/projects/ocean/hadgem3/nco/nco-4.4.7/bin/ncatted'

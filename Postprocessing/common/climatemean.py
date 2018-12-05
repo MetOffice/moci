@@ -250,23 +250,34 @@ def create_mean(meanfile, target_app, basistime, **kwargs):
                 format(meanfile.title)
 
     elif len(meanfile.component_files) == meanfile.num_components:
+        tmpname = meanfile.fname['full'] + '.tmp'
+        tmpfile = os.path.basename(tmpname)
         if callable(target_app):
             icode, output = target_app(meanfile, **kwargs)
         else:
+            if meanfile.fname['file'] in target_app:
+                # If the command contains the output filename replace with
+                # a temporary file, in case of app failure during execution
+                target_app = target_app.replace(meanfile.fname['file'], tmpfile)
             icode, output = utils.exec_subproc(target_app,
                                                cwd=meanfile.fname['path'])
 
-        if icode == 0 and os.path.isfile(meanfile.fname['full']):
+        if icode == 0 and (os.path.isfile(meanfile.fname['full']) or
+                           os.path.isfile(tmpname)):
             msg = 'Created {}: {}'.format(meanfile.description,
                                           meanfile.fname['file'])
             msglevel = 'OK'
+            if os.path.isfile(tmpname):
+                # Rename temporary file, if it exists
+                os.rename(tmpname, meanfile.fname['full'])
         else:
             msg = '{C}: Error={E}\n{O}\nFailed to create {M}: {L}'
             msg = msg.format(C=str(target_app), E=icode, O=output,
                              M=meanfile.description, L=meanfile.fname['file'])
             msglevel = 'ERROR'
             icode = -10
-            utils.remove_files(meanfile.fname['full'], ignore_non_exist=True)
+            utils.remove_files([meanfile.fname['full'], tmpname],
+                               ignore_non_exist=True)
 
     else:
         msg = '{} not possible as only got {} file(s): \n\t{}'.\

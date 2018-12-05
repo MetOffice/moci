@@ -115,10 +115,34 @@ class pp22_t301(rose.upgrade.MacroUpgrade):
         return config, self.reports
 
 
+class pp22_t356(rose.upgrade.MacroUpgrade):
+
+    """Upgrade macro for ticket #356 by Julien Palmieri."""
+    BEFORE_TAG = "pp22_t301"
+    AFTER_TAG = "pp22_t356"
+
+    def upgrade(self, config, meta_config=None):
+        """Add options for compressing files during rebuild with rebuild_nemo.exe"""
+        self.add_setting(config, ["namelist:nemo_processing", "rebuild_compress"], "false",
+              info="Add nemo netcdf output compression at rebuild time -- GMED #415 -- MOCI #362.")
+        self.add_setting(config, ["namelist:nemo_processing", "rebu_cache"], "9000000",
+              info="Add nemo netcdf output compression at rebuild time -- GMED #415 -- MOCI #362.")
+        self.add_setting(config, ["namelist:nemo_processing", "tchunk"], "01",
+              info="Add nemo netcdf output compression at rebuild time -- GMED #415 -- MOCI #362.")
+        self.add_setting(config, ["namelist:nemo_processing", "xchunk"], "120",
+              info="Add nemo netcdf output compression at rebuild time -- GMED #415 -- MOCI #362.")
+        self.add_setting(config, ["namelist:nemo_processing", "ychunk"], "112",
+              info="Add nemo netcdf output compression at rebuild time -- GMED #415 -- MOCI #362.")
+        self.add_setting(config, ["namelist:nemo_processing", "zchunk"], "01",
+              info="Add nemo netcdf output compression at rebuild time -- GMED #415 -- MOCI #362.")
+
+        return config, self.reports
+
+
 class pp22_tXXX(rose.upgrade.MacroUpgrade):
 
     """Upgrade macro for ticket #XXX by <Author>."""
-    BEFORE_TAG = "pp22_t301"
+    BEFORE_TAG = "pp22_t356"
     AFTER_TAG = "pp22_tXXX"
 
     def upgrade(self, config, meta_config=None):

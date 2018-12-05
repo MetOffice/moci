@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2017 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2018 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -291,7 +291,15 @@ class NemoPostProc(mt.ModelTemplate):
                 utils.log_msg('Rebuilding: ' + corename, level='INFO')
                 icode = self.rebuild_namelist(
                     datadir, corename, bldset,
-                    omp=1, msk=self.naml.processing.msk_rebuild
+                    omp=self.naml.processing.rebuild_omp_numthreads,
+                    rebu_cache=self.naml.processing.rebu_cache,
+                    deflate_lev=(self.naml.processing.compression_level if
+                                 self.naml.processing.rebuild_compress else 0),
+                    xchunk=self.naml.processing.xchunk,
+                    ychunk=self.naml.processing.ychunk,
+                    zchunk=self.naml.processing.zchunk,
+                    tchunk=self.naml.processing.tchunk,
+                    msk=self.naml.processing.msk_rebuild
                     )
             else:
                 msg = 'Only rebuilding periodic files: ' + \
@@ -384,7 +392,9 @@ class NemoPostProc(mt.ModelTemplate):
 
     @timer.run_timer
     def rebuild_namelist(self, datadir, filebase, bldset,
-                         omp=16, chunk=None, dims=None, msk=False):
+                         omp=16, deflate_lev=0, rebu_cache=None,
+                         xchunk=None, ychunk=None, zchunk=None, tchunk=None,
+                         chunk=None, dims=None, msk=False):
         '''Create the namelist file required by the rebuild_nemo executable'''
         cmd = self.rebuild_cmd.replace('%F', 'rebuild_' + filebase.upper())
         try:
@@ -410,6 +420,13 @@ class NemoPostProc(mt.ModelTemplate):
             txt += "\ndims='{}','{}'".format(*dims)
         if chunk:
             txt += "\nnchunksize={}".format(chunk)
+        if deflate_lev > 0:
+            txt += "\ndeflate_level={}".format(deflate_lev)
+            txt += "\nnc4_xchunk={}".format(xchunk)
+            txt += "\nnc4_ychunk={}".format(ychunk)
+            txt += "\nnc4_zchunk={}".format(zchunk)
+            txt += "\nnc4_tchunk={}".format(tchunk)
+            txt += "\nfchunksize={}".format(rebu_cache)
         txt += '\n/\n'
         open(namelistfile, 'w').write(txt)
 

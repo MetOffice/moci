@@ -313,7 +313,8 @@ class MeansMethodsTests(unittest.TestCase):
                                                  [1995, 8, 11, 0, 0]))
 
     @mock.patch('climatemean.utils.exec_subproc', return_value=(0, ''))
-    def test_create_mean_monthly_5dbase(self, mock_exec):
+    @mock.patch('climatemean.os.rename')
+    def test_create_mean_monthly_5dbase(self, mock_rename, mock_exec):
         '''Test successful creation of monthly mean'''
         func.logtest('Assert successful creation of monthly mean:')
         monthly = climatemean.MeanFile('1m', '5d')
@@ -321,15 +322,26 @@ class MeansMethodsTests(unittest.TestCase):
         monthly.component_files = ['F' + str(x) for x in range(1, 7)]
 
         with mock.patch('climatemean.os.path.isfile',
-                        side_effect=[False, True]):
+                        side_effect=[False, False, True, True]):
+            # Side effects:
+            #   False - Pre-existing mean not present
+            #   False - Completed meanfile not present
+            #   True  - Temporary meanfile present
+            #   True  - Temporary meanfile present
             with mock.patch('climatemean.MeanFile.description',
                             new_callable=mock.PropertyMock,
                             return_value='FIELD monthly mean for PERIOD'):
-                climatemean.create_mean(monthly, 'exec arg1 arg2', [0]*5)
+                climatemean.create_mean(monthly, 'exec arg1 path/MeanFileName',
+                                        [0]*5)
 
-        mock_exec.assert_called_once_with('exec arg1 arg2', cwd=os.getcwd())
+        mock_exec.assert_called_once_with('exec arg1 path/MeanFileName.tmp',
+                                          cwd=os.getcwd())
         self.assertIn('Created FIELD monthly mean for PERIOD: MeanFileName',
                       func.capture())
+        mock_rename.assert_called_once_with(
+            os.path.join(os.getcwd(), 'MeanFileName.tmp'),
+            os.path.join(os.getcwd(), 'MeanFileName')
+            )
 
     @mock.patch('climatemean.utils.exec_subproc', return_value=(0, ''))
     def test_create_mean_monthly_1mbase(self, mock_exec):
@@ -339,19 +351,18 @@ class MeansMethodsTests(unittest.TestCase):
         monthly.set_filename('MeanFileName', os.getcwd())
 
         with mock.patch('climatemean.os.path.isfile', side_effect=[True]):
+            # Side effects:
+            #   True - Pre-existing mean present
             with mock.patch('climatemean.MeanFile.description',
                             new_callable=mock.PropertyMock,
                             return_value='FIELD monthly mean for PERIOD'):
                 climatemean.create_mean(monthly, 'exec arg1 arg2', [0]*5)
 
-        self.assertListEqual(mock_exec.mock_calls, [])
-        self.assertIn('FIELD monthly mean for PERIOD already exists:',
-                      func.capture())
-        self.assertIn('Monthly mean output directly by the model',
-                      func.capture())
+        self.assertFalse(mock_exec.called)
 
     @mock.patch('climatemean.utils.exec_subproc', return_value=(0, ''))
-    def test_create_mean_seasonal(self, mock_exec):
+    @mock.patch('climatemean.os.rename')
+    def test_create_mean_seasonal(self, mock_rename, mock_exec):
         '''Test successful creation of seasonal mean'''
         func.logtest('Assert successful creation of seasonal mean:')
         seasonal = climatemean.MeanFile('1s', '1m')
@@ -359,7 +370,11 @@ class MeansMethodsTests(unittest.TestCase):
         seasonal.component_files = ['F' + str(x) for x in range(1, 4)]
 
         with mock.patch('climatemean.os.path.isfile',
-                        side_effect=[False, True]):
+                        side_effect=[False, True, False]):
+            # Side effects:
+            #   False - Pre-existing mean not present
+            #   True  - Completed meanfile present
+            #   False - Temporary meanfile not present
             with mock.patch('climatemean.MeanFile.description',
                             new_callable=mock.PropertyMock,
                             return_value='FIELD seasonal mean for PERIOD'):
@@ -368,9 +383,11 @@ class MeansMethodsTests(unittest.TestCase):
         mock_exec.assert_called_once_with('exec arg1 arg2', cwd=os.getcwd())
         self.assertIn('Created FIELD seasonal mean for PERIOD: MeanFileName',
                       func.capture())
+        self.assertFalse(mock_rename.called)
 
     @mock.patch('climatemean.utils.exec_subproc', return_value=(0, ''))
-    def test_create_mean_annual(self, mock_exec):
+    @mock.patch('climatemean.os.rename')
+    def test_create_mean_annual(self, mock_rename, mock_exec):
         '''Test successful creation of annual mean'''
         func.logtest('Assert successful creation of annual mean:')
         annual = climatemean.MeanFile('1y', '1s')
@@ -378,7 +395,11 @@ class MeansMethodsTests(unittest.TestCase):
         annual.component_files = ['F' + str(x) for x in range(1, 5)]
 
         with mock.patch('climatemean.os.path.isfile',
-                        side_effect=[False, True]):
+                        side_effect=[False, True, False]):
+           # Side effects:
+            #   False - Pre-existing mean not present
+            #   True  - Completed meanfile present
+            #   False - Temporary meanfile not present
             with mock.patch('climatemean.MeanFile.description',
                             new_callable=mock.PropertyMock,
                             return_value='FIELD annual mean for PERIOD'):
@@ -387,10 +408,12 @@ class MeansMethodsTests(unittest.TestCase):
         mock_exec.assert_called_once_with('exec arg1 arg2', cwd=os.getcwd())
         self.assertIn('Created FIELD annual mean for PERIOD: MeanFileName',
                       func.capture())
+        self.assertFalse(mock_rename.called)
 
 
     @mock.patch('climatemean.utils.exec_subproc', return_value=(0, ''))
-    def test_create_mean_decadal(self, mock_exec):
+    @mock.patch('climatemean.os.rename')
+    def test_create_mean_decadal(self, mock_rename, mock_exec):
         '''Test successful creation of decadal mean'''
         func.logtest('Assert successful creation of decadal mean:')
         decadal = climatemean.MeanFile('1x', '1y')
@@ -398,15 +421,25 @@ class MeansMethodsTests(unittest.TestCase):
         decadal.component_files = ['F' + str(x) for x in range(1, 11)]
 
         with mock.patch('climatemean.os.path.isfile',
-                        side_effect=[False, True]):
+                        side_effect=[False, True, True]):
+            # Side effects:
+            #   False - Pre-existing mean not present
+            #   True - Completed meanfile present
+            #   True  - Temporary meanfile present
             with mock.patch('climatemean.MeanFile.description',
                             new_callable=mock.PropertyMock,
                             return_value='FIELD decadal mean for PERIOD'):
-                climatemean.create_mean(decadal, 'exec arg1 arg2', [0]*5)
+                climatemean.create_mean(decadal, 'exec path/MeanFileName',
+                                        [0]*5)
 
-        mock_exec.assert_called_once_with('exec arg1 arg2', cwd=os.getcwd())
+        mock_exec.assert_called_once_with('exec path/MeanFileName.tmp',
+                                          cwd=os.getcwd())
         self.assertIn('Created FIELD decadal mean for PERIOD: MeanFileName',
                       func.capture())
+        mock_rename.assert_called_once_with(
+            os.path.join(os.getcwd(), 'MeanFileName.tmp'),
+            os.path.join(os.getcwd(), 'MeanFileName')
+            )
 
     @mock.patch('climatemean.utils.exec_subproc', return_value=(0, ''))
     def test_create_mean_existing(self, mock_exec):
@@ -496,7 +529,9 @@ class MeansMethodsTests(unittest.TestCase):
         self.assertIn('Error=5\nNot possible!\nFailed to create FIELD monthly',
                       func.capture('err'))
         mock_rm.assert_called_once_with(
-            os.path.join(os.getcwd(), 'MeanFileName'), ignore_non_exist=True
+            [os.path.join(os.getcwd(), 'MeanFileName'),
+             os.path.join(os.getcwd(), 'MeanFileName.tmp')],
+            ignore_non_exist=True
             )
 
     def test_seasonal_mean_spinup_yr1(self):
