@@ -1,28 +1,31 @@
-import rose.upgrade
-import re
 import sys
+import rose.upgrade
 
 class UpgradeError(Exception):
 
-      """Exception created when an upgrade fails."""
+    """Exception created when an upgrade fails."""
 
-      def __init__(self, msg):
-          self.msg = msg
+    def __init__(self, msg):
+        self.msg = msg
 
-      def __repr__(self):
-          sys.tracebacklimit = 0
-          return self.msg
+    def __repr__(self):
+        sys.tracebacklimit = 0
+        return self.msg
 
-      __str__ = __repr__
+    __str__ = __repr__
 
 
-class drivers12_tXXX(rose.upgrade.MacroUpgrade):
+class drivers12_t369(rose.upgrade.MacroUpgrade):
 
-    """Upgrade macro for ticket #XXXX by <author>."""
+    """Upgrade macro for ticket #369 by Harry Shepherd."""
     BEFORE_TAG = "drivers_1.2"
-    AFTER_TAG = "drivers_1.2_tXXX"
+    AFTER_TAG = "drivers_1.3"
 
     def upgrade(self, config, meta_config=None):
         """Upgrade a Driver make app configuration."""
         # Input your macro commands here
+        self.change_setting_value(config, ["env", "config_rev"],
+                                  "@drivers_1.3")
+        self.change_setting_value(config, ["env", "driver_rev"],
+                                  "drivers_1.3")
         return config, self.reports
