@@ -100,6 +100,15 @@ class CylcDB(SqlDatabase):
         self.family_list = family_list
         SqlDatabase.__init__(self, path_db)
 
+    def suite_date_valid(self, start_dt_str):
+        '''
+        Takes the suite start date and ensure it has run within the
+        past 24 hours. Returns True if true, False if not
+        '''
+        past24h = datetime.datetime.now() - datetime.timedelta(days=1)
+        past24h = DT_STR_TEMPLATE.format(dt=past24h)
+        return start_dt_str > past24h
+
     def get_tasks_in_family(self, family_name, leaf_only):
         """
         Retrieve a list of all the tasks in a family with the specified name.
@@ -304,6 +313,10 @@ class CylcDB(SqlDatabase):
         start_dt_str = \
             DT_STR_TEMPLATE.format(dt=self.get_suite_start_time())
         html_output1 += 'suite started at {0}<br>\n'.format(start_dt_str)
+        if not self.suite_date_valid(start_dt_str):
+            html_output1 += '<b><font color="red"> Warning </font>'
+            html_output1 += 'This suite has not been run in the past 24'
+            html_output1 += ' hours. Please investigate</b><br>\n'
         html_output1 += \
         self.create_summary_list(self.test_categories)
         html_output1 += '</p>\n'
@@ -369,7 +382,7 @@ def print_html_header():
         <a href="http://www.metoffice.gov.uk" target="_blank" title="opens in a new window"><img src="http://www.metoffice.gov.uk/lib/template/logos/MO_Master_W.jpg" alt="Met Office" title="www.metoffice.gov.uk" width="120" height="109" /></a>
     </div>
     <div class="header_text_cell">
-        <h1> MOCI test suite dashboard </h1>
+        <h1> MOCI test suite dashboard</h1>
         {time_gen_str}
     </div>
     <div class="header_logo_cell">
@@ -440,4 +453,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
