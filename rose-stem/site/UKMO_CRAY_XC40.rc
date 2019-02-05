@@ -14,6 +14,7 @@
             --ntasks=1
             --mem=1G
             --qos=normal
+            --partition=rhel7
 
     [[POSTPROC_RESOURCE]]
         inherit = LINUX
