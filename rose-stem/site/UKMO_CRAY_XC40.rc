@@ -1,12 +1,12 @@
     [[LINUX_DESKTOP]]
-        pre-script = "module load scitools"
+        pre-script = "module load scitools/production-os41-1"
         [[[job]]]
             batch system = background
         [[[remote]]]
             host = $(rose host-select {{EXTRACT_HOST}})
     
     [[LINUX_SERVER]]
-        pre-script = "module load scitools"
+        pre-script = "module load scitools/production-os41-1"
         [[[job]]]
             batch system = slurm
             execution time limit = PT10M
@@ -18,14 +18,14 @@
 
     [[POSTPROC_RESOURCE]]
         inherit = LINUX
-        pre-script = "ulimit -s unlimited ; module load scitools"
+        pre-script = "ulimit -s unlimited ; module load scitools/production-os41-1"
 
     [[VERIFY_RESOURCE]]
         inherit = POSTPROC_RESOURCE
 	
     [[UNITTESTS_RESOURCE]]
         inherit = LINUX
-	pre-script = "module load scitools{{ '/experimental-current' if PYTHON3 else '' }}"
+	pre-script = "module load scitools/production-{{ 'os42-1' if PYTHON3 else 'os41-1' }}"
 
     [[HOUSEKEEP_RESOURCE]]
         inherit = LINUX
@@ -279,8 +279,8 @@ module load {{XIOS}}-PrgEnv/{{XIOS_PRGENV_VERSION}}-nooasis/{{ROSE_SUITE_REV_NO}
         [[[environment]]]
             PYTHON_ENVIRONMENT = """
 {% if PYTHON3 %}
-module load scitools/experimental-current > /dev/null 2>&1 ;
-module swap scitools scitools/experimental-current ;
+module load scitools/production-os42-1 > /dev/null 2>&1 ;
+module swap scitools/production-os42-1 ;
 source $UMDIR/mule/modules/setup ;
 module swap ifort/16.0_64 ;
 module load um_tools ;
