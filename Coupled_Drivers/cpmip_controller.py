@@ -21,6 +21,7 @@ DESCRIPTION
 #The from __future__ imports ensure compatibility between python2.7 and 3.x
 from __future__ import absolute_import
 from __future__ import division
+import glob
 import math
 import re
 import sys
@@ -39,9 +40,35 @@ except ImportError:
                      ' complexity for UM\n')
     MULE_AVAIL = False
 
+# timeout for filesystem operations in seconds to avoid delays intoduced by
+# (especially Lustre) filesystems
+FS_OPERATION_TIMEOUT = 60
 
 CORES_PER_NODE_UKMO_XC40 = {'broadwell': 36,
                             'haswell': 32}
+
+
+def _get_glob_usage(glob_path, timeout=60):
+    '''
+    Get the total data from a list of files produced by a glob expression,
+    using the du -c command. This command takes two arguments, a glob
+    expression, and a timeout in seconds. This timeout is required as some
+    filesystems (notably Lustre) can take a long time to respond to metadata
+    queries
+    '''
+    size_k = -1.0
+    filelist = glob.glob(glob_path)
+    if filelist:
+        du_command = ['du', '-c'] + filelist
+        rcode, output = common.exec_subproc_timeout(du_command, timeout)
+        if rcode == 0:
+            size_k = float(output.split()[-2])
+    else:
+        sys.stderr.write('[WARN] Attepting to find the size of files described'
+                         ' by glob expression %s. There are no files found'
+                         % glob_path)
+        size_k = 0.0
+    return size_k
 
 
 def _get_directory_usage(directory_path, timeout=60):
@@ -61,6 +88,53 @@ def _get_directory_usage(directory_path, timeout=60):
         sys.stderr.write('[WARN] Attempting to determine size of directory %s'
                          ' This directory doesnt exist\n' % directory_path)
     return size_k
+
+def _get_datam_output_runonly(common_envar, cpmip_envar, timeout):
+    '''
+    Grab the data of interest within the datam directory. We only want the
+    contents of NEMOhist and CICEhist, and the output files labelled with
+    the runid. We must avoid any directories containing lrun/nrun/crun restart
+    tests etc.
+    '''
+    total_usage = 0.0
+    failed_components = []
+    # um files
+    if 'um' in cpmip_envar['models']:
+        um_path_gl = os.path.join(common_envar['DATAM'],
+                                  '%s*' % common_envar['RUNID'])
+        um_usage = _get_glob_usage(um_path_gl, timeout)
+        if um_usage >= 0.0:
+            total_usage += um_usage
+        else:
+            failed_components.append('UM')
+
+    # nemo files
+    if 'nemo' in cpmip_envar['models']:
+        nemo_path_gl = os.path.join(common_envar['DATAM'], 'NEMOhist', '*')
+        nemo_usage = _get_glob_usage(nemo_path_gl, timeout)
+        if nemo_usage >= 0.0:
+            total_usage += nemo_usage
+        else:
+            failed_components.append('NEMO')
+
+    # cice file
+    if 'cice' in cpmip_envar['models']:
+        cice_path_gl = os.path.join(common_envar['DATAM'], 'CICEhist', '*')
+        cice_usage = _get_glob_usage(cice_path_gl, timeout)
+        if cice_usage >= 0.0:
+            total_usage += cice_usage
+        else:
+            failed_components.append('CICE')
+
+    if failed_components:
+        for failed_component in failed_components:
+            sys.stderr.write('[FAIL] Unable to determine the usage in DATAM'
+                             ' for the %s component\n' %
+                             failed_component)
+        sys.exit(error.MISSING_MODEL_FILE_ERROR)
+    else:
+        return total_usage
+
 
 
 def _get_workdir_netcdf_output(timeout=60):
@@ -109,13 +183,14 @@ def _measure_xios_client_times(timeout=120):
     return mean_time, max_time
 
 
-def data_intensity_initial(common_envar):
+def data_intensity_initial(common_envar, cpmip_envar):
     '''
     Setup for the data intensity metric, getting intial directory sizes,
     and write to a placeholder file. Also set up IODEF file to produce
     XIOS timing files
     '''
-    size_k = _get_directory_usage(common_envar['DATAM'])
+    size_k = _get_datam_output_runonly(common_envar, cpmip_envar,
+                                       FS_OPERATION_TIMEOUT)
     with common.open_text_file('datam.size', 'w') as f_size:
         f_size.write(str(size_k))
     with open('iodef.xml', 'r') as f_in, \
@@ -138,7 +213,7 @@ def data_intensity_initial(common_envar):
                     update = True
     shutil.move('iodef_out.xml', 'iodef.xml')
 
-def data_intensity_final(core_hour_cycle, common_envar):
+def data_intensity_final(core_hour_cycle, common_envar, cpmip_envar):
     '''
     Calculate the data intensity metric. This is the increase in size of
     DATAM between the start and end of the coupled app, as well as the
@@ -147,7 +222,8 @@ def data_intensity_final(core_hour_cycle, common_envar):
     with common.open_text_file('datam.size', 'r') as f_size:
         for line in f_size.readlines():
             size_init = float(line)
-    size_final = _get_directory_usage(common_envar['DATAM'])
+    size_final = _get_datam_output_runonly(common_envar, cpmip_envar,
+                                           FS_OPERATION_TIMEOUT)
     size_wrkdir = _get_workdir_netcdf_output()
     if size_final > -1.0 and size_init > -1.0 and size_wrkdir > -1.0:
         data_produced_k = (size_final - size_init) + size_wrkdir
@@ -304,7 +380,7 @@ def __get_um_io(pe0_output):
                         times.append(cpu_time)
     missing = set(possible_routines) - set(present)
     missing = list(missing)
-    if len(missing) > 0:
+    if missing:
         for missing_routine in missing:
             sys.stdout.write('[INFO] IO timings running, routine %s'
                              ' unavaliable in this configuration\n' %
@@ -568,11 +644,10 @@ def _get_complexity(common_envar, cpmip_envar):
     if 'nemo' in cpmip_envar['models']:
         nemo_res = _get_component_resolution(cpmip_envar['NEMO_NL'],
                                              ('jpiglo', 'jpjglo', 'jpkdta'))
-        rcode, out = common.__exec_subproc_true_shell( \
-            'du -c %s/NEMOhist/*%s*' % (cpmip_envar['DATAM'], cycle_date),
-            verbose=False)
-        if rcode == 0:
-            nemo_words = (int(out.split()[-2])) * (1024./8)
+        size_k = _get_glob_usage('%s/NEMOhist/*%s*' %
+                                 (cpmip_envar['DATAM'], cycle_date))
+        if size_k > 0.0:
+            nemo_words = size_k * (1024./8)
             nemo_complexity = nemo_words / float(nemo_res)
             msg += 'NEMO complexity is %i, and total resolution %i\n' % \
                 (nemo_complexity, nemo_res)
@@ -582,11 +657,10 @@ def _get_complexity(common_envar, cpmip_envar):
         cice_cycle_date = '%s-%s-%s' % (cycle_date[:4],
                                         cycle_date[4:6], cycle_date[6:])
         cice_res = int(cpmip_envar['CICE_COL']) * int(cpmip_envar['CICE_ROW'])
-        rcode, out = common.__exec_subproc_true_shell( \
-            'du -c %s/CICEhist/*%s*' % (cpmip_envar['DATAM'], cice_cycle_date),
-            verbose=False)
-        if rcode == 0:
-            cice_words = (int(out.split()[-2])) * (1024./8)
+        size_k = _get_glob_usage('%s/CICEhist/*%s*' %
+                                 (cpmip_envar['DATAM'], cice_cycle_date))
+        if size_k > 0.0:
+            cice_words = size_k * (1024./8)
             cice_complexity = cice_words / float(cice_res)
             msg += 'CICE complexity is %i, and total resolution %i\n' % \
                 (cice_complexity, cice_res)
@@ -608,6 +682,11 @@ def _load_environment_variables(cpmip_envar):
     _ = cpmip_envar.load_envar('NEMO_NL', 'namelist_cfg')
     _ = cpmip_envar.load_envar('IO_COST', 'False')
     _ = cpmip_envar.load_envar('DATA_INTENSITY', 'False')
+    # Get the component models
+    if cpmip_envar.load_envar('models') != 0:
+        sys.stderr.write('[FAIL] Environment variable models containing a list'
+                         ' of component models is not set\n')
+        sys.exit(error.MISSING_EVAR_ERROR)
 
     return cpmip_envar
 
@@ -743,7 +822,7 @@ def _setup_cpmip_controller(common_envar):
                          ' Whilst this will not affect the execution time'
                          ' of the model, it may increase time spent in the'
                          ' model drivers\n')
-        data_intensity_initial(common_envar)
+        data_intensity_initial(common_envar, cpmip_envar)
 
     return cpmip_envar
 
@@ -903,7 +982,7 @@ def _finalize_cpmip_controller(common_envar):
         core_hour_cycle = total_cpus * \
             float(int(cpmip_envar['time_in_aprun']) * secs_to_hours)
         data_produced, data_intensity = \
-            data_intensity_final(core_hour_cycle, common_envar)
+            data_intensity_final(core_hour_cycle, common_envar, cpmip_envar)
         if data_intensity > -1:
             data_intensity_msg = 'This cycle produces %.2f GiB of data.\n' \
                 '  The data intensity metric is %.6f GiB per core hour\n' % \
