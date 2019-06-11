@@ -64,7 +64,7 @@ class go6_gsi8_v2(rose.upgrade.MacroUpgrade):
            self.add_setting(config, ["namelist:namsbc_cpl", "rn_antarctica_total_fw_flux"],"0.0")
  
         except:
-	   print("Ice shelf coupling not relevant. No action necessary.")
+           print("Ice shelf coupling not relevant. No action necessary.")
 
 
         # Get rid of any redundant ancient variables in namtra_dmp.
@@ -77,7 +77,7 @@ class go6_gsi8_v2(rose.upgrade.MacroUpgrade):
            self.remove_setting(config,["namelist:namtra_dmp", "rn_dep"])
            self.remove_setting(config,["namelist:namtra_dmp", "rn_surf"])
         except:
-	   print("No namtra_dmp variables need removing.")	   
+           print("No namtra_dmp variables need removing.")	   
 	   
 
         self.change_setting_value(config, ["namelist:domain_nml", "nprocs"],
@@ -99,18 +99,18 @@ class go6_gsi8_v3(rose.upgrade.MacroUpgrade):
 	# Remove it, if it's present. 
 
         # Extract the list of NEMO namelists
-	nl_list = self.get_setting_value(config, ["file:namelist_cfg", "source"]) 
+        nl_list = self.get_setting_value(config, ["file:namelist_cfg", "source"]) 
       
         # See if the offending redundant namelist is present.
-	if re.search(r'namelist:namobc', nl_list):
+        if re.search(r'namelist:namobc', nl_list):
 	   # Remove the namelist and its variables
            self.remove_setting(config,["namelist:namobc"])
 	   # Remove the entry from the list of namelists
-	   self.change_setting_value(config,["file:namelist_cfg","source"],
+           self.change_setting_value(config,["file:namelist_cfg","source"],
 	                nl_list.replace("namelist:namobc ",""))
             
-      	else:
-  	   print("No NEMO component upgrades necessary.")
+        else:
+           print("No NEMO component upgrades necessary.")
             
         """Upgrade CICE runtime app configuration, if appropriate."""
 
@@ -121,7 +121,7 @@ class go6_gsi8_v3(rose.upgrade.MacroUpgrade):
                                         ["namelist:namsbc", "nn_ice"])
 
         if (nn_ice == '4'):
-	   print("Checking CICE component for upgrades")
+           print("Checking CICE component for upgrades")
 
            # Set up a generic string to populate fields which are automatically set by 
 	   # the drivers, etc at run time. 
@@ -130,15 +130,15 @@ class go6_gsi8_v3(rose.upgrade.MacroUpgrade):
            days_per_year = self.get_setting_value(config, 
                                         ["namelist:setup_nml", "days_per_year"])
            if not days_per_year.isdigit():
-	    self.change_setting_value(config, 
+              self.change_setting_value(config, 
 	                ["namelist:setup_nml", "days_per_year"], system_set)
 	    
            # npt can only be set by the system
-  	   self.change_setting_value(config, 
+           self.change_setting_value(config, 
 	                ["namelist:setup_nml", "npt"], system_set)
 	        
            # Pointer file can only be set by the system
-	   self.change_setting_value(config, 
+           self.change_setting_value(config, 
 	                ["namelist:setup_nml", "pointer_file"], system_set)
 	    
            # Restart file can only be set by the system
@@ -171,7 +171,7 @@ class go6_gsi8_v3(rose.upgrade.MacroUpgrade):
            # The set_by_ value could take any one of three of 
 	   # forms. Here we just standardise its value if not already 
 	   # set to 'none' or 'default'.         
-	      self.change_setting_value(config, 
+             self.change_setting_value(config, 
 	                ["namelist:setup_nml", "ice_ic"], system_set)
 	    
            # Examine restart (this is not the same as restart_file!)
@@ -201,11 +201,71 @@ class go6_gsi8_v3(rose.upgrade.MacroUpgrade):
 	                ["namelist:setup_nml", "istep0"], "0")
 
         else:
-	   print("No CICE component upgrades necessary.")
+           print("No CICE component upgrades necessary.")
 
 
         return config, self.reports
-  
-    
-	
-    
+
+class go6_gsi8_v4(rose.upgrade.MacroUpgrade):
+
+    """Upgrade macro to move from go6_gsi8_3 to nemo36_gsi8_v4 """
+
+    BEFORE_TAG = "nemo36_gsi8_v3"
+    AFTER_TAG = "nemo36_gsi8_v4"
+
+    def upgrade(self, config, meta_config=None):
+        """Upgrade a GO6 runtime app configuration."""
+        # Input your macro commands here
+        #sn_cfctl%l_runstat
+        try:
+           l_runstat = self.get_setting_value(config,
+                                        ["namelist:namctl", "sn_cfctl%l_runstat"])
+           if l_runstat:
+              print("sn_cfctl%l_runstat is in namelist; No action necessary.")
+           else:
+              print("Set sn_cfctl%l_runstat in namctl")
+              self.add_setting(config,
+                               ["namelist:namctl", "sn_cfctl%l_runstat"],".true.")
+        except:
+           print("Problem with sn_cfctl%l_runstat")
+
+        #sn_cfctl%l_trcstat
+        try:
+           l_trcstat = self.get_setting_value(config,
+                                        ["namelist:namctl", "sn_cfctl%l_trcstat"])
+           if l_trcstat:
+              print("sn_cfctl%l_trcstat is in namelist; No action necessary.")
+           else:
+              print("Set sn_cfctl%l_trcstat in namctl")
+              self.add_setting(config,
+                               ["namelist:namctl", "sn_cfctl%l_trcstat"],".true.")
+        except: 
+           print("Problem with sn_cfctl%l_trcstat")
+
+        #sn_cfctl%ptimincr
+        try:
+           ptimincr = self.get_setting_value(config,
+                                        ["namelist:namctl", "sn_cfctl%ptimincr"])
+           if ptimincr:
+              print("sn_cfctl%ptimincr is in namelist; No action necessary.")
+           else:
+              print("Set sn_cfctl%ptimincr in namctl")
+              self.add_setting(config,
+                               ["namelist:namctl", "sn_cfctl%ptimincr"],"1")
+        except:
+           print("Problem with sn_cfctl%ptimincr")
+
+        #ln_flush
+        try:
+           ln_flush = self.get_setting_value(config,
+                                        ["namelist:namctl", "ln_flush"])
+           if ln_flush:
+              print("ln_flush is in namelist; No action necessary.")
+           else:
+              print("Set ln_flush in namctl")
+              self.add_setting(config,
+                               ["namelist:namctl", "ln_flush"],".false.")
+        except:
+           print("Problem with ln_flush")
+
+        return config, self.reports
