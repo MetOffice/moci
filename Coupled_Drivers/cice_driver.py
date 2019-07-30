@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016 Met Office. All rights reserved.
+ (C) Crown copyright 2019 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -261,6 +261,14 @@ def _setup_executable(common_envar):
     cice_incond = re.findall(r'incond_dir\s*=\s*\'(.*)\',', cice_incond_val)[0]
 
     for direc in (cice_rst, cice_hist, cice_incond):
+        # Strip white space
+	direc = direc.strip()
+
+        # Check for trailing slashes in directory names and strip them 
+	# out if they're present. 
+	if direc.endswith('/'):
+	    direc = direc.rstrip('/')
+ 
         if os.path.isdir(direc) and (direc not in ('./', '.')) and \
                 cice_envar['CONTINUE'] == '':
             sys.stdout.write('[INFO] directory is %s\n' % direc)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016 Met Office. All rights reserved.
+ (C) Crown copyright 2019 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -276,6 +276,14 @@ def _setup_executable(common_envar):
         restart_direcs.append(ice_rst)
 
     for direc in restart_direcs:
+        # Strip white space
+	direc = direc.strip()
+
+        # Check for trailing slashes in directory names and strip them 
+	# out if they're present. 
+	if direc.endswith('/'):
+	    direc = direc.rstrip('/')
+    
         if os.path.isdir(direc) and (direc not in ('./', '.')) and \
                 nemo_envar['CONTINUE'] == '':
             sys.stdout.write('[INFO] directory is %s\n' % direc)
