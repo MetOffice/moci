@@ -41,6 +41,17 @@ def _grab_xhist_date(xhistfile):
         if match:
             checkpoint_date = match.group(1)
             break
+    else:
+        sys.stderr.write('Unable to find checkpoint date within XHIST file %s'
+                         '\nPlease check the contents of this file and'
+                         ' rerun. It is possible that this cycle of the'
+                         '\nmodel has not been configured to produce a'
+                         ' checkpoint restart, (in which case there will be no'
+                         '\nvalue for CHECKPOINT_DUMP_IM), or there is a file'
+                         ' system delay, especially on Lustre (the file will'
+                         '\nbe zero length)' % xhistfile)
+        sys.exit(error.CORRUPTED_MODEL_FILE_ERROR)
+
     xhist_handle.close()
     return checkpoint_date
 

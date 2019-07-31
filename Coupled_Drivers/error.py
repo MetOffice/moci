@@ -59,8 +59,11 @@ TYPE_COVERSION_ERROR = 300
 # Missing file that will be required by a component model
 MISSING_MODEL_FILE_ERROR = 400
 
+# Corrupted file that will be required by a component model
+CORRUPTED_MODEL_FILE_ERROR = 401
+
 # An error in the component model
-COMPONENT_MODEL_ERROR = 401
+COMPONENT_MODEL_ERROR = 402
 
 # Invalid function argument
 INVALID_FUNC_ARG_ERROR = 500
