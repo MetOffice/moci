@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # *****************************COPYRIGHT******************************
-# (C) Crown copyright Met Office. All rights reserved.
+# (C) Crown copyright Met Office 2019. All rights reserved.
 # For further details please refer to the file COPYRIGHT.txt
 # which you should have received as part of this distribution.
 # *****************************COPYRIGHT******************************
@@ -498,6 +498,31 @@ class NemoLinuxIntelBuildSystem(NemoBuildSystem):
         return build_str1
 
 
+class NemoCrayXC30BuildSystem(NemoCrayXC40BuildSystem):
+
+    """
+    The class for building NEMO on the ARCHER Cray XC30 supercomputer.
+
+    Inherit everything from NemoCrayXC40BuildSystem except number of
+    build threads. 
+    """
+    SYSTEM_NAME = 'NCAS_CRAY_XC30'
+
+    def __init__(self, settings_dict):
+        """
+        The constructor for the class for building NEMO on the ARCHER 
+        HPC (Cray XC30).  
+        """
+        NemoCrayXC40BuildSystem.__init__(self, settings_dict)
+
+        self.number_of_build_processors = 1
+
+    def __str__(self):
+        """
+        """
+        return 'Nemo build system for ARCHER HPC (Cray XC30)'
+
+
 def create_nemo_build_system(system_name, settings_dict):
     """
     Factory method to create a class for building NEMO on the platform
@@ -509,4 +534,6 @@ def create_nemo_build_system(system_name, settings_dict):
         build_system1 = NemoCrayXC40BuildSystem(settings_dict)
     elif system_name == NemoLinuxIntelBuildSystem.SYSTEM_NAME:
         build_system1 = NemoLinuxIntelBuildSystem(settings_dict)
+    elif system_name == NemoCrayXC30BuildSystem.SYSTEM_NAME:
+        build_system1 = NemoCrayXC30BuildSystem(settings_dict)
     return build_system1

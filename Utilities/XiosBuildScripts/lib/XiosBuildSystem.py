@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """ *****************************COPYRIGHT******************************
- (C) Crown copyright Met Office. All rights reserved.
+ (C) Crown copyright Met Office 2019. All rights reserved.
  For further details please refer to the file COPYRIGHT.txt
  which you should have received as part of this distribution.
  *****************************COPYRIGHT******************************
@@ -1009,6 +1009,47 @@ class XiosLinuxIntelSystem(XiosBuildSystem):
         mw1.write_module()
 
 
+class XiosCrayXC30BuildSystem(XiosCrayBuildSystem):
+
+    """
+    Subclass of XiosCrayBuildSystem that implements Xios build
+    on the ARCHER Cray XC30 system.
+
+    Inherit everything from XiosCrayBuildSystem
+
+    """
+    SYSTEM_NAME = 'NCAS_CRAY_XC30'
+
+    def setup_arch_fcm_file(self, file_name):
+        """
+        Sets up the arch.fcm file used in the build.
+        """
+        with open(file_name, 'w') as fcm_file:
+            fcm_file.write('''
+%CCOMPILER      CC
+%FCOMPILER      ftn
+%LINKER         CC
+
+%BASE_CFLAGS    -em -DMPICH_SKIP_MPICXX -h msglevel_4 -h zero -h gnu
+%PROD_CFLAGS    -O1 -DBOOST_DISABLE_ASSERTS
+%DEV_CFLAGS     -O2
+%DEBUG_CFLAGS   -g
+
+%BASE_FFLAGS    -em -m 4 -e0 -eZ -J ../inc
+%PROD_FFLAGS    -O3
+%DEV_FFLAGS     -G2
+%DEBUG_FFLAGS   -g
+
+%BASE_INC       -D__NONE__
+%BASE_LD        -D__NONE__
+
+%CPP            cpp
+%FPP            cpp -P -CC
+%MAKE           gmake
+''')
+
+
+
 def create_build_system(system_name, build_settings):
     """
     usage:
@@ -1023,6 +1064,8 @@ def create_build_system(system_name, build_settings):
         system1 = XiosCrayBuildSystem(build_settings)
     elif system_name == XiosLinuxIntelSystem.SYSTEM_NAME:
         system1 = XiosLinuxIntelSystem(build_settings)
+    elif system_name == XiosCrayXC30BuildSystem.SYSTEM_NAME:
+        system1 = XiosCrayXC30BuildSystem(build_settings)
     else:
         raise common.ConfigError('invalid build system name')
     return system1

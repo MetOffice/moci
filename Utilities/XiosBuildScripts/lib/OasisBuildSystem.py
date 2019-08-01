@@ -1,7 +1,7 @@
 #!/usr/bin/env python2.7
 """
 *****************************COPYRIGHT******************************
-(C) Crown copyright Met Office. All rights reserved.
+(C) Crown copyright Met Office 2019. All rights reserved.
 For further details please refer to the file COPYRIGHT.txt
 which you should have received as part of this distribution.
 *****************************COPYRIGHT******************************
@@ -491,6 +491,17 @@ make model2
         remote_writer_1.write_module()
 
 
+class OasisCrayXC30BuildSystem(OasisCrayBuildSystem):
+
+    """
+    Class to build the Oasis3-mct libraries and tutorial on the ARCHER
+    Cray XC30 platform.
+
+    Inherit everything from OasisCrayBuildSystem. 
+    """
+    SYSTEM_NAME = 'NCAS_CRAY_XC30'
+
+
 def create_build_system(system_name, settings_dict):
     """
     Factory method to construct oasis3-mct build object for the correct
@@ -509,4 +520,6 @@ def create_build_system(system_name, settings_dict):
     build_system_1 = None
     if system_name == OasisCrayBuildSystem.SYSTEM_NAME:
         build_system_1 = OasisCrayBuildSystem(settings_dict)
+    if system_name == OasisCrayXC30BuildSystem.SYSTEM_NAME:
+        build_system_1 = OasisCrayXC30BuildSystem(settings_dict)
     return build_system_1

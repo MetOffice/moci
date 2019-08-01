@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 #
 #*****************************COPYRIGHT******************************
-#(C) Crown copyright Met Office. All rights reserved.
+#(C) Crown copyright Met Office 2019. All rights reserved.
 # For further details please refer to the file COPYRIGHT.txt
 # which you should have received as part of this distribution.
 #*****************************COPYRIGHT******************************
@@ -253,6 +253,16 @@ class OasisLinuxIntelTestSystem(OasisTestSystem):
         pass
 
 
+class OasisCrayXC30TestSystem(OasisCrayTestSystem):
+
+    """
+    Class to run the Oasis3-mct test on the ARCHER Cray XC30 system.
+
+    Inherit everything from OasisCrayTestSystem. 
+    """
+    SYSTEM_NAME = 'NCAS_CRAY_XC30'
+
+
 def create_test_system(system_name, settings_dict):
     """
     Factory method to create a class to run the tests.
@@ -272,4 +282,6 @@ def create_test_system(system_name, settings_dict):
         test_system1 = OasisCrayTestSystem(settings_dict)
     elif system_name == OasisLinuxIntelTestSystem.SYSTEM_NAME:
         test_system1 = OasisLinuxIntelTestSystem(settings_dict)
+    elif system_name == OasisCrayXC30TestSystem.SYSTEM_NAME:
+        test_system1 = OasisCrayXC30TestSystem(settings_dict)
     return test_system1

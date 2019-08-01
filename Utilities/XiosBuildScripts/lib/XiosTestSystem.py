@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # *****************************COPYRIGHT******************************
-# (C) Crown copyright Met Office. All rights reserved.
+# (C) Crown copyright Met Office 2019. All rights reserved.
 # For further details please refer to the file COPYRIGHT.txt
 # which you should have received as part of this distribution.
 # *****************************COPYRIGHT******************************
@@ -272,6 +272,52 @@ mpirun -n 3 ./{xios_test_exec_name} : -n 1 ./{xios_server_link_name}
             raise common.TestError('Error executing XIOS test')
 
 
+class XiosCrayXC30TestSystem(XiosCrayXC40TestSystem):
+
+    """
+    Class for running XIOS complete test case on the ARCHER Cray XC30
+    supercomputer.
+    """
+    SYSTEM_NAME = 'NCAS_CRAY_XC30'
+
+    def __str__(self):
+        return 'Class to run XIOS complete test on Archer HPC (Cray XC30)'
+
+    def write_test_file(self):
+        """
+        Write out script to run the XIOS test case. The script will then be
+        executed or submitted to the queue as required.
+        """
+        exec_str1 = ''
+        if not self.suite_mode:
+            exec_str1 += '''
+#!/bin/bash --login
+#PBS -N XIOScomplete
+#PBS -l select=2
+#PBS -l walltime=00:20:00
+#PBS -j oe
+#PBS -q short
+#PBS -A n02-cms
+'''
+        else:
+            exec_str1 += '#!/bin/bash\n'
+
+        exec_str1 += '''
+cd {test_dir}
+echo current dir is $(pwd)
+rm -rf *.csv *.nc
+
+aprun -n 24 ./{xios_test_exec_name} : -n 4 ./{xios_server_link_name}
+'''.format(**self.__dict__)
+
+        if os.path.exists(self.test_script_file_name):
+            os.remove(self.test_script_file_name)
+
+        with open(self.test_script_file_name, 'w') as script_file1:
+            script_file1.write(exec_str1)
+        os.chmod(self.test_script_file_name, 477)
+
+
 def create_test_system(system_name, settings_dict):
     """
     Factory method for constructing XIOS test object.
@@ -281,6 +327,8 @@ def create_test_system(system_name, settings_dict):
         test_system1 = XiosCrayXC40TestSystem(settings_dict)
     elif system_name == XiosLinuxIntelTestSystem.SYSTEM_NAME:
         test_system1 = XiosLinuxIntelTestSystem(settings_dict)
+    elif system_name == XiosCrayXC30TestSystem.SYSTEM_NAME:
+        test_system1 = XiosCrayXC30TestSystem(settings_dict)
     else:
         raise common.ConfigError('Invalid system name for test system')
     return test_system1

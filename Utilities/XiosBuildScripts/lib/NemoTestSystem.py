@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # *****************************COPYRIGHT******************************
-# (C) Crown copyright Met Office. All rights reserved.
+# (C) Crown copyright Met Office 2019. All rights reserved.
 # For further details please refer to the file COPYRIGHT.txt
 # which you should have received as part of this distribution.
 # *****************************COPYRIGHT******************************
@@ -365,6 +365,61 @@ class NemoLinuxIntelTestSystem(NemoTestSystem):
             raise common.TestError(err_msg1)
 
 
+class NemoCrayXC30TestSystem(NemoCrayXc40TestSystem):
+
+    """
+    Class to run nemo test on the ARCHER Cray XC30 supercomputer.
+    """
+    SYSTEM_NAME = 'NCAS_CRAY_XC30'
+
+    def __str__(self):
+        return 'System for testing NEMO on ARCHER HPC (Cray XC30)'
+
+    def write_script(self):
+        """
+        Create the test script to run. The script is written to disk as it may
+        need to be submitted to the queue.
+        """
+        test_cmd1 = ''
+        if not self.suite_mode:
+            test_cmd1 += '#!/bin/bash --login\n'
+            test_cmd1 += '#PBS -N test_nemo_gyre\n'
+            test_cmd1 += '#PBS -l select={nnodes:d}\n'
+            test_cmd1 += '#PBS -l walltime=00:20:00\n'
+            test_cmd1 += '#PBS -j oe\n'
+            test_cmd1 += '#PBS -q short\n'
+            test_cmd1 += '#PBS -A n02-cms\n'
+        else:
+            test_cmd1 += '#!/bin/bash\n'
+        test_cmd1 += 'cd {0}'.format(self.path_to_nemo_experiment)
+        test_cmd1 += '\n'
+#        for mod_1 in self.prerequisite_modules:
+#            test_cmd1 += 'module load {0}\n'.format(mod_1)
+        test_cmd1 += '\n'
+        aprun_cmd = 'aprun '
+        if self.xios_use_server:
+            aprun_cmd += '-n {xios_tasks:d} -N {xios_tasks_per_node:d} '\
+                         './{xios_server_link_name} : '
+        aprun_cmd += '-n {nemo_tasks:d} -N {nemo_tasks_per_node} '
+        aprun_cmd += './{nemo_exec_name}'
+
+
+        test_cmd1 += aprun_cmd
+        test_cmd1 += '\n'
+
+        test_cmd1 = test_cmd1.format(**self.__dict__)
+
+        if os.path.exists(self.script_path):
+            os.remove(self.script_path)
+
+        with open(self.script_path, 'w') as script_file:
+            script_file.write(test_cmd1)
+
+        os.chmod(self.script_path, 477)
+
+        return test_cmd1
+
+
 def build_test_system(system_name, settings_dict):
     """
     Factory method to construct the test runner class.
@@ -374,4 +429,6 @@ def build_test_system(system_name, settings_dict):
         test_system = NemoCrayXc40TestSystem(settings_dict)
     elif system_name == NemoLinuxIntelTestSystem.SYSTEM_NAME:
         test_system = NemoLinuxIntelTestSystem(settings_dict)
+    elif system_name == NemoCrayXC30TestSystem.SYSTEM_NAME:
+        test_system = NemoCrayXC30TestSystem(settings_dict)
     return test_system
