@@ -9,7 +9,7 @@
         pre-script = "module load scitools/production-os41-1"
         [[[job]]]
             batch system = slurm
-            execution time limit = PT10M
+            execution time limit = PT15M
         [[[directives]]]
             --ntasks=1
             --mem=1G
