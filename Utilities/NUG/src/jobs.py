@@ -107,21 +107,27 @@ class Job(object):
                 ratio)
 
     def filter_conditions(self, subproject_filter=None, user_filter=None, \
-                          account_filter=None, queue_filter=None):
+                          account_filter=None, queue_filter=None,
+                          job_state_filter=None):
         """ this method test if a job belongs to a list of subprojects,
             users, account or queues. If one of the four attributes
             is not specified the condition is considered True. """
         subproject_condition = (not subproject_filter) or \
-                               (subproject_filter and \
-                                 self.subproject in subproject_filter)
+            (subproject_filter and \
+                 self.subproject in subproject_filter)
+
         user_condition = (not user_filter) or \
-                      (user_filter and self.user in user_filter)
+            (user_filter and self.user in user_filter)
 
         account_condition = (not account_filter) or \
-                        (account_filter and self.project in account_filter)
+            (account_filter and self.project in account_filter)
 
         queue_condition = (not queue_filter) or \
-                        (queue_filter and self.queue in queue_filter)
+            (queue_filter and self.queue in queue_filter)
+
+        job_state_condition = (not job_state_filter) or \
+            (job_state_filter and \
+                 self.job_state in job_state_filter)
 
         return subproject_condition and user_condition and account_condition \
-                                    and queue_condition
+            and queue_condition and job_state_condition

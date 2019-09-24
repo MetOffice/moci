@@ -20,10 +20,9 @@ DESCRIPTION
 ENVIRONMENT VARIABLES
 '''
 
-import src.jobs
 import os
-import os.path
 import re
+import src.jobs
 
 class JobList(object):
     ''' Class encapsulates a list of job objects.
@@ -97,12 +96,13 @@ class JobList(object):
             self.job_list = tmp_l
 
     def filtered(self, subproject_filter=None, user_filter=None,
-                 account_filter=None, queue_filter=None):
+                 account_filter=None, queue_filter=None, job_state_filter=None):
         ''' Apply the job class filtering method to the whole list '''
         new_list = JobList()
         for job in self.job_list:
             if job.filter_conditions(subproject_filter, user_filter, \
-                                     account_filter, queue_filter):
+                                     account_filter, queue_filter,
+                                     job_state_filter):
                 new_list.append(job)
         return new_list
 

@@ -2,7 +2,7 @@
 
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2018 Met Office. All rights reserved.
+ (C) Crown copyright 2019 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -73,10 +73,19 @@ def main():
                         help="monitor jobs for a particular list \
                          (comma separated) of queues {normal|high|urgent}"
                         " [default: %(default)s]")
+
+    parser.add_argument("-t", "--status",
+                        action="store", type=str, dest="job_state",
+                        default="all",
+                        help="monitor jobs for particular list \
+                         (comma separated) of job statuses {queued|running|all}"
+                        " [default: %(default)s]")
+
     options = parser.parse_args()
 
     print "Monitoring for subproject %s and users %s" % (options.subproject,
                                                          options.users)
+    print "Monitoring for job_state %s" % options.job_state
 
 # options are transformed into list of strings to pass to the display routine
     if not options.subproject == 'any':
@@ -93,12 +102,21 @@ def main():
 
     queue_filter = options.queues.split(',')
 
+    job_state_filter = []
+    if 'all' not in options.job_state:
+        for job_stat in options.job_state.split(','):
+            if job_stat == 'queued':
+                job_state_filter.append('Q')
+            if job_stat == 'running':
+                job_state_filter.append('R')
+
     if os.path.isfile('/var/spool/qstat/qstat_cache.txt'):
         job_file = '/var/spool/qstat/qstat_cache.txt'
     elif os.path.isfile('/critical/qstat/qstat_cache.txt'):
         job_file = '/critical/qstat/qstat_cache.txt'
     elif os.path.isfile('aux/qstat_cache.txt'):
-        print '\nPBS data could not be found on the system - Using KGO file aux/qstat_cache.txt instead \n'
+        print '\nPBS data could not be found on the system - ' \
+            'Using KGO file aux/qstat_cache.txt instead \n'
         job_file = 'aux/qstat_cache.txt'
     else:
         print 'INPUT FILE NOT AVAILABLE'
@@ -107,7 +125,7 @@ def main():
 
     joblist = JobList(data_file)
     newlist = joblist.filtered(subproject_filter, user_filter,
-                     account_filter, queue_filter)
+                               account_filter, queue_filter, job_state_filter)
     print newlist
     print 'Total number of nodes is '+str(newlist.node_count())
 
