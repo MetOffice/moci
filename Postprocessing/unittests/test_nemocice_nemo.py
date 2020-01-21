@@ -313,7 +313,7 @@ class RebuildTests(unittest.TestCase):
 
         self.assertListEqual(
             mock_subset.mock_calls,
-            [mock.call('ShareDir', 'rebuilding_.*FIELD'),
+            [mock.call('ShareDir', 'rebuilding_FIELD'),
              mock.call('ShareDir/rebuilding_FILETYPE', r'^.*_\d{4}\.nc$'),
              mock.call('ShareDir', r'^.*field_0000.nc$')]
             )
@@ -323,6 +323,17 @@ class RebuildTests(unittest.TestCase):
             )
         mock_rm.assert_called_once_with(os.path.join('ShareDir',
                                                      'rebuilding_FILETYPE'))
+
+    @mock.patch('nemo.utils.get_subset', return_value=[])
+    def test_rebuild_recover_regex(self, mock_set):
+        '''Test regular expresion for recovery failed rebuild tasks'''
+        func.logtest('Assert recover of failed rebuild tasks:')
+        self.nemo.rebuild_fileset('ShareDir',
+                                  r'runido_\d{8}_restart(\.nc)?')
+        self.assertEqual(mock_set.mock_calls[0], mock.call(
+            'ShareDir',
+            r'rebuilding_RUNIDO_\d{8}_RESTART(\.NC)?'
+        ))
 
     @mock.patch('utils.remove_files')
     @mock.patch('utils.get_subset')

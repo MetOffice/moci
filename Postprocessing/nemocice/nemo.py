@@ -232,8 +232,8 @@ class NemoPostProc(mt.ModelTemplate):
         '''Rebuild partial files for given filetype'''
         # Recover any partial files which may have been left in temporary
         # directories due to failure (usually timeout) in a previous task.
-        tmp_dirs = utils.get_subset(datadir,
-                                    r'rebuilding_.*{}'.format(filetype.upper()))
+        tmpdir_regex = 'rebuilding_' + filetype.upper().replace(r'\D', r'\d')
+        tmp_dirs = utils.get_subset(datadir, tmpdir_regex)
         for tmp_dir in tmp_dirs:
             fullpath_tmp = os.path.join(datadir, tmp_dir)
             partial_files = utils.get_subset(
