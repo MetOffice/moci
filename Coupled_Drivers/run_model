@@ -23,8 +23,14 @@ set -eu
 
 echo $CYLC_SUITE_RUN_DIR
 
-# Copy scripts to work directory so they can be found
-cp $CYLC_SUITE_SHARE_DIR/fcm_make_drivers/build/bin/* ./
+# Set a default value for the driver extract directory to allow for backward
+# compatibility, and future flexibility
+DRIVER_EXTRACT_DIR=${DRIVER_EXTRACT_DIR:=$CYLC_SUITE_SHARE_DIR/fcm_make_drivers}
+
+echo "[DRIVER_TEST_SCRIPT] DRIVER_EXTRACT_DIR is $DRIVER_EXTRACT_DIR" 
+
+# Copy scripts to work directory so they can be found.
+cp $DRIVER_EXTRACT_DIR/build/bin/* ./
 
 # Run our drivers, this produces two command files
 #  driver_envar containing environment variables to be exported
