@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2019 Met Office. All rights reserved.
+ (C) Crown copyright 2020 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -90,8 +90,7 @@ def _get_ln_icebergs(nemo_nl_file):
     else:
         if 'true' in icb_val.lower():
             return True
-        else:
-            return False
+        return False
 
 
 def _verify_nemo_rst(cyclepointstr, nemo_rst, nemo_nl, nemo_nproc):
@@ -285,13 +284,13 @@ def _setup_executable(common_envar):
 
     for direc in restart_direcs:
         # Strip white space
-	direc = direc.strip()
+        direc = direc.strip()
 
-        # Check for trailing slashes in directory names and strip them 
-	# out if they're present. 
-	if direc.endswith('/'):
-	    direc = direc.rstrip('/')
-    
+        # Check for trailing slashes in directory names and strip them
+        # out if they're present.
+        if direc.endswith('/'):
+            direc = direc.rstrip('/')
+
         if os.path.isdir(direc) and (direc not in ('./', '.')) and \
                 nemo_envar['CONTINUE'] == '':
             sys.stdout.write('[INFO] directory is %s\n' % direc)
@@ -468,8 +467,8 @@ def _setup_executable(common_envar):
 
             if nemo_restart_count < 1:
                 sys.stdout.write('[INFO] No NEMO sub-PE restarts found\n')
-	        # We found no nemo restart sub-domain files let's
-		# look for a global file.
+                # We found no nemo restart sub-domain files let's
+                # look for a global file.
                 nemo_rst_source = '%s/%so_%s_restart.nc' % \
                     (nemo_init_dir, common_envar['RUNID'], \
                          nemo_dump_time)
@@ -482,10 +481,10 @@ def _setup_executable(common_envar):
 
             if ice_restart_count < 1:
                 sys.stdout.write('[INFO] No ice sub-PE restarts found\n')
-	        # We found no ice restart sub-domain files let's
-		# look for a global file.
+                # We found no ice restart sub-domain files let's
+                # look for a global file.
                 ice_rst_source = '%s/%so_%s_restart_ice.nc' % \
-		                    (nemo_init_dir, common_envar['RUNID'], \
+                                    (nemo_init_dir, common_envar['RUNID'], \
                          nemo_dump_time)
                 if os.path.isfile(ice_rst_source):
                     sys.stdout.write('[INFO] Using rebuilt ice restart '\
@@ -496,8 +495,8 @@ def _setup_executable(common_envar):
 
             if iceberg_restart_count < 1:
                 sys.stdout.write('[INFO] No iceberg sub-PE restarts found\n')
-	        # We found no iceberg restart sub-domain files let's
-		# look for a global file.
+                # We found no iceberg restart sub-domain files let's
+                # look for a global file.
                 iceberg_rst_source = '%s/%so_icebergs_%s_restart.nc' % \
                     (nemo_init_dir, common_envar['RUNID'], \
                          nemo_dump_time)
@@ -537,8 +536,8 @@ def _setup_executable(common_envar):
                     proc_number = fname.split('.')[-2][-4:]
 
                     # We need to make sure there isn't already
-	  	    # a restart file link set up, and if there is, get
-		    # rid of it because symlink wont work otherwise!
+                    # a restart file link set up, and if there is, get
+                    # rid of it because symlink wont work otherwise!
                     common.remove_file('restart_%s.nc' % proc_number)
 
                     os.symlink(fname, 'restart_%s.nc' % proc_number)
@@ -557,8 +556,8 @@ def _setup_executable(common_envar):
             if os.path.isfile(nemo_envar['NEMO_ICEBERGS_START']):
 
                 # We need to make sure there isn't already
-	  	# an iceberg restart file link set up, and if there is, get
-		# rid of it because symlink wont work otherwise!
+                # an iceberg restart file link set up, and if there is, get
+                # rid of it because symlink wont work otherwise!
                 common.remove_file('restart_icebergs.nc')
                 os.symlink(nemo_envar['NEMO_ICEBERGS_START'],
                            'restart_icebergs.nc')
@@ -569,8 +568,8 @@ def _setup_executable(common_envar):
                     proc_number = fname.split('.')[-2][-4:]
 
                     # We need to make sure there isn't already
-	      	    # an iceberg restart file link set up, and if there is, get
-		    # rid of it because symlink wont work otherwise!
+                    # an iceberg restart file link set up, and if there is, get
+                    # rid of it because symlink wont work otherwise!
                     common.remove_file('restart_icebergs_%s.nc' % proc_number)
 
                     os.symlink(fname, 'restart_icebergs_%s.nc' % proc_number)
@@ -647,11 +646,11 @@ def _setup_executable(common_envar):
         controller_mode = "run_controller"
 
         top_controller.run_controller(restart_ctl,
-				      int(nemo_envar['NEMO_NPROC']),
-				      common_envar['RUNID'],
+                                      int(nemo_envar['NEMO_NPROC']),
+                                      common_envar['RUNID'],
                                       common_envar['DRIVERS_VERIFY_RST'],
-				      nemo_dump_time,
-				      controller_mode)
+                                      nemo_dump_time,
+                                      controller_mode)
     else:
         sys.stdout.write('[INFO] nemo_driver: '
                          'Passive tracer code not active\n.')
@@ -697,13 +696,13 @@ def get_ocean_resol(nemo_nl_file, run_info):
     ocean_nml = f90nml.read(nemo_nl_file)
 
     # Check the required entries exist
-    if not 'namcfg' in ocean_nml:
+    if 'namcfg' not in ocean_nml:
         sys.stderr.write('[FAIL] namcfg not found in namelist_cfg\n')
         sys.exit(error.MISSING_OCN_RESOL_NML)
-    if not 'jpiglo' in ocean_nml['namcfg'] or \
-            not 'jpjglo' in ocean_nml['namcfg'] or \
-            not 'cp_cfg' in ocean_nml['namcfg'] or \
-            not 'jp_cfg' in ocean_nml['namcfg']:
+    if 'jpiglo' not in ocean_nml['namcfg'] or \
+       'jpjglo' not in ocean_nml['namcfg'] or \
+       'cp_cfg' not in ocean_nml['namcfg'] or \
+       'jp_cfg' not in ocean_nml['namcfg']:
         sys.stderr.write('[FAIL] cp_cfg, jp_cfg, jpiglo or jpjglo are '
                          'missing from namelist namcf in namelist_cfg\n')
         sys.exit(error.MISSING_OCN_RESOL)
@@ -753,11 +752,11 @@ def _sent_coupling_fields(nemo_envar, run_info):
     oasis_nml = f90nml.read('OASIS_OCN_SEND')
 
     # Check we have the expected information
-    if not 'oasis_ocn_send_nml' in oasis_nml:
+    if 'oasis_ocn_send_nml' not in oasis_nml:
         sys.stderr.write('[FAIL] namelist oasis_ocn_send_nml is '
                          'missing from OASIS_OCN_SEND.\n')
         sys.exit(error.MISSING_OASIS_OCN_SEND_NML)
-    if not 'oasis_ocn_send' in oasis_nml['oasis_ocn_send_nml']:
+    if 'oasis_ocn_send' not in oasis_nml['oasis_ocn_send_nml']:
         sys.stderr.write('[FAIL] entry oasis_ocn_send is missing '
                          'from namelist oasis_ocn_send_nml in '
                          'OASIS_OCN_SEND.\n')

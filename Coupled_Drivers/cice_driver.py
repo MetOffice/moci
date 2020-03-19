@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2019 Met Office. All rights reserved.
+ (C) Crown copyright 2020 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -262,13 +262,13 @@ def _setup_executable(common_envar):
 
     for direc in (cice_rst, cice_hist, cice_incond):
         # Strip white space
-	direc = direc.strip()
+        direc = direc.strip()
 
-        # Check for trailing slashes in directory names and strip them 
-	# out if they're present. 
-	if direc.endswith('/'):
-	    direc = direc.rstrip('/')
- 
+        # Check for trailing slashes in directory names and strip them
+        # out if they're present.
+        if direc.endswith('/'):
+            direc = direc.rstrip('/')
+
         if os.path.isdir(direc) and (direc not in ('./', '.')) and \
                 cice_envar['CONTINUE'] == '':
             sys.stdout.write('[INFO] directory is %s\n' % direc)
@@ -283,7 +283,7 @@ def _setup_executable(common_envar):
 
     cice_restart_files = [f for f in os.listdir(cice_rst) if
                           re.findall(r'.*i\.restart\..*', f)]
-    if len(cice_restart_files) == 0:
+    if not cice_restart_files:
         cice_restart_files = ['nofile']
 
     if not os.path.isfile(os.path.join(cice_rst, cice_restart_files[-1])):

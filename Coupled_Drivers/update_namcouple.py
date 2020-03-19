@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016 Met Office. All rights reserved.
+ (C) Crown copyright 2020 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -44,8 +44,8 @@ class _UpdateComponents(object):
         '''
 
         self.models_to_update = {'mct': self.add_mct_details,
-	                         'um': self.add_um_details,
-				 'nemo': self.add_nemo_details,}
+                                 'um': self.add_um_details,
+                                 'nemo': self.add_nemo_details,}
 
     def update(self, models):
         '''
@@ -59,12 +59,12 @@ class _UpdateComponents(object):
                 sys.stdout.write('[FAIL] update_namcouple can not update the'
                                  ' %s component' % model)
                 sys.exit(error.INVALID_DRIVER_ARG_ERROR)
- 
+
     def add_um_details(self):
         '''
         Update namcouple details specifcally relevant to the UM.
         '''
-	# Nothing to do currently
+        # Nothing to do currently
         pass
 
     def add_nemo_details(self):
@@ -78,30 +78,30 @@ class _UpdateComponents(object):
         '''
         Update general namcouple details required by OASIS3-MCT.
         '''
-	
-	# The coupler needs to know the run length of this cycle. 
+
+        # The coupler needs to know the run length of this cycle.
         seconds = common.setup_runtime()
-	
+
         #Edit the namcouple file
         namc_file_in, namc_file_out = _start_edit_namcouple()
         edit_runtime = False
         ignore_line = False
 
         for line in namc_file_in.readlines():
-            # Look for the run time header $RUNTIME. 
-	    # The namcouple format rules prescribe that each section header should
-	    # startwith the presence of a $ in column 2 thus: " $"
-	    # Thus, triggers are based on testing for this at the start
-	    # of the line.   
-            if re.match(r'^ \$RUNTIME', line ):
+            # Look for the run time header $RUNTIME.
+            # The namcouple format rules prescribe that each section header should
+            # startwith the presence of a $ in column 2 thus: " $"
+            # Thus, triggers are based on testing for this at the start
+            # of the line.
+            if re.match(r'^ \$RUNTIME', line):
                 edit_runtime = True
                 namc_file_out.write(line)
             elif edit_runtime:
                 # Once we've found the line we need to write the run length
                 # on we write it and close the $RUNTIME header section
                 # and ignore all further lines until we find a line
-                # featuring " $" at the start, at which point we start 
-		# writing out lines again to our target file.
+                # featuring " $" at the start, at which point we start
+                # writing out lines again to our target file.
                 namc_file_out.write('# Runtime setting automated via suite'
                                     ' run length settings\n')
                 namc_file_out.write('  %i\n' % seconds)
@@ -112,14 +112,14 @@ class _UpdateComponents(object):
                 # Look for the next keyword which will start with " $".
                 # As for the header this is always indented by a single space
                 # in the namcouple file
-                if re.match(r'^ \$', line ):
+                if re.match(r'^ \$', line):
                     ignore_line = False
                     namc_file_out.write(line)
             else:
                 namc_file_out.write(line)
 
         _end_edit_namcouple(namc_file_in, namc_file_out)
-	
+
 def _start_edit_namcouple(fname='namcouple'):
     '''
     Open the original namcouple file for input and a new file for output.
