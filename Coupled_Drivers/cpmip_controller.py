@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2019 Met Office. All rights reserved.
+ (C) Crown copyright 2020 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -193,7 +193,7 @@ def _measure_xios_client_times(timeout=120):
     return mean_time, max_time
 
 
-def data_intensity_setup_nemo(common_envar):
+def data_metrics_setup_nemo(common_envar):
     '''
     Set up IODEF file to produce XIOS timing files
     '''
@@ -201,16 +201,14 @@ def data_intensity_setup_nemo(common_envar):
             open('iodef_out.xml', 'w') as f_out:
         update = False
         for line in f_in.readlines():
+            if 'variable id="print_file"' in line:
+                continue
             if update:
-                if 'variable id="print_file"' in line:
-                    f_out.write(line)
-                    update = False
-                else:
-                    new_line = '\t  <variable id="print_file"           ' + \
-                        '     type="bool">true</variable>\n'
-                    f_out.write(new_line)
-                    f_out.write(line)
-                    update = False
+                updated_line = '\t  <variable id="print_file"           ' + \
+                               '     type="bool">true</variable>\n'
+                f_out.write(updated_line)
+                f_out.write(line)
+                update = False
             else:
                 f_out.write(line)
                 if 'variable id="using_server"' in line:
@@ -967,15 +965,18 @@ def _setup_cpmip_controller(common_envar):
     # Modify namelists, so information is available to plot later
     __update_namelists_for_timing(cpmip_envar)
 
-    # Are we prerforming the data intensity calculations
+    # Are we prerforming the data intensity or data cost calculations
+    # Modify iodef.xml file so that timing files are produced
+    if (cpmip_envar['DATA_INTENSITY'] in ('true', 'True') or \
+        cpmip_envar['IO_COST'] in ('true', 'True')) and \
+        'nemo' in cpmip_envar['models']:
+        data_metrics_setup_nemo(common_envar)
+
     if cpmip_envar['DATA_INTENSITY'] in ('true', 'True'):
         sys.stdout.write('[INFO] Calculating the data intensity metric.'
                          ' Whilst this will not affect the execution time'
                          ' of the model, it may increase time spent in the'
                          ' model drivers\n')
-        if 'nemo' in cpmip_envar['models']:
-            # Modify iodef.xml file so that timing files are produced
-            data_intensity_setup_nemo(common_envar)
         # Get the intial data size for DATAM directory (for all model
         # components)
         data_intensity_initial(common_envar, cpmip_envar)
