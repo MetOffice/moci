@@ -1,0 +1,171 @@
+#!jinja2
+
+{% set HPC_HOST_OASIS = DEPLOYMENT_HOST if DEPLOYMENT_HOST is defined else HPC_HOST_OASIS %}
+
+MODULE_STR = {{ MODULES|join(' ') }}
+{% set MODULE_STR =  MODULES|join(' ')  %}
+{% set MODULE_CMD = 'for mod in '+MODULE_STR+'; do module load $mod; done; module list' %}
+
+
+[cylc]
+    UTC mode = True
+    [[events]]
+        timeout handler = "rose suite-hook --shutdown"
+	timeout = PT6H
+
+[scheduling]
+    [[dependencies]]
+	graph = """
+	      	prepare_hpc_host => extract_oasis & extract_xios
+		extract_oasis => build_oasis => run_oasis_tutorial => create_oasis_module
+		create_oasis_module & extract_xios => build_xios
+		build_xios => create_xios_module
+		create_oasis_module & create_xios_module => create_prgenv_module
+		"""
+
+[runtime]
+    [[root]]
+        script = 'rose task-run --verbose'
+    [[LINUX_SERVER]]
+        [[[job]]]
+            batch system = slurm
+            execution time limit = PT15M
+        [[[directives]]]
+            --ntasks=1
+            --mem=1G
+            --qos=normal
+            --partition=rhel7
+    [[HPC]]
+	env-script = "{{MODULE_CMD}}"
+        [[[job]]]
+            batch system = pbs
+        [[[remote]]]
+            host = $(rose host-select {{ HPC_HOST_OASIS }})
+        [[[directives]]]
+            -W umask=0022
+    [[HPC_SERIAL]]
+        inherit = None, HPC
+        [[[job]]]
+            execution time limit = PT10M
+        [[[environment]]]
+            ROSE_TASK_N_JOBS = 1
+        [[[directives]]]
+            -l ncpus = 1
+            -q = shared
+    [[OASIS]]
+        [[[environment]]]
+	    PRISMPATH=$CYLC_SUITE_RUN_DIR/share/oasis3-mct
+    [[extract_oasis]]
+        inherit=LINUX_SERVER
+        env-script = """
+		     eval $(rose task-env);
+		     export OASIS_BUILD_DIR="~/cylc-run/$ROSE_SUITE_NAME/share"
+		     """
+		   
+        [[[directives]]]
+            --mem=8G
+        [[[environment]]]
+            HPC_HOST_OASIS={{HPC_HOST_OASIS}}
+	    OASIS_BRANCH={{OASIS_BRANCH}}
+	    OASIS_REPOSITORY={{OASIS_REPOSITORY}}
+    [[prepare_hpc_host]]
+        inherit = HPC_SERIAL
+	script = 'echo Preparing HPC for file transfer'
+    [[build_oasis]]
+        inherit = None, HPC_SERIAL, OASIS
+        [[[job]]]
+            execution time limit = PT20M
+        [[[environment]]]
+	    BUILD_MCT={{BUILD_MCT}}
+	    BUILD_TEST={{BUILD_TEST}}
+	    OASIS_BUILD_DIR={{OASIS_BUILD_DIR}}
+	    PLATFORM_CONFIG={{PLATFORM_CONFIG}}
+    [[run_oasis_tutorial]]
+        inherit = None, HPC, OASIS
+        [[[directives]]]
+            -l walltime = 00:10:00
+	    -l select = 2
+	    -q = normal
+        [[[environment]]]
+	    TEST_MODEL1_EXE=model1
+	    TEST_MODEL2_EXE=model2
+	    NPROC_EXE1=3
+	    NPROC_EXE2=3
+    [[create_oasis_module]]
+        inherit = None, HPC_SERIAL, OASIS
+	[[[environment]]]
+	    OASIS_BRANCH={{OASIS_BRANCH}}
+	    OASIS_REPOSITORY={{OASIS_REPOSITORY}}
+	    OASIS_MOD_NAME={{OASIS_MOD_NAME}}
+	    OASIS_MOD_VERSION={{OASIS_MOD_VERSION}}
+	    OASIS_BUILD_DIR={{OASIS_BUILD_DIR}}
+{% if SUITE_URL is defined %}
+      	    SUITE_URL={{SUITE_URL}}
+{% endif %}
+{% if SUITE_REVISION is defined %}
+            SUITE_REVISION={{SUITE_REVISION}}
+{% endif %}
+{% if MODULE_BASE is defined %}
+            MODULE_BASE={{MODULE_BASE}}
+{% endif %}
+    [[XIOS]]
+        [[[environment]]]
+            XIOSPATH=$CYLC_SUITE_RUN_DIR/share/xios
+    [[extract_xios]]
+        inherit = None, HPC_SERIAL, XIOS
+        [[[environment]]]
+            XIOS_VERSION={{XIOS_VERSION}}
+	    XIOS_REV={{XIOS_REV}}
+	    XIOS_URL={{XIOS_URL}}
+    [[build_xios]]
+        inherit = None, HPC, XIOS
+	env-script = """
+		     {{MODULE_CMD}};
+		     eval $(cat $CYLC_SUITE_RUN_DIR/share/use_oasis_mod.sh);
+		     module use $OASIS_MODULE_USE_PATH;
+		     module load $OASIS_MODULE_PATH;
+		     module list;
+		     """
+	[[[directives]]]
+	    -l walltime = 02:00:00
+	    -q = shared
+	    -l ncpus = 8
+	    -l mem=24GB
+	    -l tmpsize=12gb
+    [[create_xios_module]]
+        inherit = None, HPC_SERIAL, XIOS
+	[[[environment]]]
+	    XIOS_URL={{XIOS_URL}}
+	    XIOS_VERSION={{XIOS_VERSION}}
+	    XIOS_REV={{XIOS_REV}}
+	    XIOS_MOD_VERSION={{XIOS_MOD_VERSION}}
+	    XIOS_MOD_NAME={{XIOS_MOD_NAME}}
+{% if SUITE_URL is defined %}
+      	    SUITE_URL={{SUITE_URL}}
+{% endif %}
+{% if SUITE_REVISION is defined %}
+            SUITE_REVISION={{SUITE_REVISION}}
+{% endif %}
+{% if MODULE_BASE is defined %}
+            MODULE_BASE={{MODULE_BASE}}
+{% endif %}
+    [[create_prgenv_module]]
+        inherit = None, HPC_SERIAL
+	env-script = """
+		     {{MODULE_CMD}};
+		     eval $(cat $CYLC_SUITE_RUN_DIR/share/use_oasis_mod.sh);
+		     eval $(cat $CYLC_SUITE_RUN_DIR/share/use_xios_mod.sh);
+		     """
+        [[[environment]]]
+	    MODULE_STR={{MODULE_STR}}
+	    GC_PRG_ENV_VERSION={{GC_PRG_ENV_VERSION}}
+	    GC_PRG_ENV_NAME={{GC_PRG_ENV_NAME}}
+{% if SUITE_URL is defined %}
+      	    SUITE_URL={{SUITE_URL}}
+{% endif %}
+{% if SUITE_REVISION is defined %}
+            SUITE_REVISION={{SUITE_REVISION}}
+{% endif %}
+{% if MODULE_BASE is defined %}
+            MODULE_BASE={{MODULE_BASE}}
+{% endif %}

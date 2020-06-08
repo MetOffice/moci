@@ -1,0 +1,79 @@
+\documentclass[10pt]{article}
+\begin{document}
+
+\title{MOCI Infrastructure Builds}
+\author{Harry Shepherd}
+
+\maketitle
+
+\tableofcontents
+
+\section{Introduction}
+Coupled production models contain several components, developed at several different institutions. It is important that these components can each be built in a consistant and repeatable way, for example knowing which repository revisions and compiler versions are used.
+A key part of this process is having a suite to build the libraries they depend on as an automated process, and to deploy those libraries as modules with a particular suite revision. This suite contains a series of scripts to perform those processes, and the scripts can be run as stand alone entities if required.
+
+\section{Suite Design}
+The suite is contained within the \texttt{infrastructure\_suite} directory. All changes, be it to the build scripts or suite paramaters are carried out in this one location. The suite contains a
+full set of metadata. Paramaters can be changed by running the rose-edit command and different paramaters can be found in the following locations under \textbf{suite conf}
+\begin{itemize}
+ \item[] \textbf{Top Level Control} Change the host, and also any preloaded modules before the build process. If different compilers were to be used these would be specified by the preloaded modules, and these are encapsulated in the programming environment created.
+ \item[] \textbf{OASIS} Extraction and build of OASIS3-MCT from the nitrox Git repository. Takes in a Git hash in OASIS Branch to allow for repeatability of builds.
+ \item[] \textbf{XIOS} XIOS branch/revision to allow for repeatability of builds.
+ \item[] \textbf{Modules} The modules to be created by the suite (Names, version numbers etc.)
+\end{itemize}
+
+Any compiler flags may be changed by editing the scripts (in the \texttt{bin/} directory) \texttt{oasis\_build.sh}, \texttt{xios\_build.sh}. These generate \texttt{make.inc} and \texttt{.arch files} respectively.
+
+\subsection{Overall Design}
+A list of directories and a summary of their contents
+\begin{itemize}
+ \item[] \texttt{app/} Rose applications to perform the tasks on various platforms.
+ \item[] \texttt{bin/} Executable shell scripts. These are described further below in section \ref{sec:the_scripts}.
+ \item[] \texttt{file/} Met Office specific files for the Oasis3-MCT tutorial tests
+ \item[] \texttt{meta/} Metadata for the rose suite
+ \item[] \texttt{src/} Fortran 90 source files, MO specific for the OASIS3-MCT tests.
+\end{itemize}
+
+\subsection{The Scripts}
+\protect\label{sec:the_scripts}
+The scripts are found in the \texttt{bin/} directory.
+\begin{itemize}
+ \item[] \texttt{extract\_xios.sh} Run on the HPC, extracts XIOS from the \texttt{fcm:xios.xm} repository path.
+  \item[] \texttt{extract\_oasis.sh} Runs on Spice. Clones the OASIS3-MCT Git repository, then checks out a branch, either using a name or a hash. Transfers the files to the \texttt{\$CYLC\_SUITE\_RUN\_DIR/share} directory on the HPC. (This is already created by the \texttt{prepare\_hpc\_host} app defined in suite.rc.
+  \item[] \texttt{xios\_build.sh} Runs on the HPC shared queue. Using cat, the arch files for XIOS are created, and then the code is compiled on the RAM-disk. To change compiler flags the definitions in this script can be edited directly.
+ \item[] \texttt{oasis\_build.sh} Run on the HPC serial queue. Creates the make.inc file, then builds OASIS3-MCT using \texttt{make -f TopMakefileOasis3}. Then builds the tutorial using the models located in the \texttt{src/} directory.
+ \item[] \texttt{run\_tutorial.sh} Run on HPC parallel queue. Runs the OASIS3-MCT tutorial tests
+ \item[] \texttt{create\_oasis\_module.sh}, \texttt{create\_xios\_module.sh}, \texttt{create\_prgenv\_module.sh}. Create the OASIS3-MCT, XIOS, and PrgEnv modules respectively. The module
+definitions are contained within the scripts themselves. Any specified environment variables will be automatically included. Includes OASIS3-MCT branch name/hash, or XIOS revision in the path. If the suite is run with \texttt{./launch\_suite.sh} it will also include the suite revision.
+\end{itemize}
+
+\section{Deployment of Modules}
+If the suite is run using the \texttt{rose suite-run} command, then the modules will be created in the  \texttt{\$CYLC\_SUITE\_RUN\_DIR/share/modules} directory, with the corresponding packages in \texttt{\$CYLC\_SUITE\_RUN\_DIR/share/packages}. In this scenario the modules \emph{will not} contain full revision numbers and are not suitiable for production work. To deploy the modules, a wrapper script \texttt{launch\_suite.sh} is avaliable. This is run with two compulsory arguments, the HPC host on which the script is to be run, and the location to which the modules are to be deployed. For example:
+\begin{verbatim}
+ $ ./launch_suite.sh xcslr0 /data/d00/moci/modules
+\end{verbatim}
+will run the build on the XCS and will place the \texttt{modules} and \texttt{packages} directories in \texttt{/data/d00/moci/modules/}.
+The suite \emph{will not} run using this method unless it is checked in, and there are no changes in the working copy. This is to ensure the versioning of the modules created is correct, and the modules can be rebuilt if required. This script overrides the enviroment variables \texttt{DEPLOYMENT\_HOST} and \texttt{MODULE\_BASE}, and passes in the suite url and suite revision as the environment variables \texttt{SUITE\_URL} and \texttt{SUITE\_REVISION} respectively.
+
+There are three modules created, one for OASIS3-MCT, one for XIOS and one for the programming environments. They are versioned\footnote{If the suite is not run using the launch script, then `undefined' will appear instead of the suite revision} and named using environment variables within the suite, which can be modified via \texttt{rose-edit}.\linebreak
+
+The OASIS3-MCT module:
+\begin{verbatim}
+$OASIS_MOD_NAME/$OASIS_MOD_VERSION/$SUITE_REVISION/$OASIS_BRANCH
+\end{verbatim}
+
+The XIOS module:
+\begin{verbatim}
+$XIOS_MOD_NAME/$XIOS_MOD_VERSION/$SUITE_REVISION/$XIOS_REV
+\end{verbatim}
+
+The Programming Environment module (which loads both above modules):
+\begin{verbatim}
+$GC_PRG_ENV_NAME/$GC_PRG_ENV_VERSION/$SUITE_REVISION/
+\end{verbatim}
+
+\section{Building the documentation}
+The source for this documentation can be found in \texttt{doc/README.tex}. It can be compiled using \LaTeX by running the script \texttt{doc/build\_doc.sh}, which will then overwrite the pdf file in the top level directory.
+
+
+\end{document}
