@@ -93,3 +93,8 @@ cat <<EOF > $CYLC_SUITE_RUN_DIR/share/use_xios_mod.sh
 export XIOS_MODULE_USE_PATH=$MODULE_BASE/modules
 export XIOS_MODULE_PATH=$xios_mod_version_path/$XIOS_REV
 EOF
+
+
+#End of script test
+ls $MODULE_BASE/modules/$xios_mod_version_path/$XIOS_REV
+[ $? -eq 0 ] || exit 1

@@ -86,3 +86,8 @@ cat <<EOF > $CYLC_SUITE_RUN_DIR/share/use_oasis_mod.sh
 export OASIS_MODULE_USE_PATH=$MODULE_BASE/modules
 export OASIS_MODULE_PATH=$oasis_mod_version_path/$OASIS_BRANCH
 EOF
+
+
+#End of script test
+ls $MODULE_BASE/modules/$oasis_mod_version_path/$OASIS_BRANCH
+[ $? -eq 0 ] || exit 1

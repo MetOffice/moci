@@ -107,6 +107,10 @@ echo 'Building xios in'
 echo $PWD
 
 ./make_xios --job 8 --arch XC40_UKMO --use_oasis oasis3_mct
+if [ $? -ne 0 ]; then
+    1>&2 echo "Unable to succesfully build XIOS. Please see compiler output for more informaton"
+    exit 999;
+fi
 
 find .
 mv ./bin $XIOSPATH/
@@ -115,3 +119,12 @@ mv ./inc $XIOSPATH/
 
 cd $RAMTMP
 rm -rf $RAMTMP/xios
+
+#End of script tests
+ls $XIOSPATH/bin
+[ $? -eq 0 ] || exit 1
+ls $XIOSPATH/lib
+[ $? -eq 0 ] || exit 1
+ls $XIOSPATH/inc
+[ $? -eq 0 ] || exit 1
+

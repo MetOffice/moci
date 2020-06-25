@@ -12,6 +12,11 @@
 
 rm -rf $XIOSPATH
 fcm co $XIOS_URL/$XIOS_VERSION@$XIOS_REV
-mv $XIOS_VERSION $XIOSPATH
+XIOS_VERSION_BASE="$(basename $XIOS_VERSION)"
+mv $XIOS_VERSION_BASE $XIOSPATH
+
+#End of script test
+ls $XIOS_PATH
+[ $? -eq 0 ] || exit 1
 
 

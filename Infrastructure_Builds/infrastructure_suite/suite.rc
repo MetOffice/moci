@@ -4,7 +4,7 @@
 
 MODULE_STR = {{ MODULES|join(' ') }}
 {% set MODULE_STR =  MODULES|join(' ')  %}
-{% set MODULE_CMD = 'for mod in '+MODULE_STR+'; do module load $mod; done; module list' %}
+{% set MODULE_CMD = 'for mod in '+MODULE_STR+'; do module load $mod; module swap $mod; done; module list' %}
 
 
 [cylc]

@@ -133,5 +133,13 @@ if [ "$build_test" = "True" ]; then
     mv model1_ukmo_cray_xc40.F90 model1.F90
     mv model2_ukmo_cray_xc40.F90 model2.F90
     make model1
+    if [ $? -ne 0 ]; then
+	1>&2 echo "Unable to succesfully build oasis3-mct tutorial. Please see compiler output for more informaton"
+	exit 999;
+    fi
     make model2
+    if [ $? -ne 0 ]; then
+	1>&2 echo "Unable to succesfully build oasis3-mct tutorial. Please see compiler output for more informaton"
+	exit 999;
+    fi
 fi

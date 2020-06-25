@@ -74,3 +74,7 @@ else
     fi
     rm -rf oasis3-mct
 fi
+
+#End of script test, check that the code is avaliable
+ssh $user@$HPC_HOST_OASIS ls $OASIS_BUILD_DIR/oasis3-mct
+[ $? -eq 0 ] || exit 1

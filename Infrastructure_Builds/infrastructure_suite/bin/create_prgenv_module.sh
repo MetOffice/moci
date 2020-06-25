@@ -71,3 +71,7 @@ for mod in $OASIS_MODULE_PATH $XIOS_MODULE_PATH; do
 $line
 EOF
 done
+
+#End of script test
+ls $module_file_path
+[ $? -eq 0 ] || exit 1
