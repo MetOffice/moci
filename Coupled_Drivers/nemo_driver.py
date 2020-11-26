@@ -786,8 +786,10 @@ def _finalize_executable(common_envar):
     nemo_stdout_file = 'ocean.output'
     nemo36_solver_file = 'solver.stat'
     nemo40_solver_file = 'run.stat'
+    icebergs_stat_file = 'icebergs.stat'
     for nemo_output_file in (nemo_stdout_file,
-                             nemo36_solver_file, nemo40_solver_file):
+                             nemo36_solver_file, nemo40_solver_file,
+                             icebergs_stat_file):
         if os.path.isfile(nemo_output_file):
             with open(nemo_output_file, 'r') as n_out:
                 for line in n_out:
