@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016 Met Office. All rights reserved.
+ (C) Crown copyright 2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -148,7 +148,19 @@ def _load_environment_variables(top_envar):
     # indicate that this is a continuation run. It indicates
     # that it is a cycle within a set of runs which MAY be a
     # CRUN but may also be the first NRUN in the sequence!
-    _ = top_envar.load_envar('CONTINUE', '')
+    _ = top_envar.load_envar('CONTINUE', 'false')
+    # ensure that CONTINUE is always lower case false, unless explicitly
+    # set to true (in which case make sure it's lower case true).
+    if 'T' in top_envar['CONTINUE'] or 't' in top_envar['CONTINUE']:
+        top_envar['CONTINUE'] = 'true'
+    else:
+        top_envar['CONTINUE'] = 'false'
+    _ = top_envar.load_envar('CONTINUE_FROM_FAIL', 'false')
+    if 'T' in top_envar['CONTINUE_FROM_FAIL'] or \
+      't' in top_envar['CONTINUE_FROM_FAIL']:
+        top_envar['CONTINUE_FROM_FAIL'] = 'true'
+    else:
+        top_envar['CONTINUE_FROM_FAIL'] = 'false'
 
     return top_envar
 
@@ -165,6 +177,14 @@ def _setup_top_controller(restart_ctl,
 
     # Load the environment variables required
     top_envar = _load_environment_variables(top_envar)
+
+    # TOP controller hasn't been set up to use CONTINUE_FROM_FAIL yet
+    # Raise an error if it's set to prevent unexpected behaviour in future
+    if top_envar['CONTINUE_FROM_FAIL'] == 'true':
+        sys.stderr.write('[FAIL] top_controller is not coded to work with'
+                         'CONTINUE_FROM_FAIL=true')
+        sys.exit(error.INVALID_EVAR_ERROR)
+
 
     # Read restart from TOP namelist
     restart_direcs = []
@@ -237,6 +257,13 @@ def _setup_top_controller(restart_ctl,
                                 top_envar['TOP_START']):
                 for fname in glob.glob('%s_????.nc' %
                                        top_envar['TOP_START']):
+                    proc_number = fname.split('.')[-2][-4:]
+                    common.remove_file('restart_trc_%s.nc' % proc_number)
+                    os.symlink(fname, 'restart_trc_%s.nc' % proc_number)
+            elif os.path.isfile('%s_0000.nc' %
+                                top_envar['TOP_START'][:-3]):
+                for fname in glob.glob('%s_????.nc' %
+                                       top_envar['TOP_START'][-3:]):
                     proc_number = fname.split('.')[-2][-4:]
                     common.remove_file('restart_trc_%s.nc' % proc_number)
                     os.symlink(fname, 'restart_trc_%s.nc' % proc_number)

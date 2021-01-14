@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2019 Met Office. All rights reserved.
+ (C) Crown copyright 2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -113,6 +113,11 @@ def _setup_common():
         sys.stderr.write('[FAIL] Environment variable CYLC_TASK_NAME '
                          'is not set\n')
         sys.exit(error.MISSING_EVAR_ERROR)
+    # The following 2 variables are used in Coupled NWP suites to allow
+    # resubmission within the same cylc cycle as
+    # coupled_run1, coupled_run2
+    _ = common_envars.load_envar('CNWP_SUB_CYCLING', 'False')
+    _ = common_envars.load_envar('CYLC_TASK_PARAM_run', None) 
     # Check to see if the automatic restart has been disabled. By default
     # DRIVERS_VERIFY_RST will be True, and will be automatically turned off
     # if the configuration can not support the verification because it runs in
@@ -133,6 +138,8 @@ def _setup_common():
                          'drivers are unable to verify restart files\n')
         common_envars['DRIVERS_VERIFY_RST'] = 'False'
     elif common_envars['CYLC_CYCLING_MODE'] == 'unset':
+        common_envars['DRIVERS_VERIFY_RST'] = 'False'
+    elif common_envars['CNWP_SUB_CYCLING'] == 'True':
         common_envars['DRIVERS_VERIFY_RST'] = 'False'
     else:
         sys.stdout.write('[FAIL] Cycling mode %s not permitted. The '

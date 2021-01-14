@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016-2020 Met Office. All rights reserved.
+ (C) Crown copyright 2016-2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -90,6 +90,13 @@ def _load_environment_variables(si3_envar):
     # that it is a cycle within a set of runs which MAY be a
     # CRUN but may also be the first NRUN in the sequence!
     _ = si3_envar.load_envar('CONTINUE', '')
+    _ = si3_envar.load_envar('CONTINUE_FROM_FAIL', 'false')
+    if 'T' in si3_envar['CONTINUE_FROM_FAIL'] or \
+      't' in si3_envar['CONTINUE_FROM_FAIL']:
+        si3_envar['CONTINUE_FROM_FAIL'] = 'true'
+    else:
+        si3_envar['CONTINUE_FROM_FAIL'] = 'false'
+
 
     return si3_envar
 
@@ -107,6 +114,13 @@ def _setup_si3_controller(restart_ctl,
     # Load the environment variables required
     si3_envar = _load_environment_variables(si3_envar)
     si3_envar = _get_si3nl_envar(si3_envar)
+
+    # SI3 hasn't been set up to use CONTINUE_FROM_FAIL yet
+    # Raise an error if it's set to prevent unexpected behaviour in future
+    if si3_envar['CONTINUE_FROM_FAIL'] == 'true':
+        sys.stderr.write('[FAIL] si3_controller is not coded to work with'
+                         'CONTINUE_FROM_FAIL=true')
+        sys.exit(error.INVALID_EVAR_ERROR)
 
     restart_direcs = []
     si3_rst = _get_si3rst(si3_envar['SI3_NL'])

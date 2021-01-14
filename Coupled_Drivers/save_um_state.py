@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2019 Met Office. All rights reserved.
+ (C) Crown copyright 2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -41,7 +41,7 @@ def save_state(runid, common_envar, iscrun):
 
     # If this is an NRUN we want to remove any exisiting partial sum files
     # to avoid restoring files from any previous cycles should they exist.
-    if iscrun in ('', 'false'):
+    if iscrun == 'false':
         sys.stdout.write('preparing to delete partial sums\n')
         all_partial_sum_regex = r'.*%sa_s\d{1}(?:a|b)$' % runid
         previous_psums = [f for f in datam_files if \

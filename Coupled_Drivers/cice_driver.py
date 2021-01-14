@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2020 Met Office. All rights reserved.
+ (C) Crown copyright 2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -26,11 +26,14 @@ from __future__ import division
 import os
 import sys
 import re
+import datetime
 import time
 import time2days
 import inc_days
 import common
 import error
+import subprocess
+
 
 def __expand_array(short_array):
     '''
@@ -131,7 +134,23 @@ def _load_environment_variables(cice_envar):
     _ = cice_envar.load_envar('ATM_DATA_DIR', 'unknown_atm_data_dir')
     _ = cice_envar.load_envar('OCN_DATA_DIR', 'unknown_ocn_data_dir')
     _ = cice_envar.load_envar('CICE_RESTART', 'ice.restart_file')
-    _ = cice_envar.load_envar('CONTINUE', '')
+    _ = cice_envar.load_envar('CONTINUE', 'false')
+    _ = cice_envar.load_envar('CONTINUE_FROM_FAIL', 'false')
+    # ensure that CONTINUE is always lower case false, unless explicitly
+    # set to true (in which case make sure it's lower case true).
+    if 'T' in cice_envar['CONTINUE'] or 't' in cice_envar['CONTINUE']:
+        cice_envar['CONTINUE'] = 'true'
+    else:
+        cice_envar['CONTINUE'] = 'false'
+    # ensure that CONTINUE_FROM_FAIL is always lower case false, unless
+    # explicitly set to true (in which case make sure it's lower case true).
+    if 'T' in cice_envar['CONTINUE_FROM_FAIL'] or \
+       't' in cice_envar['CONTINUE_FROM_FAIL']:
+        cice_envar['CONTINUE_FROM_FAIL'] = 'true'
+        #If continue_from_fail is true then continue must also be true
+        cice_envar['CONTINUE'] = 'true'
+    else:
+        cice_envar['CONTINUE_FROM_FAIL'] = 'false'
     _ = cice_envar.load_envar('CICE_OCEAN_DATA', '')
     _ = cice_envar.load_envar('CICE_ATMOS_DATA', '')
 
@@ -139,6 +158,7 @@ def _load_environment_variables(cice_envar):
         (cice_envar['ATM_DATA_DIR'], cice_envar['CICE_ATMOS_DATA'])
     cice_envar['OCN_DATA_DIR'] = '%s:%s' % \
         (cice_envar['OCN_DATA_DIR'], cice_envar['CICE_OCEAN_DATA'])
+    _ = cice_envar.load_envar('LAST_DUMP_HOURS', '0')
 
     return cice_envar
 
@@ -188,12 +208,18 @@ def _setup_executable(common_envar):
     tot_runlen_sec = run_days * 86400 + run_length[3]*3600 + run_length[4]*60 \
         + run_length[5]
 
+    # These variables default to zero except in operational NWP suite where
+    # a run can be restarted part way through after a failure.
+    # In this case CONTINUE_FROM_FAIL should also be true
+    last_dump_hours = int(cice_envar['LAST_DUMP_HOURS'])
+    last_dump_seconds = last_dump_hours*3600
+
     #any variables containing things that can be globbed will start with gl_
     gl_step_int_match = '^dt='
     _, step_int_val = common.exec_subproc(['grep', gl_step_int_match,
                                            cice_nl])
     cice_step_int = int(re.findall(r'^dt=(\d*)\.?', step_int_val)[0])
-    cice_steps = tot_runlen_sec // cice_step_int
+    cice_steps = (tot_runlen_sec - last_dump_seconds) // cice_step_int
 
     _, cice_histfreq_val = common.exec_subproc(['grep', 'histfreq', cice_nl])
     cice_histfreq_val = re.findall(r'histfreq\s*=\s*(.*)', cice_histfreq_val)[0]
@@ -238,10 +264,27 @@ def _setup_executable(common_envar):
             tasklength = [int(i) for i in __expand_array(tasklength_val)]
             cice_envar.add('TASKLENGTH', tasklength)
 
-    days_to_year_init = time2days.time2days(model_basis[0], 1, 1, calendar)
-    days_to_start = time2days.time2days(run_start[0], run_start[1],
-                                        run_start[2], calendar)
-    cice_istep0 = (days_to_start - days_to_year_init) * 86400 // cice_step_int
+    _ = cice_envar.load_envar('TASK_START_TIME', 'unavaliable')
+    if cice_envar['TASK_START_TIME'] is 'unavaliable':
+        # This is probably a climate suite
+        days_to_year_init = time2days.time2days(model_basis[0], 1, 1, calendar)
+        days_to_start = time2days.time2days(run_start[0], run_start[1],
+                                            run_start[2], calendar)
+        cice_istep0 = (days_to_start - days_to_year_init) * 86400 \
+                      // cice_step_int
+    else:
+        # This is probably a coupled NWP suite
+        cmd = ['rose', 'date', str(run_start[0])+'0101T0000Z',
+               cice_envar['TASK_START_TIME']]
+        time_since_year_start = subprocess.check_output(cmd)
+        #The next command works because rose date assumes
+        # 19700101T0000Z is second 0
+        cmd = ['rose', 'date', '--print-format=%s', '19700101T00Z',
+               '--offset='+time_since_year_start]
+        # Account for restarting from a failure in next line
+        seconds_since_year_start = int(subprocess.check_output(cmd)) \
+                                     + last_dump_seconds
+        cice_istep0 = seconds_since_year_start/cice_step_int
 
     _, cice_rst_val = common.exec_subproc(['grep', 'restart_dir', cice_nl])
     cice_rst = re.findall(r'restart_dir\s*=\s*\'(.*)\',', cice_rst_val)[0]
@@ -270,7 +313,7 @@ def _setup_executable(common_envar):
             direc = direc.rstrip('/')
 
         if os.path.isdir(direc) and (direc not in ('./', '.')) and \
-                cice_envar['CONTINUE'] == '':
+                cice_envar['CONTINUE'] == 'false':
             sys.stdout.write('[INFO] directory is %s\n' % direc)
             sys.stdout.write('[INFO] This is a New Run. Renaming old CICE'
                              ' history directory\n')
@@ -317,6 +360,25 @@ def _setup_executable(common_envar):
             common_envar['DRIVERS_VERIFY_RST'] == 'True':
         _verify_fix_rst(cice_restart, common_envar['CYLC_TASK_CYCLE_POINT'])
 
+    # if this is a continuation from a failed NWP job we check that the last
+    # CICE dump matches the time of LAST_DUMP_HOURS
+    if cice_envar['CONTINUE_FROM_FAIL'] == 'true':
+        #Read the filename from pointer file
+        with open(cice_restart) as fid:
+            rst_file = fid.readline()
+        rst_file = rst_file.rstrip('\n').strip()
+        rst_file = os.path.basename(rst_file)
+        ymds = [int(f) for f in rst_file[-19:-3].split('-')]
+        since_start = datetime.datetime(ymds[0], ymds[1], ymds[2], \
+                                        ymds[3]//3600, (ymds[3]%3600)//60, \
+                                        (ymds[3]%3600)%60) \
+             - datetime.datetime(run_start[0], run_start[1], run_start[2],
+                                 run_start[3], run_start[4])
+        if int(since_start.total_seconds()) != last_dump_seconds:
+            sys.stderr.write('[FAIL] Last CICE restart not at correct time')
+            sys.stderr.write('since_start='+since_start.total_seconds())
+            sys.stderr.write('last_dump_seconds='+last_dump_seconds)
+            sys.exit(error.RESTART_FILE_ERROR)
 
     #block of code to modify the main CICE namelist
     mod_cicenl = common.ModNamelist(cice_nl)

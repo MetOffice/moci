@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2019 Met Office. All rights reserved.
+ (C) Crown copyright 2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -64,6 +64,9 @@ CORRUPTED_MODEL_FILE_ERROR = 401
 
 # An error in the component model
 COMPONENT_MODEL_ERROR = 402
+
+# Restart file time does not match length of run
+RESTART_FILE_ERROR = 403
 
 # Invalid function argument
 INVALID_FUNC_ARG_ERROR = 500

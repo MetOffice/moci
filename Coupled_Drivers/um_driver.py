@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016-2019 Met Office. All rights reserved.
+ (C) Crown copyright 2016-2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -134,6 +134,20 @@ def _load_run_environment_variables(um_envar):
     _ = um_envar.load_envar('UM_THREAD_LEVEL', 'MULTIPLE')
     _ = um_envar.load_envar('HISTORY', 'atmos.xhist')
     _ = um_envar.load_envar('CONTINUE', '')
+    # ensure that CONTINUE is always lower case false, unless explicitly
+    # set to true (in which case make sure it's lower case true).
+    if 'T' in um_envar['CONTINUE'] or 't' in um_envar['CONTINUE']:
+        um_envar['CONTINUE'] = 'true'
+    else:
+        um_envar['CONTINUE'] = 'false'
+    _ = um_envar.load_envar('CONTINUE_FROM_FAIL', '')
+    if 'T' in um_envar['CONTINUE_FROM_FAIL'] or \
+      't' in um_envar['CONTINUE_FROM_FAIL']:
+        um_envar['CONTINUE_FROM_FAIL'] = 'true'
+        #If continue_from_fail is true then continue must also be true
+        um_envar['CONTINUE'] = 'true'
+    else:
+        um_envar['CONTINUE_FROM_FAIL'] = 'false'
     _ = um_envar.load_envar('STASHMASTER', '')
     _ = um_envar.load_envar('STASHMSTR', '')
     _ = um_envar.load_envar('SHARED_FNAME', 'SHARED')
@@ -183,7 +197,7 @@ def _setup_executable(common_envar):
     os.symlink(um_envar['ATMOS_EXEC'],
                um_envar['ATMOS_LINK'])
 
-    if um_envar['CONTINUE'] in ('', 'false'):
+    if um_envar['CONTINUE'] == 'false':
         sys.stdout.write('[INFO] This is an NRUN\n')
         common.remove_file(um_envar['HISTORY'])
     else:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2020 Met Office. All rights reserved.
+ (C) Crown copyright 2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -810,6 +810,7 @@ def _load_environment_variables_finalise(cpmip_envar):
     Load the CPMIP environment variables required for the model finalize
     into the cpmip_envar container
     '''
+    _ = cpmip_envar.load_envar('PPN', '0')
     _ = cpmip_envar.load_envar('TOTAL_POWER_CONSUMPTION', '')
     _ = cpmip_envar.load_envar('NODES_IN_HPC', '')
 
@@ -1073,7 +1074,7 @@ def _finalize_cpmip_controller(common_envar):
             * plat_cores_per_node
         allocated_xios = int(math.ceil(xios_cpus/float(plat_cores_per_node))) \
             * plat_cores_per_node
-    elif cpmip_envar['PPN'] > 0:
+    elif int(cpmip_envar['PPN']) > 0:
         plat_cores_per_node = int(cpmip_envar['PPN'])
         sys.stdout.write('[INFO] plat_cores_per_node = %s\n' %
                          plat_cores_per_node)

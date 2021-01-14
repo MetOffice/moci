@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2019 Met Office. All rights reserved.
+ (C) Crown copyright 2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -60,6 +60,12 @@ def _load_run_environment_variables(jnr_envar):
     _ = jnr_envar.load_envar('ATMOS_LINK_JNR', 'atmos-jnr.exe')
     _ = jnr_envar.load_envar('HISTORY_JNR', 'junio.xhist')
     _ = jnr_envar.load_envar('CONTINUE', '')
+    # ensure that CONTINUE is always lower case false, unless explicitly
+    # set to true (in which case make sure it's lower case true).
+    if 'T' in jnr_envar['CONTINUE'] or 't' in jnr_envar['CONTINUE']:
+        jnr_envar['CONTINUE'] = 'true'
+    else:
+        jnr_envar['CONTINUE'] = 'false'
     _ = jnr_envar.load_envar('FLUME_IOS_NPROC_JNR', '0')
     _ = jnr_envar.load_envar('OCN_RES', '')
 
@@ -92,7 +98,7 @@ def _setup_executable(common_envar):
     os.symlink(jnr_envar['ATMOS_EXEC_JNR'],
                jnr_envar['ATMOS_LINK_JNR'])
 
-    if jnr_envar['CONTINUE'] in ('', 'false'):
+    if jnr_envar['CONTINUE'] == 'false':
         sys.stdout.write('[INFO] This is an NRUN for Jnr\n')
         common.remove_file(jnr_envar['HISTORY_JNR'])
     else:

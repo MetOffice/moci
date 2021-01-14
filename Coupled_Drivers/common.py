@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2019 Met Office. All rights reserved.
+ (C) Crown copyright 2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -164,34 +164,50 @@ class ModNamelist(object):
         os.rename(self.filename+'out', self.filename)
 
 
-def find_previous_workdir(cyclepoint, workdir, taskname):
+def find_previous_workdir(cyclepoint, workdir, taskname, task_param_run=None):
     '''
     Find the work directory for the previous cycle. Takes as argument
     the current cyclepoint, the path to the current work directory, and
-    the current taskname, and returns an absolute path.
+    the current taskname, a value specifying multiple tasks within 
+    same cycle (e.g. coupled_run1, coupled_run2) as used in coupled NWP
+    and returns an absolute path.
     '''
-    cyclesdir = os.sep.join(workdir.split(os.sep)[:-2])
-    #find the work directory for the previous cycle
-    work_cycles = os.listdir(cyclesdir)
-    work_cycles.sort()
 
-    # find the last restart directory for the task we are interested in
-    # initialise previous_task_cycle to None
-    previous_task_cycle = None
-    for work_cycle in work_cycles[::-1]:
-        # If this is an ensemble run we need to ensure that we're not looking
-        # at a future cycle, or the current cycle.
-        if (work_cycle < cyclepoint) and \
-                (taskname in os.listdir(os.path.join(cyclesdir, work_cycle))):
-            previous_task_cycle = work_cycle
-            break
+    if task_param_run:
+        stem = workdir.rstrip(task_param_run)
+        nchars = len(task_param_run)
+        prev_param_run = '{:0{}d}'.format(int(task_param_run) - 1, nchars)
+        previous_workdir = stem + prev_param_run
+        if not os.path.isdir(previous_workdir):
+            sys.stderr.write('[FAIL] Can not find previous work directory for'
+                             ' task %s\n' % taskname)
+            sys.exit(error.MISSING_DRIVER_FILE_ERROR)
 
-    if not previous_task_cycle:
-        sys.stderr.write('[FAIL] Can not find previous work directory for'
-                         ' task %s\n' % taskname)
-        sys.exit(error.MISSING_DRIVER_FILE_ERROR)
+        return previous_workdir
 
-    return os.path.join(cyclesdir, previous_task_cycle, taskname)
+    else:      
+        cyclesdir = os.sep.join(workdir.split(os.sep)[:-2])
+        #find the work directory for the previous cycle
+        work_cycles = os.listdir(cyclesdir)
+        work_cycles.sort()
+        try:
+            work_cycles.remove(cyclepoint)
+        except ValueError:
+            pass
+        # find the last restart directory for the task we are interested in
+        # initialise previous_task_cycle to None
+        previous_task_cycle = None
+        for work_cycle in work_cycles[::-1]:
+            if taskname in os.listdir(os.path.join(cyclesdir, work_cycle)):
+                previous_task_cycle = work_cycle
+                break
+
+        if not previous_task_cycle:
+            sys.stderr.write('[FAIL] Can not find previous work directory for'
+                             ' task %s\n' % taskname)
+            sys.exit(error.MISSING_DRIVER_FILE_ERROR)
+    
+        return os.path.join(cyclesdir, previous_task_cycle, taskname)
 
 
 def get_filepaths(directory):

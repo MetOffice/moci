@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2020 Met Office. All rights reserved.
+ (C) Crown copyright 2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -25,6 +25,7 @@ from __future__ import division
 import re
 import os
 import time
+import datetime
 import sys
 import glob
 import shutil
@@ -204,8 +205,23 @@ def _load_environment_variables(nemo_envar):
         sys.exit(error.MISSING_EVAR_ERROR)
     _ = nemo_envar.load_envar('NEMO_START', '')
     _ = nemo_envar.load_envar('NEMO_ICEBERGS_START', '')
-    _ = nemo_envar.load_envar('CONTINUE', '')
+    _ = nemo_envar.load_envar('CONTINUE', 'false')
+    # ensure that CONTINUE is always lower case false, unless explicitly
+    # set to true (in which case make sure it's lower case true).
+    if 'T' in nemo_envar['CONTINUE'] or 't' in nemo_envar['CONTINUE']:
+        nemo_envar['CONTINUE'] = 'true'
+    else:
+        nemo_envar['CONTINUE'] = 'false'
+    _ = nemo_envar.load_envar('CONTINUE_FROM_FAIL', 'false')
+    if 'T' in nemo_envar['CONTINUE_FROM_FAIL'] or \
+      't' in nemo_envar['CONTINUE_FROM_FAIL']:
+        nemo_envar['CONTINUE_FROM_FAIL'] = 'true'
+        #If continue_from_fail is true then continue must also be true
+        nemo_envar['CONTINUE'] = 'true'
+    else:
+        nemo_envar['CONTINUE_FROM_FAIL'] = 'false'
     _ = nemo_envar.load_envar('CPL_RIVER_COUNT', '0')
+    _ = nemo_envar.load_envar('LAST_DUMP_HOURS', '0')
 
 
     # Check switch to see if TOP/MEDUSA is switched on. Default to OFF.
@@ -292,7 +308,7 @@ def _setup_executable(common_envar):
             direc = direc.rstrip('/')
 
         if os.path.isdir(direc) and (direc not in ('./', '.')) and \
-                nemo_envar['CONTINUE'] == '':
+                nemo_envar['CONTINUE'] == 'false':
             sys.stdout.write('[INFO] directory is %s\n' % direc)
             sys.stdout.write('[INFO] This is a New Run. Renaming old NEMO'
                              ' history directory\n')
@@ -324,7 +340,7 @@ def _setup_executable(common_envar):
     common.remove_file('restart.nc')
     common.remove_file('restart_icebergs.nc')
 
-    if nemo_envar['CONTINUE'] == '':
+    if nemo_envar['CONTINUE'] == 'false':
         # This is a new run
         sys.stdout.write('[INFO] New nemo run\n')
         if os.path.isfile(latest_nemo_dump):
@@ -345,12 +361,22 @@ def _setup_executable(common_envar):
                          % nemo_rst)
         sys.stdout.write('[INFO] Sourcing namelist file from the work '
                          'directory of the previous cycle\n')
-        # find the previous work directory
-        prev_workdir = common.find_previous_workdir( \
-            common_envar['CYLC_TASK_CYCLE_POINT'],
-            common_envar['CYLC_TASK_WORK_DIR'],
-            common_envar['CYLC_TASK_NAME'])
-        history_nemo_nl = os.path.join(prev_workdir, nemo_envar['NEMO_NL'])
+        # find the previous work directory if there is one
+        if nemo_envar['CONTINUE_FROM_FAIL'] == 'false':
+            if common_envar['CNWP_SUB_CYCLING'] == 'True':
+                prev_workdir = common.find_previous_workdir( \
+                    common_envar['CYLC_TASK_CYCLE_POINT'],
+                    common_envar['CYLC_TASK_WORK_DIR'],
+                    common_envar['CYLC_TASK_NAME'],
+                    common_envar['CYLC_TASK_PARAM_run'])
+            else:
+                prev_workdir = common.find_previous_workdir( \
+                    common_envar['CYLC_TASK_CYCLE_POINT'],
+                    common_envar['CYLC_TASK_WORK_DIR'],
+                    common_envar['CYLC_TASK_NAME'])
+            history_nemo_nl = os.path.join(prev_workdir, nemo_envar['NEMO_NL'])
+        else:
+            history_nemo_nl = nemo_envar['NEMO_NL']
         nemo_init_dir = nemo_rst
     else:
         sys.stderr.write('[FAIL] No restart data available in NEMO restart '
@@ -520,7 +546,12 @@ def _setup_executable(common_envar):
                              completed_days)
         ln_restart = ".true."
         restart_ctl = 2
-        nemo_next_step = nemo_last_step + 1
+        if nemo_envar['CONTINUE_FROM_FAIL'] == 'true':
+            # This is only used for coupled NWP where we don't have dates in
+            # NEMO restart file names
+            nemo_next_step = int(nemo_dump_time)+1
+        else:
+            nemo_next_step = nemo_last_step + 1
     else:
         # This is an NRUN
         if nemo_envar['NEMO_START'] != '':
@@ -536,8 +567,21 @@ def _setup_executable(common_envar):
                     proc_number = fname.split('.')[-2][-4:]
 
                     # We need to make sure there isn't already
-                    # a restart file link set up, and if there is, get
-                    # rid of it because symlink wont work otherwise!
+	  	    # a restart file link set up, and if there is, get
+		    # rid of it because symlink wont work otherwise!
+                    common.remove_file('restart_%s.nc' % proc_number)
+
+                    os.symlink(fname, 'restart_%s.nc' % proc_number)
+                ln_restart = ".true."
+            elif os.path.isfile('%s_0000.nc' %
+                                nemo_envar['NEMO_START'][:-3]):
+                for fname in glob.glob('%s_????.nc' %
+                                       nemo_envar['NEMO_START'][:-3]):
+                    proc_number = fname.split('.')[-2][-4:]
+
+                    # We need to make sure there isn't already
+	  	    # a restart file link set up, and if there is, get
+		    # rid of it because symlink wont work otherwise!
                     common.remove_file('restart_%s.nc' % proc_number)
 
                     os.symlink(fname, 'restart_%s.nc' % proc_number)
@@ -568,8 +612,20 @@ def _setup_executable(common_envar):
                     proc_number = fname.split('.')[-2][-4:]
 
                     # We need to make sure there isn't already
-                    # an iceberg restart file link set up, and if there is, get
-                    # rid of it because symlink wont work otherwise!
+	      	    # an iceberg restart file link set up, and if there is, get
+		    # rid of it because symlink wont work otherwise!
+                    common.remove_file('restart_icebergs_%s.nc' % proc_number)
+
+                    os.symlink(fname, 'restart_icebergs_%s.nc' % proc_number)
+            elif os.path.isfile('%s_0000.nc' %
+                                nemo_envar['NEMO_ICEBERGS_START'][:-3]):
+                for fname in glob.glob('%s_????.nc' %
+                                       nemo_envar['NEMO_ICEBERGS_START'][:-3]):
+                    proc_number = fname.split('.')[-2][-4:]
+
+                    # We need to make sure there isn't already
+	      	    # an iceberg restart file link set up, and if there is, get
+		    # rid of it because symlink wont work otherwise!
                     common.remove_file('restart_icebergs_%s.nc' % proc_number)
 
                     os.symlink(fname, 'restart_icebergs_%s.nc' % proc_number)
@@ -586,9 +642,31 @@ def _setup_executable(common_envar):
         nemo_next_step = nemo_first_step
         nemo_last_step = nemo_first_step - 1
 
-    tot_runlen_sec = run_days * 86400 + run_length[3]*3600 + run_length[4]*60 \
-        + run_length[5]
-    nemo_final_step = (tot_runlen_sec // nemo_step_int) + nemo_last_step
+    if nemo_envar['CONTINUE_FROM_FAIL'] == 'true':
+        #Check that the length of run is correct
+        #(it won't be if this is the wrong restart file)
+        run_start_dt = datetime.datetime(run_start[0], run_start[1],
+                                         run_start[2], run_start[3])
+        model_basis_dt = datetime.datetime(model_basis[0], model_basis[1],
+                                           model_basis[2], model_basis[3])
+        nemo_init_step = (run_start_dt-model_basis_dt).total_seconds() \
+                           /nemo_step_int
+        tot_runlen_sec = run_days * 86400 + run_length[3]*3600 \
+                       + run_length[4]*60 + run_length[5]
+        nemo_final_step = int((tot_runlen_sec//nemo_step_int) + nemo_init_step)
+        # Check that nemo_next_step is the correct number of hours to
+        # match LAST_DUMP_HOURS variable
+        steps_per_hour = 3600./nemo_step_int
+        last_dump_hrs = int(nemo_envar['LAST_DUMP_HOURS'])
+        last_dump_step = int(nemo_init_step + last_dump_hrs*steps_per_hour)
+        if nemo_next_step-1 != last_dump_step:
+            sys.stderr.write('[FAIL] Last NEMO restarts not at correct time')
+            sys.exit(error.RESTART_FILE_ERROR)
+    else:
+        tot_runlen_sec = run_days * 86400 + run_length[3]*3600 \
+            + run_length[4]*60 + run_length[5]
+        nemo_final_step = (tot_runlen_sec // nemo_step_int) + nemo_last_step
+
 
     #Make our call to update the nemo namelist. First generate the list
     #of commands
