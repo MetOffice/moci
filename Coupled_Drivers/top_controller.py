@@ -220,7 +220,7 @@ def _setup_top_controller(restart_ctl,
     else:
         # If we didn't find any restart files in the suite data directory,
         # check the TOP_START env var.
-        if top_envar['CONTINUE'] == '':
+        if top_envar['CONTINUE'] == 'false':
             latest_top_dump = top_envar['TOP_START']
         else:
             # We don't have a restart file, which implies we must be
@@ -234,7 +234,7 @@ def _setup_top_controller(restart_ctl,
     common.remove_file('restart_trc.nc')
 
     # Is this a CRUN or an NRUN?
-    if top_envar['CONTINUE'] == '':
+    if top_envar['CONTINUE'] == 'false':
 
         # This is definitely a new run
         sys.stdout.write('[INFO] top_controller: New TOP/MEDUSA run\n\n')
@@ -337,7 +337,7 @@ def _setup_top_controller(restart_ctl,
         # during a CRUN seems pretty slim.
 
     else:
-        sys.stderr.write('[FAIL] top_controller: No restart data avaliable in '
+        sys.stderr.write('[FAIL] top_controller: No restart data available in '
                          'TOP restart directory:\n  %s\n' % top_rst)
         sys.exit(error.MISSING_MODEL_FILE_ERROR)
 
