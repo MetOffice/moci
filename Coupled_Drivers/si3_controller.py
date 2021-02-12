@@ -89,7 +89,7 @@ def _load_environment_variables(si3_envar):
     # indicate that this is a continuation run. It indicates
     # that it is a cycle within a set of runs which MAY be a
     # CRUN but may also be the first NRUN in the sequence!
-    _ = si3_envar.load_envar('CONTINUE', '')
+    _ = si3_envar.load_envar('CONTINUE', 'false')
     _ = si3_envar.load_envar('CONTINUE_FROM_FAIL', 'false')
     if 'T' in si3_envar['CONTINUE_FROM_FAIL'] or \
       't' in si3_envar['CONTINUE_FROM_FAIL']:
@@ -151,7 +151,7 @@ def _setup_si3_controller(restart_ctl,
     else:
         # If we didn't find any restart files in the suite data directory,
         # check the SI3_START env var.
-        if si3_envar['CONTINUE'] == '':
+        if si3_envar['CONTINUE'] == 'false':
             latest_si3_dump = si3_envar['SI3_START']
         else:
             # We don't have a restart file, which implies we must be
@@ -163,7 +163,7 @@ def _setup_si3_controller(restart_ctl,
     common.remove_file('restart_ice.nc')
 
     # Is this a CRUN or an NRUN?
-    if si3_envar['CONTINUE'] == '':
+    if si3_envar['CONTINUE'] == 'false':
 
         # This is definitely a new run
         sys.stdout.write('[INFO] si3_controller: New SI3 run\n\n')
