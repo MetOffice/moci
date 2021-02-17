@@ -52,10 +52,26 @@ def _load_run_environment_variables(jnr_envar):
         sys.stderr.write('[FAIL] Environment variable ATMOS_EXEC_JNR is '
                          'not set\n')
         sys.exit(error.MISSING_EVAR_ERROR)
+
+    # Ensure a method of setting aprun options has been provided
     if jnr_envar.load_envar('ROSE_LAUNCHER_PREOPTS_JNR') != 0:
-        sys.stderr.write('[FAIL] Environment variable '
-                         'ROSE_LAUNCHER_PREOPTS_JNR is not set\n')
-        sys.exit(error.MISSING_EVAR_ERROR)
+        sys.stdout.write('[INFO] Environment variable ROSE_LAUNCHER_PREOPTS_JNR'\
+            ' not set, checking for driver side launch command construction '\
+                'environment variables.\n')
+
+        if jnr_envar.load_envar('JNR_NODES') != 0:
+            sys.stderr.write('[FAIL] Environment variable '
+                             'JNR_NODES is not set\n')
+            sys.exit(error.MISSING_EVAR_ERROR)
+        if jnr_envar.load_envar('HYPERTHREADS') != 0:
+            sys.stderr.write('[FAIL] Environment variable '
+                             'HYPERTHREADS is not set\n')
+            sys.exit(error.MISSING_EVAR_ERROR)
+        if jnr_envar.load_envar('OMPTHR_JNR') != 0:
+            sys.stderr.write('[FAIL] Environment variable '
+                             'OMPTHR_JNR is not set\n')
+            sys.exit(error.MISSING_EVAR_ERROR)
+
     _ = jnr_envar.load_envar('RUNID_JNR', 'junior')
     _ = jnr_envar.load_envar('ATMOS_LINK_JNR', 'atmos-jnr.exe')
     _ = jnr_envar.load_envar('HISTORY_JNR', 'junio.xhist')
@@ -138,10 +154,18 @@ def _setup_executable(common_envar):
 
     return jnr_envar
 
-def _set_launcher_command(jnr_envar):
+def _set_launcher_command(launcher, jnr_envar):
     '''
     Setup the launcher command for the executable
     '''
+    if not jnr_envar.contains('ROSE_LAUNCHER_PREOPTS_JNR'):
+        ss = False
+        jnr_envar['ROSE_LAUNCHER_PREOPTS_JNR'] = \
+            common.set_aprun_options(jnr_envar['NPROC_JNR'], \
+                jnr_envar['JNR_NODES'], jnr_envar['OMPTHR_JNR'], \
+                    jnr_envar['HYPERTHREADS'], ss) \
+                        if launcher == 'aprun' else ''
+
     launch_cmd = '%s ./%s' % \
         (jnr_envar['ROSE_LAUNCHER_PREOPTS_JNR'], \
              jnr_envar['ATMOS_LINK_JNR'])
@@ -269,7 +293,7 @@ def run_driver(common_envar, mode, run_info):
         exe_envar = _setup_executable(common_envar)
         if exe_envar['OCN_RES']:
             run_info['OCN_grid'] = exe_envar['OCN_RES']
-        launch_cmd = _set_launcher_command(exe_envar)
+        launch_cmd = _set_launcher_command(common_envar['ROSE_LAUNCHER'], exe_envar)
         if run_info['l_namcouple']:
             model_snd_list = None
         else:

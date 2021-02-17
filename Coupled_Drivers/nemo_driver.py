@@ -199,10 +199,26 @@ def _load_environment_variables(nemo_envar):
     if nemo_envar.load_envar('NEMO_VERSION') != 0:
         sys.stderr.write('[FAIL] Environment variable NEMO_VERSION not set\n')
         sys.exit(error.MISSING_EVAR_ERROR)
+
+    # Ensure a method of setting aprun options has been provided
     if nemo_envar.load_envar('ROSE_LAUNCHER_PREOPTS_NEMO') != 0:
-        sys.stderr.write('[FAIL] Environment variable '
-                         'ROSE_LAUNCHER_PREOPTS_NEMO not set\n')
-        sys.exit(error.MISSING_EVAR_ERROR)
+        sys.stdout.write('[INFO] Environment variable ROSE_LAUNCHER_PREOPTS_NEMO'\
+            ' not set, checking for driver side launch command construction '\
+                'environment variables.\n')
+
+        if nemo_envar.load_envar('OMPTHR_OCN') != 0:
+            sys.stderr.write('[FAIL] Environment variable '
+                             'OMPTHR_OCN not set\n')
+            sys.exit(error.MISSING_EVAR_ERROR)
+        if nemo_envar.load_envar('OCEAN_NODES') != 0:
+            sys.stderr.write('[FAIL] Environment variable '
+                             'OCEAN_NODES not set\n')
+            sys.exit(error.MISSING_EVAR_ERROR)
+        if nemo_envar.load_envar('OHYPERTHREADS') != 0:
+            sys.stderr.write('[FAIL] Environment variable '
+                             'OHYPERTHREADS not set\n')
+            sys.exit(error.MISSING_EVAR_ERROR)
+
     _ = nemo_envar.load_envar('NEMO_START', '')
     _ = nemo_envar.load_envar('NEMO_ICEBERGS_START', '')
     _ = nemo_envar.load_envar('CONTINUE', 'false')
@@ -747,11 +763,17 @@ def _setup_executable(common_envar):
     return nemo_envar
 
 
-def _set_launcher_command(nemo_envar):
+def _set_launcher_command(launcher, nemo_envar):
     '''
     Setup the launcher command for the executable
     '''
-    launch_cmd = nemo_envar['ROSE_LAUNCHER_PREOPTS_NEMO']
+    if not nemo_envar.contains('ROSE_LAUNCHER_PREOPTS_NEMO'):
+        ss = False
+        nemo_envar['ROSE_LAUNCHER_PREOPTS_NEMO'] = \
+            common.set_aprun_options(nemo_envar['NEMO_NPROC'], \
+                nemo_envar['OCEAN_NODES'], nemo_envar['OMPTHR_OCN'], \
+                    nemo_envar['OHYPERTHREADS'], ss) \
+                        if launcher == 'aprun' else ''
 
     launch_cmd = '%s ./%s' % \
         (nemo_envar['ROSE_LAUNCHER_PREOPTS_NEMO'], \
@@ -927,7 +949,7 @@ def run_driver(common_envar, mode, run_info):
     '''
     if mode == 'run_driver':
         exe_envar = _setup_executable(common_envar)
-        launch_cmd = _set_launcher_command(exe_envar)
+        launch_cmd = _set_launcher_command(common_envar['ROSE_LAUNCHER'], exe_envar)
         if run_info['l_namcouple']:
             model_snd_list = None
         else:

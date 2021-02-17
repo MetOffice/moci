@@ -25,6 +25,7 @@ import os
 import sys
 import subprocess
 import threading
+import math
 import error
 import inc_days
 
@@ -392,3 +393,33 @@ def __exec_subproc_true_shell(cmd, verbose=True):
     if sys.version_info[0] >= 3:
         output = output.decode()
     return process.returncode, output
+
+
+def _calculate_ppn_values(nproc, nodes):
+    '''
+    Calculates number of processes per node and numa node for launch
+    command options
+    '''
+    nproc = int(nproc)
+    nodes = float(nodes)
+    numa_nodes = 2
+
+    ppnu = int(math.ceil(nproc/nodes/numa_nodes))
+    ppn = (ppnu * numa_nodes) if nproc > 1 else nproc
+
+    return ppnu, ppn
+
+
+def set_aprun_options(nproc, nodes, ompthr, hyperthreads, ss):
+    '''
+    Setup the aprun options for the launcher command
+    '''
+    ppnu, ppn = _calculate_ppn_values(nproc, nodes)
+    rose_launcher_preopts = \
+        '-n %s -N %s -S %s -d %s -j %s env OMP_NUM_THREADS=%s env HYPERTHREADS=%s' \
+            % (nproc, ppn, ppnu, ompthr, hyperthreads, ompthr, hyperthreads)
+
+    if ss:
+        rose_launcher_preopts = "-ss " + rose_launcher_preopts
+
+    return rose_launcher_preopts

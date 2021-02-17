@@ -79,14 +79,22 @@ def _setup_executable(_):
         # mode
         using_server = True
         _ = xios_envar.load_envar('XIOS_LINK', 'xios.exe')
-        if xios_envar.load_envar('ROSE_LAUNCHER_PREOPTS_XIOS') != 0:
-            sys.stderr.write('[FAIL] Environment variable '
-                             'ROSE_LAUNCHER_PREOPTS_XIOS not set\n')
-            sys.exit(error.MISSING_EVAR_ERROR)
         if xios_envar.load_envar('XIOS_EXEC') != 0:
             sys.stderr.write('[FAIL] Environment variable XIOS_EXEC '
                              'not set\n')
             sys.exit(error.MISSING_EVAR_ERROR)
+
+        # Ensure a method of setting aprun options has been provided
+        if xios_envar.load_envar('ROSE_LAUNCHER_PREOPTS_XIOS') != 0:
+            sys.stdout.write('[INFO] Environment variable ROSE_LAUNCHER_PREOPTS_XIOS'\
+                ' not set, checking for driver side launch command construction '\
+                    'environment variables.\n')
+
+            if xios_envar.load_envar('XIOS_NODES') != 0:
+                sys.stderr.write('[FAIL] Environment variable XIOS_NODES '
+                                 'not set\n')
+                sys.exit(error.MISSING_EVAR_ERROR)
+
         common.remove_file(xios_envar['XIOS_LINK'])
         os.symlink(xios_envar['XIOS_EXEC'],
                    xios_envar['XIOS_LINK'])
@@ -102,17 +110,27 @@ def _setup_executable(_):
     return xios_envar
 
 
-def _set_launcher_command(xios_envar):
+def _set_launcher_command(launcher, xios_envar):
     '''
     Setup the launcher command for the executable, bearing in mind that XIOS
     can run attached. If this is so, this function will return an empty
     string
     '''
-
     if xios_envar['XIOS_NPROC'] != '0':
+        if not xios_envar.contains('ROSE_LAUNCHER_PREOPTS_XIOS'):
+            ompthr = 1
+            hyperthreads = 1
+            ss = True
+            xios_envar['ROSE_LAUNCHER_PREOPTS_XIOS'] = \
+                common.set_aprun_options(xios_envar['XIOS_NPROC'], \
+                    xios_envar['XIOS_NODES'], ompthr, \
+                        hyperthreads, ss) \
+                            if launcher == 'aprun' else ''
+
         launch_cmd = '%s ./%s' % \
             (xios_envar['ROSE_LAUNCHER_PREOPTS_XIOS'], \
                  xios_envar['XIOS_LINK'])
+
         # Put in quotes to allow this environment variable to be exported as it
         # contains (or can contain) spaces
         xios_envar['ROSE_LAUNCHER_PREOPTS_XIOS'] = "'%s'" % \
@@ -149,7 +167,7 @@ def run_driver(common_envar, mode, run_info):
     '''
     if mode == 'run_driver':
         exe_envar = _setup_executable(common_envar)
-        launch_cmd = _set_launcher_command(exe_envar)
+        launch_cmd = _set_launcher_command(common_envar['ROSE_LAUNCHER'], exe_envar)
         model_snd_list = None
         if not run_info['l_namcouple']:
             run_info = _sent_coupling_fields(run_info)

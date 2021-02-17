@@ -123,10 +123,26 @@ def _load_run_environment_variables(um_envar):
     if um_envar.load_envar('ATMOS_EXEC') != 0:
         sys.stderr.write('[FAIL] Environment variable ATMOS_EXEC is not set\n')
         sys.exit(error.MISSING_EVAR_ERROR)
+
+    # Ensure a method of setting aprun options has been provided
     if um_envar.load_envar('ROSE_LAUNCHER_PREOPTS_UM') != 0:
-        sys.stderr.write('[FAIL] Environment variable '
-                         'ROSE_LAUNCHER_PREOPTS_UM is not set\n')
-        sys.exit(error.MISSING_EVAR_ERROR)
+        sys.stdout.write('[INFO] Environment variable ROSE_LAUNCHER_PREOPTS_UM'\
+            ' not set, checking for driver side launch command construction '\
+                'environment variables.\n')
+
+        if um_envar.load_envar('ATMOS_NODES') != 0:
+            sys.stderr.write('[FAIL] Environment variable '
+                             'ATMOS_NODES is not set\n')
+            sys.exit(error.MISSING_EVAR_ERROR)
+        if um_envar.load_envar('HYPERTHREADS') != 0:
+            sys.stderr.write('[FAIL] Environment variable '
+                             'HYPERTHREADS is not set\n')
+            sys.exit(error.MISSING_EVAR_ERROR)
+        if um_envar.load_envar('OMPTHR_ATM') != 0:
+            sys.stderr.write('[FAIL] Environment variable '
+                             'OMPTHR_ATM is not set\n')
+            sys.exit(error.MISSING_EVAR_ERROR)
+
     _ = um_envar.load_envar('ATMOS_LINK', 'atmos.exe')
     _ = um_envar.load_envar('DR_HOOK', '0')
     _ = um_envar.load_envar('DR_HOOK_OPT', 'noself')
@@ -254,10 +270,17 @@ def _setup_executable(common_envar):
     return um_envar
 
 
-def _set_launcher_command(um_envar):
+def _set_launcher_command(launcher, um_envar):
     '''
     Setup the launcher command for the executable
     '''
+    if not um_envar.contains('ROSE_LAUNCHER_PREOPTS_UM'):
+        ss = False
+        um_envar['ROSE_LAUNCHER_PREOPTS_UM'] = \
+            common.set_aprun_options(um_envar['NPROC'], \
+                um_envar['ATMOS_NODES'], um_envar['OMPTHR_ATM'], \
+                    um_envar['HYPERTHREADS'], ss) \
+                        if launcher == 'aprun' else ''
 
     launch_cmd = '%s ./%s' % \
         (um_envar['ROSE_LAUNCHER_PREOPTS_UM'], \
@@ -624,7 +647,7 @@ def run_driver(common_envar, mode, run_info):
     '''
     if mode == 'run_driver':
         exe_envar = _setup_executable(common_envar)
-        launch_cmd = _set_launcher_command(exe_envar)
+        launch_cmd = _set_launcher_command(common_envar['ROSE_LAUNCHER'], exe_envar)
         if run_info['l_namcouple']:
             model_snd_list = None
         else:
