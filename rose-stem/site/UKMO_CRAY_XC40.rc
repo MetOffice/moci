@@ -1,9 +1,11 @@
+{% if EXTRACT_HOST is defined %}
     [[LINUX_DESKTOP]]
         pre-script = "module load scitools/production-os41-1"
         [[[job]]]
             batch system = background
         [[[remote]]]
             host = $(rose host-select {{EXTRACT_HOST}})
+{% endif %}
     
     [[LINUX_SERVER]]
         pre-script = "module load scitools/production-os41-1"
@@ -41,4 +43,13 @@ module load scitools/production-os41-1
 {% endif %}
 module list ;
 echo ;
+"""
+
+    [[PYTHON3_ENV]]
+        [[[environment]]]
+            PYTHON_ENVIRONMENT = """
+module unload scitools;
+module load scitools scitools/default-current;
+module list;
+echo;
 """

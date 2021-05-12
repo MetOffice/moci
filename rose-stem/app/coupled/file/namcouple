@@ -1,0 +1,835 @@
+# Control file for OASIS 3.0, using netCDF format  
+# for restart input files.  Oasis reads in  
+# this file at run-time.  
+#  
+# Description: This file defines the fields used in coupling between   
+#              Note: this version uses a mixture of conservative
+#              (first order) and bilinear remapping techniques. 
+# HadGEM3 atmos/ocean models (not cice in this instance).  
+# Atmos component: UM atmos   
+# Ocean component: ORCA1  
+# Ice component:   None (pseudo ice in ORCA1)  
+#  
+#  
+# Author: R. Hill  
+# Date  : 22/08/2007  
+# Added SEQ information to ensure no implicit deadlock artificially 
+# created in OASIS3. 
+# 19/09/2007 Update remapping to use DESTAREA fora all A->O fluxes
+# (everything on T points) and BILINEAR remapping for TAUX,TAUY and
+# all O->A fields.
+# 09/10/2007 Add total rain, snow, evap2d, lhflx and top/botmeltn 
+# for atmos->nemocice (via ocean) coupling operations. 
+# 12/10/2007 Added multi cat ice conc, snow thickness and ice depth
+# for nemocice->atmos coupling.
+# 21/06/2011 Added 2k/h and ice temperature for multilayered ice for
+# nemocice->atmos coupling 
+# 10/05/2012 Naming and other changes for NEMO 3.4 
+# 14/11/12: Updated for UM8.3 compatibility. RSRH 
+# 10/12/12: Set up for  N216(EG)-ORCA025 MCT. RSRH 
+# 16/05/14: Sepcial version for MR's tests. RSRH
+#
+#
+# Don't hesitate to ask precisions or make  
+# suggestions (oasishelp@cerfacs.fr).   
+#  
+#  
+# Any line beginning with # is ignored. Blank lines are not allowed.  
+#  
+ $NFIELDS  
+# This is the total number of fields being exchanged.   
+# For the definition of the fields, see under $STRINGS keyword  
+#  
+          74    
+ $END  
+#########################################################################  
+##########################################################################  
+ $NBMODEL
+   3 toyatm toyoce xios.x 99 99 99
+ $END
+###########################################################################  
+ $RUNTIME
+# Run time setting automated via NEMO namelist values
+  864000
+ $END
+###########################################################################  
+ $INIDATE  
+# This is the initial date of the run. This is important only if  
+# FILLING analysis is used for a coupling field in the run.  
+# The format is YYYYMMDD.  
+#  
+# RH: This may become important in all cases if we want to   
+#     cross check to ensure all components start at the same  
+#     date/time.     
+#  
+  00010101  
+ $END  
+###########################################################################  
+ $MODINFO  
+# Indicates if a header is encapsulated within the field brick   
+# in binary restart files for all communication techniques,    
+# (and for coupling field exchanges for PIPE, SIPC and GMEM.  
+# (YES or NOT)  
+  NOT  
+ $END  
+###########################################################################  
+ $NLOGPRT  
+# Index of printing level in output file cplout: 0 = no printing  
+#  1 = main routines and field names when treated, 30 = complete output  
+  0  
+ $END  
+###########################################################################  
+ $CALTYPE  
+# Calendar type :  0      = 365 day calendar (no leap years)  
+#                  1      = 365 day, or 366 days for leap years, calendar  
+#                  n (>1) = n day month calendar  
+# This is important only if FILLING analysis is used for a coupling  
+# field in the run.  
+#  
+  30  
+ $END  
+###########################################################################  
+ $STRINGS  
+#  
+# The above variables are the general parameters for the experiment.  
+# Everything below has to do with the fields being exchanged.  
+#  
+############################################################################  
+#  
+#   
+############################################################################
+#                      OCEAN --->>> ATMOS
+#                  -------------------------
+############################################################################
+#
+#  Ocean SST
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 1 25  ######################################################  
+ model01_O_SSTSST ocn_sst 1 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 2 41 ######################################################  
+model01_OTepIce_cat01 oicet01 469 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 3 42 ######################################################  
+model01_OTepIce_cat02 oicet02 469 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 4 43 ######################################################  
+model01_OTepIce_cat03 oicet03 469 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 5 44 ######################################################  
+model01_OTepIce_cat04 oicet04 469 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 6 45 ######################################################  
+model01_OTepIce_cat05 oicet05 469 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 7 26  ######################################################  
+ model01_OIceFrc_cat01 ofrzn01 31 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 8 27  ######################################################  
+ model01_OIceFrc_cat02 ofrzn02 31 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 9 28  ######################################################  
+ model01_OIceFrc_cat03 ofrzn03 31 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 10 29  ######################################################  
+ model01_OIceFrc_cat04 ofrzn04 31 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 11 30  ######################################################  
+ model01_OIceFrc_cat05 ofrzn05 31 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 12 81  ######################################################  
+ model01_OIceFrd_cat01 ofrzz01 31 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 13 82  ######################################################  
+ model01_OIceFrd_cat02 ofrzz02 31 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 14 83  ######################################################  
+ model01_OIceFrd_cat03 ofrzz03 31 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 15 84  ######################################################  
+ model01_OIceFrd_cat04 ofrzz04 31 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 16 85  ######################################################  
+ model01_OIceFrd_cat05 ofrzz05 31 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 17 36  ######################################################  
+model01_OIceTck_cat01 ohicn01 468 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 18 37  ######################################################  
+model01_OIceTck_cat02 ohicn02 468 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 19 38  ######################################################  
+model01_OIceTck_cat03 ohicn03 468 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 20 39  ######################################################  
+model01_OIceTck_cat04 ohicn04 468 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 21 40 ######################################################  
+model01_OIceTck_cat05 ohicn05 468 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 22 31 ######################################################  
+model01_OSnwTck_cat01 osnwtn01 373 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 23 32 ######################################################  
+model01_OSnwTck_cat02 osnwtn02 373 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 24 33 ######################################################  
+model01_OSnwTck_cat03 osnwtn03 373 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 25 34 ######################################################  
+model01_OSnwTck_cat04 osnwtn04 373 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 26 35  ######################################################  
+model01_OSnwTck_cat05 osnwtn05 373 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNU ATMU 27 51 ######################################################  
+model01_O_OCurx1 sunocean 47 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  uor1 aum3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_uor1_to_aum3_BILINEA.nc
+#
+#  Ocean NS surface velocity
+#
+############################################################################
+# TRANSDEF: OCNV ATMV 28 52 ######################################################  
+model01_O_OCury1 svnocean 48 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 145 vor1 avm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_vor1_to_avm3_BILINEA.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 29 56 ######################################################  
+model01_OPndFrc_cat01 pndfrcn1 428 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144 tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+############################################################################
+# TRANSDEF: OCNT ATMT 30 57 ######################################################  
+model01_OPndFrc_cat02 pndfrcn2 428 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+############################################################################
+# TRANSDEF: OCNT ATMT 31 58 ######################################################  
+model01_OPndFrc_cat03 pndfrcn3 428 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+############################################################################
+# TRANSDEF: OCNT ATMT 32 59 ######################################################  
+model01_OPndFrc_cat04 pndfrcn4 428 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+############################################################################
+# TRANSDEF: OCNT ATMT 33 60 ######################################################  
+model01_OPndFrc_cat05 pndfrcn5 428 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 34 61 ######################################################  
+model01_OPndTck_cat01 pndtckn1 429 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 35 62 ######################################################  
+model01_OPndTck_cat02 pndtckn2 429 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 36 63 ######################################################  
+model01_OPndTck_cat03 pndtckn3 429 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 37 64 ######################################################  
+model01_OPndTck_cat04 pndtckn4 429 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 38 65 ######################################################  
+model01_OPndTck_cat05 pndtckn5 429 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 39 46 ######################################################  
+model01_OIceKn_cat01 oicek01 470 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 40 47 ######################################################  
+model01_OIceKn_cat02 oicek02 470 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 41 48 ######################################################  
+model01_OIceKn_cat03 oicek03 470 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 42 49 ######################################################  
+model01_OIceKn_cat04 oicek04 470 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: OCNT ATMT 43 50 ######################################################  
+model01_OIceKn_cat05 oicek05 470 3600 1 atmos_restart.nc   EXPORTED
+1442 1207 192 144  tor1 atm3 SEQ=+1
+ P  2  P 0
+#
+ MAPPING
+#
+ rmp_tor1_to_atm3_CONSERV_FRACAREA_1st.nc
+#
+############################################################################  
+#                      ATMOSPHERE  --->>>  OCEAN  
+#                      -------------------------  
+############################################################################  
+# TRANSDEF: ATMU OCNU 45 23  ######################################################  
+ taux model01_O_OTaux1 23 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  aum3 uor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_aum3_to_uor1_BILINEA.nc
+#
+############################################################################
+# TRANSDEF: ATMV OCNV 46 24  ######################################################  
+ tauy model01_O_OTauy1 24 3600 1 atmos_restart.nc   EXPORTED
+192 145 1442 1207  avm3 vor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_avm3_to_vor1_BILINEA.nc
+############################################################################
+# TRANSDEF: ATMT OCNT 47 54 1 ######################################################  
+ solar model01_O_QsrOce 38 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+#
+############################################################################  
+# TRANSDEF: ATMT OCNT 48 1 2 ######################################################  
+ heatflux model01_O_QnsOce 6 3600 1 atmos_restart.nc   EXPORTED  
+192 144 1442 1207  atm3 tor1  SEQ=+2 
+ P  0  P  2  
+#  
+ MAPPING  
+#  
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_2nd.nc
+#  
+#############################################################################
+# TRANSDEF: ATMT OCNT 49 5 1 ######################################################  
+ train model01_OTotRain 27 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+#
+############################################################################
+############################################################################
+# TRANSDEF: ATMT OCNT 50 6 1 ######################################################  
+ tsnow model01_OTotSnow 40 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+#
+############################################################################
+############################################################################
+# TRANSDEF: ATMT OCNT 51 7 2 ######################################################  
+ evap2d model01_OTotEvap 25 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_2nd.nc
+#
+# TRANSDEF: ATMT OCNT 52 18 1 ######################################################  
+ sublim01 model01_OIceEvp_cat01 472 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: ATMT OCNT 53 19 1 ######################################################  
+ sublim02 model01_OIceEvp_cat02 472 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: ATMT OCNT 54 20 1 ######################################################  
+ sublim03 model01_OIceEvp_cat03 472 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: ATMT OCNT 55 21 1 ######################################################  
+sublim04 model01_OIceEvp_cat04 472 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: ATMT OCNT 56 22 1 ######################################################  
+ sublim05 model01_OIceEvp_cat05 472 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: ATMT OCNT 57 4 1 ######################################################  
+ w10 model01_O_Wind10 56 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+#
+############################################################################
+# No longer reverse the sign of runoff
+# TRANSDEF: ATMT OCNT 58 3 1 ######################################################  
+ runoff model01_O_Runoff 32 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: ATMT OCNT 59 8 1 ######################################################  
+ tmlt01 model01_OTopMlt_cat01 467 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+############################################################################
+# TRANSDEF: ATMT OCNT 60 9 1 ######################################################  
+ tmlt02 model01_OTopMlt_cat02 467 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+############################################################################
+# TRANSDEF: ATMT OCNT 61 10 1 ######################################################  
+ tmlt03 model01_OTopMlt_cat03 467 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+############################################################################
+# TRANSDEF: ATMT OCNT 62 11 1 ######################################################  
+ tmlt04 model01_OTopMlt_cat04 467 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+############################################################################
+# TRANSDEF: ATMT OCNT 63 12 1 ######################################################  
+ tmlt05 model01_OTopMlt_cat05 467 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+############################################################################
+# TRANSDEF: ATMT OCNT 64 66 ######################################################
+ tsfi01 model01_OTsfIce_cat01 469 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+############################################################################
+# TRANSDEF: ATMT OCNT 65 67 ######################################################
+ tsfi02 model01_OTsfIce_cat02 469 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+############################################################################
+# TRANSDEF: ATMT OCNT 66 68 ######################################################
+ tsfi03 model01_OTsfIce_cat03 469 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+############################################################################
+# TRANSDEF: ATMT OCNT 67 69 ######################################################
+ tsfi04 model01_OTsfIce_cat04 469 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+############################################################################
+# TRANSDEF: ATMT OCNT 68 70 ######################################################
+ tsfi05 model01_OTsfIce_cat05 469 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+############################################################################ 
+# TRANSDEF: ATMT OCNT 69 13 1 ######################################################  
+ fcon01 model01_OBotMlt_cat01 466 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+############################################################################
+# TRANSDEF: ATMT OCNT 70 14 1 ######################################################  
+ fcon02 model01_OBotMlt_cat02 466 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+############################################################################
+# TRANSDEF: ATMT OCNT 71 15 1 ######################################################  
+ fcon03 model01_OBotMlt_cat03 466 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+############################################################################
+# TRANSDEF: ATMT OCNT 72 16 1 ######################################################  
+ fcon04 model01_OBotMlt_cat04 466 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+############################################################################
+# TRANSDEF: ATMT OCNT 73 17 1 ######################################################  
+ fcon05 model01_OBotMlt_cat05 466 3600 1 atmos_restart.nc   EXPORTED
+192 144 1442 1207  atm3 tor1 SEQ=+2
+ P  0  P  2
+#
+ MAPPING
+#
+ rmp_atm3_to_tor1_CONSERV_DESTAREA_1st.nc
+#
+############################################################################
+# TRANSDEF: ATM0 OCN0 74 72 1 ######################################################  
+ icenorth model01_OGrnmass 466 3600 1 atmos_restart.nc   EXPORTED
+1 1 1 1  atm3 tor1 SEQ=+2
+ R  0  R  0
+#
+ BLASOLD
+#
+ 1.0 0
+############################################################################
+# TRANSDEF: ATM0 OCN0 75 73 1 ######################################################  
+ icesouth model01_OAntmass 466 3600 1 atmos_restart.nc   EXPORTED
+1 1 1 1  atm3 tor1 SEQ=+2
+ R  0  R  0
+#
+ BLASOLD
+#
+ 1.0 0
+#
+#
+$END

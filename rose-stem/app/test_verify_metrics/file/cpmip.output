@@ -1,0 +1,23 @@
+Cores per node: 36
+Time in APRUN: 1137 s
+Time in UM model code: 381 s
+Time in UM coupling code: 680 s
+   Time in UM put code: 0 s
+Time in NEMO model code: 1097 s
+Time in NEMO coupling code: 15 s
+   Time in NEMO put code: 2 s
+This equates to 0.21 years per day run (SYPD)
+This run uses 78.89 percent of the allocated CPUS (142/180)
+Corehours per simulated year (CHSY): 20466.00
+The CPMIP coupling metric for this run is 0.280
+The UM spends 13 s performing IO
+   This is a fraction of 0.04
+NEMO spends 2 s performing IO
+   This is a fraction of 0.00
+XIOS spends on average 129 s in each client, and a maxiumum time of 217 s
+This cycle produces 12.86 GiB of data.
+  The data intensity metric is 0.286633 GiB per core hour
+UM Processors: 64
+NEMO Processors: 72
+XIOS Processors: 6
+Energy cost for run 7.60E+08 Joules per simulated year
