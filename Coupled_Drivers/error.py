@@ -81,7 +81,8 @@ MISMATCH_RESTART_DATE_ERROR = 700
 # namcouple on the fly.
 # The following errors relate to the following files
 #  - 800:     link_drivers
-#  - 801-819: create_namcouple.py
+#  - 801-809: write_namcouple.py
+#  - 810-819: write_namcouple_fields.py
 #  - 820-829: mct_driver.py
 #  - 830-839: nemo_driver.py
 #  - 840-859: um_driver.py
@@ -108,38 +109,38 @@ MISSING_WEIGHTING = 804
 # Coupling entry looks to be in the wrong format
 WRONG_CPL_FORMAT = 805
 
-# Not found couping variable in run_info
-NOT_FOUND_CPL_VAR = 806
-
-# Not enough coupling frequencies
-NOT_ENOUGH_CPL_FREQ = 807
-
-# Missing the STASHmaster_A file
-MISSING_STASHMASTER_A = 808
-
 # Model levels for Snr and Jnr are different
-DIFFERENT_MODEL_LEVELS = 809
+DIFFERENT_MODEL_LEVELS = 806
 
 # Soil levels for Snr and Jnr are different
-DIFFERENT_SOIL_LEVELS = 810
+DIFFERENT_SOIL_LEVELS = 809
+
+# Not found couping variable in run_info
+NOT_FOUND_CPL_VAR = 810
+
+# Not enough coupling frequencies
+NOT_ENOUGH_CPL_FREQ = 811
+
+# Missing the STASHmaster_A file
+MISSING_STASHMASTER_A = 812
 
 # Unrecognised grid
-UNRECOGNISED_GRID = 811
+UNRECOGNISED_GRID = 813
 
 # Unrecognised levelF or levelL
-UNRECOGNISED_LEVEL = 812
+UNRECOGNISED_LEVEL = 814
 
 # Not found the stash code in stashmaster_info
-NOT_FOUND_STASH_CODE = 813
+NOT_FOUND_STASH_CODE = 815
 
 # Unable to create remapping file for mapping type
-MISSING_RMP_MAPPING = 814
+MISSING_RMP_MAPPING = 816
 
 # Size of 1D grid is unknown
-UNKNOWN_1D_GRID_SIZE = 815
+UNKNOWN_1D_GRID_SIZE = 817
 
 # Ocean resolution for Snr<->Jnr coupling is not specified
-NO_OCN_RESOL = 816
+NO_OCN_RESOL = 818
 
 # Not found SHARED file
 NOT_FOUND_SHARED = 820
@@ -198,37 +199,43 @@ MISSING_ATM_RESOL_NML = 842
 # Missing namelist oasis_send_nml from OASIS_ATM_SEND
 MISSING_OASIS_SEND_NML_ATM = 843
 
+# Missing default remapping in hybrid_rmp_mapping variable
+MISSING_DEFAULT_RMP = 844
+
 # Missing entry 'hybrid_weight' from namelist
 # oasis_atm_send_nml/oasis_jnr_send_nml
-MISSING_HYBRID_WEIGHT = 844
+MISSING_HYBRID_WEIGHT = 845
 
 # Missing entry 'hybrid_rmp_mapping' from namelist
 # oasis_atm_send_nml/oasis_jnr_send_nml
-MISSING_HYBRID_RMP_MAPPING = 845
+MISSING_HYBRID_RMP_MAPPING = 846
 
 # Missing hybrid namelist
-MISSING_HYBRID_NML = 846
+MISSING_HYBRID_NML = 847
 
 # Missing coupling fields in hybrid namelist
-MISSING_HYBRID_SEND = 847
+MISSING_HYBRID_SEND = 848
 
 # Missing nlsizes namelist from SIZES file
-MISSING_ATM_RESOL_NML = 848
+MISSING_ATM_RESOL_NML = 849
 
 # Missing 'global_row_length' or 'global_rows' from nlsizes namelist
-MISSING_ATM_HORIZ_RESOL = 849
+MISSING_ATM_HORIZ_RESOL = 850
 
 # Missing 'model_levels' from nlsizes namelist
-MISSING_ATM_VERT_RESOL = 850
+MISSING_ATM_VERT_RESOL = 851
 
 # Missing a SHARED file
-MISSING_FILE_SHARED = 851
+MISSING_FILE_SHARED = 852
 
 # Missing JULES namelist
-MISSING_JULES_RESOL_NML = 852
+MISSING_JULES_RESOL_NML = 853
 
 # Missing the soil depths array
-MISSING_JULES_VERT_RESOL = 853
+MISSING_JULES_VERT_RESOL = 854
+
+# Missing tile information
+MISSING_JULES_TILE_INFO = 855
 
 # Missing OASIS send file for Jnr UM
 MISSING_OASIS_JNR_SEND = 860

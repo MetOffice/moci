@@ -18,10 +18,6 @@ DESCRIPTION
     Driver for the NEMO 3.6 model, called from link_drivers. Note that this
     does not cater for any earlier versions of NEMO
 '''
-
-#The from __future__ imports ensure compatibility between python2.7 and 3.x
-from __future__ import absolute_import
-from __future__ import division
 import re
 import os
 import time
@@ -34,7 +30,7 @@ import common
 import error
 import dr_env_lib.nemo_def
 import dr_env_lib.env_lib
-import create_namcouple
+import write_namcouple
 try:
     import f90nml
 except ImportError:
@@ -790,7 +786,7 @@ def _sent_coupling_fields(nemo_envar, run_info):
 
     # Create a list of fields sent from OCN
     model_snd_list = \
-        create_namcouple.add_to_cpl_list( \
+        write_namcouple.add_to_cpl_list( \
         'OCN', False, 0,
         oasis_nml['oasis_ocn_send_nml']['oasis_ocn_send'])
 

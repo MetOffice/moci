@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #*****************************COPYRIGHT******************************
-# (C) Crown copyright 2019 Met Office. All rights reserved.
+# (C) Crown copyright 2021 Met Office. All rights reserved.
 #
 # Use, duplication or disclosure of this code is subject to the restrictions
 # as set forth in the licence. If no licence has been raised with this copy
@@ -139,8 +139,8 @@ while (<F0>) {
                                      # contain the same number of elements!
          $k_dim = $line_field_count;	 
 	 
-	 $mapping_type = 1; 
-	 
+         # Default option is always 1st order
+	 $mapping_type = 1;
 	 $items_count = @types;
 	 if ( $items_count > 6 ) {
 	 
@@ -149,17 +149,13 @@ while (<F0>) {
 	    # case we ignore it and presume first order remapping
 	    # or that we're using OASIS3. 
 	    if ( substr($types[6],0,1) ne "#" ) {
-	    
-	       # If our extra item indicates 1st or 2nd order 
-	       # remapping specifically, then that's fine.
-               if (($types[6] eq "1")||($types[6] eq "2")) {
-            
-	          if ( $types[6] eq "2" ){
-	          # This indicates that the field should use 2nd order terms. 
-	            $mapping_type = 2; 
-	          }
-
-               } else {
+	       if ( $types[6] eq "2" ) {
+		  # This indicates the field should use 2nd order terms
+		  $mapping_type = 2
+	       } elsif ( $types[6] eq "3" ) {
+		  # Bicubic remapping
+		  $mapping_type = 3;
+               } elsif ($types[6] ne "1") {
 	          # If our extra item is not a valid order or a comment 
 		  # indicator then say something. It's a moot point 
 		  # whether we should abort or not - but we assume

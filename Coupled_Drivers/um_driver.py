@@ -16,8 +16,6 @@ NAME
 DESCRIPTION
     Driver for the UM component, called from link_drivers
 '''
-#The from __future__ imports ensure compatibility between python2.7 and 3.x
-from __future__ import absolute_import
 import os
 import sys
 import shutil
@@ -29,7 +27,7 @@ import error
 import save_um_state
 import dr_env_lib.um_def
 import dr_env_lib.env_lib
-import create_namcouple
+import write_namcouple
 try:
     import f90nml
 except ImportError:
@@ -106,7 +104,7 @@ def _load_run_environment_variables(um_envar):
     '''
     um_envar = dr_env_lib.env_lib.load_envar_from_definition(
         um_envar, dr_env_lib.um_def.UM_ENVIRONMENT_VARS_INITIAL)
-    
+
     # copy a couple of variables to different names
     um_envar.add('STDOUT_FILE', um_envar['ATMOS_STDOUT_FILE'])
 
@@ -227,12 +225,12 @@ def get_atmos_resol(um_name, um_resol_file, run_info):
     sizes_nml = f90nml.read(um_resol_file)
 
     # Check the horizontal resolution variables exist
-    if not 'nlsizes' in sizes_nml:
+    if 'nlsizes' not in sizes_nml:
         sys.stderr.write('[FAIL] nlsizes not found in %s\n' % \
                              um_resol_file)
         sys.exit(error.MISSING_ATM_RESOL_NML)
-    if not 'global_row_length' in sizes_nml['nlsizes'] or \
-            not 'global_rows' in sizes_nml['nlsizes']:
+    if 'global_row_length' not in sizes_nml['nlsizes'] or \
+            'global_rows' not in sizes_nml['nlsizes']:
         sys.stderr.write('[FAIL] global_row_length or global_rows are '
                          'missing from namelist nlsizes in %s\n' % \
                              um_resol_file)
@@ -252,7 +250,7 @@ def get_atmos_resol(um_name, um_resol_file, run_info):
                                   sizes_nml['nlsizes']['global_rows']]
 
     # Check that vertical resolution exists
-    if not 'model_levels' in sizes_nml['nlsizes']:
+    if 'model_levels' not in sizes_nml['nlsizes']:
         sys.stderr.write('[FAIL] model_levels is missing from namelist '
                          'nlsizes in %s\n' % um_resol_file)
         sys.exit(error.MISSING_ATM_VERT_RESOL)
@@ -265,7 +263,8 @@ def get_atmos_resol(um_name, um_resol_file, run_info):
 
 def get_jules_levels(jules_resol_file):
     '''
-    Determine the number of levels in JULES.
+    Determine the number of soil levels, vegetation tiles and
+    non-vegetation tiles.
     This function is only used when creating the namcouple at run time.
     '''
 
@@ -277,44 +276,126 @@ def get_jules_levels(jules_resol_file):
     # Read the resolution file
     sizes_nml = f90nml.read(jules_resol_file)
 
-    # Check that soil depths exist
-    if not 'jules_soil' in sizes_nml:
+    # Check that soil depth, which is given by the number of elements in
+    # in dzsoil_io, exists
+    if 'jules_soil' not in sizes_nml:
         sys.stderr.write('[FAIL] jules_soil not found in %s\n' % \
                          jules_resol_file)
         sys.exit(error.MISSING_JULES_RESOL_NML)
-    if not 'dzsoil_io' in sizes_nml['jules_soil']:
+    if 'dzsoil_io' not in sizes_nml['jules_soil']:
         sys.stderr.write('[FAIL] dzsoil_io is missing from namelist '
                          'jules_soil in %s\n' % jules_resol_file)
         sys.exit(error.MISSING_JULES_VERT_RESOL)
 
-    # Return the vertical levels for soil
-    return len(sizes_nml['jules_soil']['dzsoil_io'])
+    # Store the soil levels
+    n_soil_levs = len(sizes_nml['jules_soil']['dzsoil_io'])
+
+    # Check that tile information exists
+    if 'jules_surface_types' not in sizes_nml:
+        sys.stderr.write('[FAIL] jules_surface_types not found in %s\n' % \
+                         jules_resol_file)
+        sys.exit(error.MISSING_JULES_RESOL_NML)
+    # 'npft' is the number of plant functional or vegetation tiles, and
+    # 'nnvg' is the number of non-vegetation tiles.
+    if 'npft' not in sizes_nml['jules_surface_types'] or \
+       'nnvg' not in sizes_nml['jules_surface_types']:
+        sys.stderr.write('[FAIL] npft or nnvg is missing from namelist '
+                         'jules_surface_types in %s\n' % jules_resol_file)
+        sys.exit(error.MISSING_JULES_TILE_INFO)
+
+    # Return soil levels, number of plant function tiles (npft) and
+    # number of non-vegetation tiles (nnvg).
+    return n_soil_levs, sizes_nml['jules_surface_types']['npft'], \
+        sizes_nml['jules_surface_types']['nnvg']
+
+def _determine_rmp_mapping(rmp_mapping):
+    '''
+    Determine the rmp mapping from the string rmp_mapping
+    '''
+
+    remap = {}
+    # Separate by the number of rmp mappings
+    for remap_str in rmp_mapping.split(';'):
+
+        # The default mapping type
+        mapping_type = -99
+
+        # Determine the stash fields which this remapping applies to.
+        i_colon = remap_str.find(':')
+        if i_colon > 0:
+            stash_list = []
+            for stash_code in remap_str[i_colon+1:].split(','):
+                stash_list.append(int(stash_code))
+            remap_str = remap_str[:i_colon]
+        else:
+            stash_list = ['default']
+
+        # Determine the mapping type
+        if remap_str.find('BICUBIC') > -1:
+            mapping_type = 3
+        else:
+            i_ext = remap_str.find('_1st')
+            if i_ext > 0:
+                mapping_type = 1
+                remap_str = remap_str[0:i_ext]
+            else:
+                i_ext = remap_str.find('_2nd')
+                if i_ext > 0:
+                    mapping_type = 2
+                    remap_str = remap_str[0:i_ext]
+
+        # Store remapping and the mapping type
+        for stash_name in stash_list:
+            if stash_name != 'default':
+                stash_name = '{:05d}'.format(stash_name)
+            remap[stash_name] = {'mapping': remap_str, 'map_type': mapping_type}
+
+    # Return remapping information
+    return remap
 
 def _add_hybrid_cpl(n_cpl_freq, cpl_list, origin, dest, name_out_ident,
-                    rmp_mapping, mapping_order, hybrid_weight):
+                    rmp_mapping, hybrid_weight):
     '''
     Write the hybrid coupling fields into hybrid_snd_list.
     This function is only used when creating the namcouple at run time.
     '''
 
     if cpl_list:
-        hybrid_snd_list = []
+
+        # Determine the remapping
+        remap = _determine_rmp_mapping(rmp_mapping)
+
+        # Ensure we have a list
         if isinstance(cpl_list, int):
             # Convert single integer to a list
             cpl_list = [cpl_list]
 
         # Loop across the fields to couple
+        hybrid_snd_list = []
         for stash_code in cpl_list:
-            name_out = '{:05d}'.format(stash_code) + name_out_ident + '001'
+            stash_name = '{:05d}'.format(stash_code)
+            name_out = stash_name + name_out_ident + '001s'
+
+            if stash_name in remap:
+                remapping = remap[stash_name]['mapping']
+                mapping_type = remap[stash_name]['map_type']
+            else:
+                if 'default' in remap:
+                    remapping = remap['default']['mapping']
+                    mapping_type = remap['default']['map_type']
+                else:
+                    sys.stderr.write('[FAIL] Require a default remapping '
+                                     'in hybrid_rmp_mapping.\n')
+                    sys.exit(error.MISSING_DEFAULT_RMP)
 
             # Add entry
             hybrid_snd_list.append(
-                create_namcouple.NamcoupleEntry(name_out,
-                                                (100000 + stash_code),
-                                                '?', origin, dest, -99, '?',
-                                                rmp_mapping, mapping_order,
-                                                hybrid_weight, True,
-                                                n_cpl_freq))
+                write_namcouple.NamcoupleEntry(name_out,
+                                               (100000 + stash_code),
+                                               '?', origin, dest, -99, '?',
+                                               remapping, mapping_type,
+                                               hybrid_weight, True,
+                                               n_cpl_freq))
 
             # Move to next entry
             hybrid_weight += 1
@@ -331,75 +412,71 @@ def read_hybrid_coupling(hybrid_file_nml, run_info, oasis_nml):
     This function is only used when creating the namcouple at run time.
     '''
 
+    # Default option is to send no fields
+    hybrid_snd_list = None
+
     # Determine if hybrid sending file is present
     if os.path.exists(hybrid_file_nml):
         # Determine if this Snr->Jnr or Jnr->Snr coupling
         if hybrid_file_nml == 'HYBRID_SNR2JNR':
             # These are Snr->Jnr fields
             origin = 'ATM'
-            dest   = 'JNR'
+            dest = 'JNR'
             name_out_ident = 's'
         else:
             # These are Jnr->Snr fields
             origin = 'JNR'
-            dest   = 'ATM'
+            dest = 'ATM'
             name_out_ident = 'j'
 
-        # The default option
-        mapping_order = -99
-
         # Check we have the data in oasis_nml which we need
-        if not 'hybrid_weight' in oasis_nml['oasis_send_nml']:
+        if 'hybrid_weight' not in oasis_nml['oasis_send_nml']:
             sys.stderr.write('[FAIL] entry hybrid_weight missing '
                              'from namelist oasis_send_nml.\n')
             sys.exit(error.MISSING_HYBRID_WEIGHT)
         else:
             hybrid_weight = oasis_nml['oasis_send_nml']['hybrid_weight']
-        if not 'hybrid_rmp_mapping' in oasis_nml['oasis_send_nml']:
+        if 'hybrid_rmp_mapping' not in oasis_nml['oasis_send_nml']:
             sys.stderr.write('[FAIL] entry hybrid_rmp_mapping missing '
                              'from namelist oasis_send_nml.\n')
             sys.exit(error.MISSING_HYBRID_RMP_MAPPING)
         else:
             rmp_mapping = oasis_nml['oasis_send_nml']['hybrid_rmp_mapping']
-            i_ext = rmp_mapping.find('_1st')
-            if i_ext > 0:
-                mapping_order = 1
-                rmp_mapping = rmp_mapping[0:i_ext]
-            else:
-                i_ext = rmp_mapping.find('_2nd')
-                if i_ext > 0:
-                    mapping_order = 2
-                    rmp_mapping = rmp_mapping[0:i_ext]
 
         # Read the hybrid namelist
         hybrid_nml = f90nml.read(hybrid_file_nml)
 
         # Check we have the expected information
-        if not 'hybrid_cpl' in hybrid_nml:
+        if 'hybrid_cpl' not in hybrid_nml:
             sys.stderr.write('[FAIL] namelist hybrid_cpl is missing '
                              'from %s.\n' % hybrid_nml)
             sys.exit(error.MISSING_HYBRID_NML)
-        if not 'cpl_hybrid' in hybrid_nml['hybrid_cpl']:
+        if 'cpl_hybrid' not in hybrid_nml['hybrid_cpl']:
             sys.stderr.write('[FAIL] entry cpl_hybrid is missing '
                              'from namelist hybrid_cpl in %s.\n' %
                              hybrid_nml)
             sys.exit(error.MISSING_HYBRID_SEND)
 
+        # Default option is to have no stats
+        if 'l_hybrid_stats' not in hybrid_nml['hybrid_cpl']:
+            hybrid_nml['hybrid_cpl']['l_hybrid_stats'] = False
+
         # Check that we have some hybrid fields to send
         if hybrid_nml['hybrid_cpl']['cpl_hybrid']:
-            hybrid_weight, hybrid_snd_list = \
-                _add_hybrid_cpl(0, hybrid_nml['hybrid_cpl']['cpl_hybrid'],
-                                origin, dest, name_out_ident, rmp_mapping,
-                                mapping_order, hybrid_weight)
+            if hybrid_nml['hybrid_cpl']['l_hybrid_overw'] or \
+               hybrid_nml['hybrid_cpl']['l_hybrid_stats']:
+                hybrid_weight, hybrid_snd_list \
+                    = _add_hybrid_cpl(0, hybrid_nml['hybrid_cpl']['cpl_hybrid'],
+                                      origin, dest, name_out_ident,
+                                      rmp_mapping, hybrid_weight)
 
-            # Are there any extra stats to send
-            if 'l_hybrid_stats' in hybrid_nml['hybrid_cpl']:
+                # Are there any extra stats to send
                 if hybrid_nml['hybrid_cpl']['l_hybrid_stats'] and \
                         'cpl_hybrid_stats' in hybrid_nml['hybrid_cpl']:
                     hybrid_weight, hybrid_snd_stat_list = _add_hybrid_cpl(
                         1, hybrid_nml['hybrid_cpl']['cpl_hybrid_stats'],
                         origin, dest, name_out_ident, rmp_mapping,
-                        mapping_order, hybrid_weight)
+                        hybrid_weight)
 
                     if hybrid_snd_stat_list:
                         hybrid_snd_list.extend(hybrid_snd_stat_list)
@@ -410,13 +487,6 @@ def read_hybrid_coupling(hybrid_file_nml, run_info, oasis_nml):
                 if hybrid_nml['hybrid_cpl']['l_hybrid_stats']:
                     flag_name = 'l_hyb_stats_' + origin + '2' + dest
                     run_info[flag_name] = True
-        else:
-            # No fields are being sent from this component
-            hybrid_snd_list = None
-    else:
-        # File is missing, so no coupling field are being sent to the
-        # other hybrid component.
-        hybrid_snd_list = None
 
     return run_info, hybrid_snd_list
 
@@ -432,7 +502,7 @@ def _sent_coupling_fields(run_info):
         sys.exit(error.MISSING_OASIS_ATM_SEND)
 
     # Add toyatm to our list of executables
-    if not 'exec_list' in run_info:
+    if 'exec_list' not in run_info:
         run_info['exec_list'] = []
     run_info['exec_list'].append('toyatm')
 
@@ -440,7 +510,8 @@ def _sent_coupling_fields(run_info):
     run_info = get_atmos_resol('ATM', 'SIZES', run_info)
 
     # Determine the soil levels
-    run_info['ATM_soil_levels'] = get_jules_levels('SHARED')
+    run_info['ATM_soil_levels'], run_info['ATM_veg_tiles'], \
+        run_info['ATM_non_veg_tiles'] = get_jules_levels('SHARED')
 
     # Read the namelist OASIS_ATM_SND (note that this must exist
     # or run_info['l_namecouple'] wouldn't be false and we wouldn't
@@ -448,7 +519,7 @@ def _sent_coupling_fields(run_info):
     oasis_nml = f90nml.read('OASIS_ATM_SEND')
 
     # Check with have the expected namelist in this file
-    if not 'oasis_send_nml' in oasis_nml:
+    if 'oasis_send_nml' not in oasis_nml:
         sys.stderr.write('[FAIL] namelist oasis_send_nml is '
                          'missing from OASIS_ATM_SEND.\n')
         sys.exit(error.MISSING_OASIS_SEND_NML_ATM)
@@ -482,7 +553,7 @@ def _sent_coupling_fields(run_info):
     if 'oasis_atm_send' in oasis_nml['oasis_send_nml']:
         # Check that we have some fields in here
         if oasis_nml['oasis_send_nml']['oasis_atm_send']:
-            model_snd_list = create_namcouple.add_to_cpl_list(
+            model_snd_list = write_namcouple.add_to_cpl_list(
                 'ATM', False, 0,
                 oasis_nml['oasis_send_nml']['oasis_atm_send'])
 
@@ -559,7 +630,8 @@ def run_driver(common_env, mode, run_info):
     '''
     if mode == 'run_driver':
         exe_envar = _setup_executable(common_env)
-        launch_cmd = _set_launcher_command(common_env['ROSE_LAUNCHER'], exe_envar)
+        launch_cmd = _set_launcher_command(common_env['ROSE_LAUNCHER'],
+                                           exe_envar)
         if run_info['l_namcouple']:
             model_snd_list = None
         else:
@@ -574,5 +646,5 @@ def run_driver(common_env, mode, run_info):
         exe_envar = None
         launch_cmd = None
         model_snd_list = None
-        
+
     return exe_envar, launch_cmd, run_info, model_snd_list

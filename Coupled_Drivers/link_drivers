@@ -27,7 +27,7 @@ import os
 import argparse
 import error
 import common
-import create_namcouple
+import write_namcouple
 import dr_env_lib.common_def
 import dr_env_lib.env_lib
 
@@ -199,8 +199,8 @@ if __name__ == '__main__':
 
         # Create the namcouple file
         if not run_info['l_namcouple']:
-            create_namcouple.write_namcouple(
-                common_env,run_info, coupling_list)
+            write_namcouple.write_namcouple(
+                common_env, run_info, coupling_list)
 
         # Create a string containing the export command and a list of
         # environment variable definitions that can be run by the shell

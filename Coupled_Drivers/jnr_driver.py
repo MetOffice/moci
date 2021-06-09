@@ -18,8 +18,6 @@ DESCRIPTION
     Driver for the Jnr hybrid UM component, called from link_drivers
     This is only used when creating the namcouple at run time.
 '''
-#The from __future__ imports ensure compatibility between python2.7 and 3.x
-from __future__ import absolute_import
 import os
 import sys
 import glob
@@ -27,7 +25,7 @@ import common
 import error
 import save_um_state
 import um_driver
-import create_namcouple
+import write_namcouple
 import dr_env_lib.jnr_def
 import dr_env_lib.env_lib
 try:
@@ -59,7 +57,8 @@ def _setup_executable(common_env):
 
     # Save the state of the partial sum files, or restore state depending on
     # what is required
-    save_um_state.save_state(jnr_envar['RUNID_JNR'], common_env)
+    if common_env['CYLC_CYCLING_MODE'] != 'integer':
+        save_um_state.save_state(jnr_envar['RUNID_JNR'], common_env)
 
     # Create a link to the UM atmos exec in the work directory
     common.remove_file(jnr_envar['ATMOS_LINK_JNR'])
@@ -140,7 +139,7 @@ def _sent_coupling_fields(run_info):
         sys.exit(error.MISSING_OASIS_JNR_SEND)
 
     # Add toyatm to our list of executables
-    if not 'exec_list' in run_info:
+    if 'exec_list' not in run_info:
         run_info['exec_list'] = []
     run_info['exec_list'].append('junior')
 
@@ -148,17 +147,18 @@ def _sent_coupling_fields(run_info):
     run_info = um_driver.get_atmos_resol('JNR', 'SIZES_JNR', run_info)
 
     # Determine the soil levels
-    run_info['JNR_soil_levels'] = um_driver.get_jules_levels('SHARED_JNR')
+    run_info['JNR_soil_levels'], run_info['JNR_veg_tiles'], \
+        run_info['JNR_non_veg_tiles'] = um_driver.get_jules_levels('SHARED_JNR')
 
     # Read the OASIS sending namelist
     oasis_nml = f90nml.read('OASIS_JNR_SEND')
 
     # Check we have the expected information
-    if not 'oasis_send_nml' in oasis_nml:
+    if 'oasis_send_nml' not in oasis_nml:
         sys.stderr.write('[FAIL] namelist oasis_send_nml is '
                          'missing from OASIS_JNR_SEND.\n')
         sys.exit(error.MISSING_OASIS_SEND_NML_JNR)
-    if not 'oasis_jnr_send' in oasis_nml['oasis_send_nml']:
+    if 'oasis_jnr_send' not in oasis_nml['oasis_send_nml']:
         sys.stderr.write('[FAIL] entry oasis_jnr_send is missing '
                          'from namelist oasis_send_nml in '
                          'OASIS_JNR_SEND.\n')
@@ -169,7 +169,7 @@ def _sent_coupling_fields(run_info):
     # Check that we have some fields in here
     if oasis_nml['oasis_send_nml']['oasis_jnr_send']:
         model_snd_list = \
-            create_namcouple.add_to_cpl_list( \
+            write_namcouple.add_to_cpl_list( \
             'JNR', False, 0,
             oasis_nml['oasis_send_nml']['oasis_jnr_send'])
 
@@ -212,7 +212,7 @@ def _finalize_executable(_):
                 sys.stdout.write(line)
 
     # Remove output from other PEs unless requested otherwise
-    if jnr_envar_fin['ATMOS_KEEP_MPP_STDOUT_JNR'] == 'false':
+    if jnr_envar_fin['ATMOS_KEEP_MPP_STDOUT'] == 'false':
         for stdout_file in glob.glob('%s*' %
                                      jnr_envar_fin['STDOUT_FILE_JNR']):
             common.remove_file(stdout_file)
@@ -237,7 +237,8 @@ def run_driver(common_env, mode, run_info):
         exe_envar = _setup_executable(common_env)
         if exe_envar['OCN_RES']:
             run_info['OCN_grid'] = exe_envar['OCN_RES']
-        launch_cmd = _set_launcher_command(common_env['ROSE_LAUNCHER'], exe_envar)
+        launch_cmd = _set_launcher_command(common_env['ROSE_LAUNCHER'],
+                                           exe_envar)
         if run_info['l_namcouple']:
             model_snd_list = None
         else:

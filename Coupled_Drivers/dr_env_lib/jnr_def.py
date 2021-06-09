@@ -41,7 +41,8 @@ JNR_ENVIRONMENT_VARS_INITIAL = {
     'HYPERTHREADS': {}}
 JNR_ENVIRONMENT_VARS_FINAL = {
     'NPROC_JNR': {},
-    'ATMOS_KEEP_MPP_STDOUT_JNR': {'default_val': 'false'}}
+    'STDOUT_FILE_JNR': {'desc': 'Path to the Jnr UM standard out file'},
+    'ATMOS_KEEP_MPP_STDOUT': {'default_val': 'false'}}
 
 JNR_ENVIRONMENT_VARS_INITIAL = {**JNR_ENVIRONMENT_VARS_COMMON,
                                 **JNR_ENVIRONMENT_VARS_INITIAL}

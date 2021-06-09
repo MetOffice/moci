@@ -17,11 +17,9 @@ DESCRIPTION
     Add in the default couplings.
     This is only used when creating the namcouple at run time.
 '''
-#The from __future__ imports ensure compatibility between python2.7 and 3.x
-from __future__ import absolute_import
 import sys
 import error
-import create_namcouple
+import write_namcouple
 try:
     import f90nml
 except ImportError:
@@ -166,11 +164,11 @@ def _determine_default_couplings(origin, ocean_nml, run_info):
                                 mapping = 'Scalar'
                             else:
                                 grid = exchange_couplings[cpl_field][1]
-                                mapping = create_namcouple.RMP_MAPPING[
+                                mapping = write_namcouple.RMP_MAPPING[
                                     exchange_couplings[cpl_field][2]]
                             # Add field to list
                             default_cpl.append(
-                                create_namcouple.NamcoupleEntry(
+                                write_namcouple.NamcoupleEntry(
                                     name_out, vind, grid,
                                     origin, dest, 1, False, mapping,
                                     exchange_couplings[cpl_field][3],
@@ -198,7 +196,7 @@ def add_default_couplings(run_info, coupling_list):
     # Read in the ocean namelist
     if 'nemo_nl' in run_info:
         ocean_nml = f90nml.read(run_info['nemo_nl'])
-        if not 'namsbc_cpl' in ocean_nml:
+        if 'namsbc_cpl' not in ocean_nml:
             sys.stderr.write('[FAIL] missing namelist namsbc_cpl.\n')
             sys.exit(error.MISSING_NAMSBC_CPL)
 
