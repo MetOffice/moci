@@ -21,250 +21,20 @@ DESCRIPTION
 #The from __future__ imports ensure compatibility between python2.7 and 3.x
 from __future__ import absolute_import
 from __future__ import division
-import glob
 import math
-import re
 import sys
-import os
-import shutil
-import time
 import common
+import cpmip_metrics
+import cpmip_nemo
+import cpmip_um
+import cpmip_utils
+import cpmip_xios
 import dr_env_lib.cpmip_def
 import dr_env_lib.env_lib
-import error
-
-try:
-    # Mule is not part of the standard Python package
-    import mule
-    MULE_AVAIL = True
-except ImportError:
-    sys.stdout.write('[WARN] Mule utility is unavaliable, unable to calculate'
-                     ' complexity for UM\n')
-    MULE_AVAIL = False
-
-# timeout for filesystem operations in seconds to avoid delays intoduced by
-# (especially Lustre) filesystems
-FS_OPERATION_TIMEOUT = 60
 
 CORES_PER_NODE_UKMO_XC40 = {'broadwell': 36,
                             'haswell': 32}
 
-
-def _get_glob_usage(glob_path, timeout=60):
-    '''
-    Get the total data from a list of files produced by a glob expression,
-    using the du -c command. This command takes two arguments, a glob
-    expression, and a timeout in seconds. This timeout is required as some
-    filesystems (notably Lustre) can take a long time to respond to metadata
-    queries
-    '''
-    size_k = -1.0
-    filelist = glob.glob(glob_path)
-    if filelist:
-        du_command = ['du', '-c'] + filelist
-        rcode, output = common.exec_subproc_timeout(du_command, timeout)
-        if rcode == 0:
-            size_k = float(output.split()[-2])
-    else:
-        sys.stderr.write('[WARN] Attepting to find the size of files described'
-                         ' by glob expression %s. There are no files found'
-                         % glob_path)
-        size_k = 0.0
-    return size_k
-
-
-def _get_directory_usage(directory_path, timeout=60):
-    '''
-    Get the data used in a directory, using the du -s command. This
-    command takes two arguments, the path to the directory and a timeout
-    in seconds. This timeout is required as some filesystems (notably Lustre)
-    can take a long time to respond to metadata queries.
-    '''
-    size_k = -1.0
-    if os.path.isdir(directory_path):
-        du_command = ['du', '-s', directory_path]
-        rcode, output = common.exec_subproc_timeout(du_command, timeout)
-        if rcode == 0:
-            size_k = float(output.split()[0])
-    else:
-        sys.stderr.write('[WARN] Attempting to determine size of directory %s'
-                         ' This directory doesnt exist\n' % directory_path)
-    return size_k
-
-def _get_datam_output_runonly(common_env, cpmip_envar, timeout):
-    '''
-    Grab the data of interest within the datam directory. We only want the
-    contents of NEMOhist and CICEhist, and the output files labelled with
-    the runid. We must avoid any directories containing lrun/nrun/crun restart
-    tests etc.
-    '''
-    total_usage = 0.0
-    failed_components = []
-    # um files
-    if 'um' in common_env['models']:
-        um_path_gl = os.path.join(common_env['DATAM'],
-                                  '%s*' % common_env['RUNID'])
-        um_usage = _get_glob_usage(um_path_gl, timeout)
-        if um_usage >= 0.0:
-            total_usage += um_usage
-        else:
-            failed_components.append('UM')
-
-    # Jnr UM files
-    if 'jnr' in common_env['models']:
-        jnr_path_gl = os.path.join(common_env['DATAM'],
-                                  '%s*' % cpmip_envar['RUNID_JNR'])
-        jnr_usage = _get_glob_usage(jnr_path_gl, timeout)
-        if jnr_usage >= 0.0:
-            total_usage += jnr_usage
-        else:
-            failed_components.append('Jnr')
-
-    # nemo files
-    if 'nemo' in common_env['models']:
-        nemo_path_gl = os.path.join(common_env['DATAM'], 'NEMOhist', '*')
-        nemo_usage = _get_glob_usage(nemo_path_gl, timeout)
-        if nemo_usage >= 0.0:
-            total_usage += nemo_usage
-        else:
-            failed_components.append('NEMO')
-
-    # cice file
-    if 'cice' in common_env['models']:
-        cice_path_gl = os.path.join(common_env['DATAM'], 'CICEhist', '*')
-        cice_usage = _get_glob_usage(cice_path_gl, timeout)
-        if cice_usage >= 0.0:
-            total_usage += cice_usage
-        else:
-            failed_components.append('CICE')
-
-    if failed_components:
-        for failed_component in failed_components:
-            sys.stderr.write('[FAIL] Unable to determine the usage in DATAM'
-                             ' for the %s component\n' %
-                             failed_component)
-        sys.exit(error.MISSING_MODEL_FILE_ERROR)
-    else:
-        return total_usage
-
-
-
-def _get_workdir_netcdf_output(timeout=60):
-    '''
-    Gather any netcdf output files written to the work directory
-    '''
-    output_files = [i_f for i_f in os.listdir('.') if \
-                        i_f.split('.')[-1] == 'nc' and not os.path.islink(i_f)]
-    size_k = -1.0
-    du_command = ['du', '-c'] + output_files
-    rcode, output = common.exec_subproc_timeout(du_command, timeout)
-    if rcode == 0:
-        size_k = float(output.split()[-2])
-    return size_k
-
-def _measure_xios_client_times(timeout=120):
-    '''
-    Gather the output from XIOS client files. Takes in an optional value
-    of timeout in seconds, as there may be a lot of files and we don't want
-    to hang around forever if there is a problem opening them all. Returns
-    the mean time and high watermark time
-    '''
-    total_measured = 0
-    total_time = 0.
-    max_time = 0.
-    files = [i_f for i_f in os.listdir('.') if \
-                 'xios_client' in i_f and 'out' in i_f]
-    total_files = len(files)
-    wall_start = time.time()
-    for i_f in files:
-        rcode, out = common.exec_subproc(['grep', 'total time', i_f],
-                                         verbose=False)
-        if rcode == 0:
-            meas_time = float(out.split()[-2])
-            total_measured += 1
-            total_time += meas_time
-            if meas_time > max_time:
-                max_time = meas_time
-        #check if out timeout has been reached
-        accum_wall = time.time() - wall_start
-        if accum_wall > timeout:
-            break
-    sys.stdout.write('[INFO] Measured timings for (%s/%s) XIOS clients\n' %
-                     (total_measured, total_files))
-    mean_time = total_time / float(total_measured)
-    return mean_time, max_time
-
-
-def data_metrics_setup_nemo(common_env):
-    '''
-    Set up IODEF file to produce XIOS timing files
-    '''
-    with open('iodef.xml', 'r') as f_in, \
-            open('iodef_out.xml', 'w') as f_out:
-        update = False
-        for line in f_in.readlines():
-            if 'variable id="print_file"' in line:
-                continue
-            if update:
-                updated_line = '\t  <variable id="print_file"           ' + \
-                               '     type="bool">true</variable>\n'
-                f_out.write(updated_line)
-                f_out.write(line)
-                update = False
-            else:
-                f_out.write(line)
-                if 'variable id="using_server"' in line:
-                    update = True
-    shutil.move('iodef_out.xml', 'iodef.xml')
-
-
-def data_intensity_initial(common_env, cpmip_envar):
-    '''
-    Setup for the data intensity metric, getting intial directory sizes,
-    and write to a placeholder file.
-    '''
-    size_k = _get_datam_output_runonly(common_env, cpmip_envar,
-                                       FS_OPERATION_TIMEOUT)
-    with common.open_text_file('datam.size', 'w') as f_size:
-        f_size.write(str(size_k))
-
-
-def data_intensity_final(core_hour_cycle, common_env, cpmip_envar):
-    '''
-    Calculate the data intensity metric. This is the increase in size of
-    DATAM between the start and end of the coupled app, as well as the
-    total size of the NEMO output files in the coupled work directory
-    '''
-    if 'um' in common_env['models']:
-        with common.open_text_file('datam.size', 'r') as f_size:
-            for line in f_size.readlines():
-                size_init = float(line)
-        size_final = _get_datam_output_runonly(common_env, cpmip_envar,
-                                               FS_OPERATION_TIMEOUT)
-        datam_size = size_final - size_init
-    else:
-        datam_size = 0
-
-    if 'nemo' in common_env['models']:
-        size_wrkdir = _get_workdir_netcdf_output()
-    else:
-        size_wrkdir = 0
-
-    data_produced_k = 0
-    if datam_size > -1.0:
-        data_produced_k += datam_size
-    if size_wrkdir > -1.0:
-        data_produced_k += size_wrkdir
-
-    if data_produced_k > 0:
-        data_produced_g = data_produced_k / (1024. * 1024.)
-        data_intensity = data_produced_g / core_hour_cycle
-    else:
-        sys.stderr.write('[WARN] The du operation to determine the data volume'
-                         ' has timed out. This metric will be ignored\n')
-        data_produced_g = -1
-        data_intensity = -1
-    return data_produced_g, data_intensity
 
 def get_allocated_cpus(cpmip_envar):
     '''
@@ -297,342 +67,7 @@ def get_allocated_cpus(cpmip_envar):
     return allocated_cpu, mpi_tasks
 
 
-def jpsy_metric(total_power, total_hpc_nodes, number_nodes,
-                aprun_time, years_run):
-    '''
-    Calculate the Joules per simulated year metric, and return an appropriate
-    message to be written to stdout and the cpmip.out file. Takes arguments
-    of total machine power (MW), total number of nodes, core hours per
-    simulated year and the number of allocated nodes
-    '''
-    if total_power == '' or total_hpc_nodes == '':
-        sys.stdout.write('[INFO] Unable to determine the JPSY metric')
-        message = ''
-    else:
-        power_for_run_w = (float(total_power) / float(total_hpc_nodes)) * \
-            (float(number_nodes) * 1000 * 1000)
-        energy_for_run_joules = float(aprun_time) * power_for_run_w
-        jpsy = energy_for_run_joules / years_run
-        message = 'Energy cost for run %.2E Joules per simulated year\n' % \
-            jpsy
-    return message
-
-
-def chsy_metric(allocated_cpus, run_cpus, years_run_cycle, cycle_runtime_hr):
-    '''
-    Core hours per simulated year metric. This is the product of the model
-    runtime for 1 simulated year, and the number of cores allocated. Note
-    that these are the allocated cores, which may be a greater number than
-    the cores used when considering non fully populated nodes. Returns a
-    string of the message for this metric to be written to stdout/output file
-    '''
-
-    cpus_used_percentage = (float(run_cpus) / float(allocated_cpus)) * 100.
-    cpus_message = 'This run uses %.2f percent of the allocated CPUS ' \
-        '(%i/%i)\n' % (cpus_used_percentage, run_cpus, allocated_cpus)
-
-    total_corehours = float(allocated_cpus) * float(cycle_runtime_hr)
-    corehours_per_year = total_corehours / float(years_run_cycle)
-    chsy_message = 'Corehours per simulated year (CHSY): %.2f\n' % \
-        corehours_per_year
-    return '%s%s' % (cpus_message, chsy_message)
-
-
-def tasklength_to_years(tasklength):
-    '''
-    Takes in a tasklength variable (string of form Y,M,D,h,m,s) and returns
-    an integer value of the equivalent number of years for a 360 day
-    calendar.
-    '''
-    length = [int(i) for i in tasklength.split(',')]
-    to_years = (1, 1./30., 1./360., 1./(360.*24.),
-                1./(360.*24.*60.), 1./(360.*24.*3600.))
-    years = sum([x*y for x, y in zip(to_years, length)])
-    return years
-
-
-def seconds_to_days(time_secs):
-    '''
-    Takes in an integer value in units of seconds, and returns a floating point
-    value of that time in days
-    '''
-    time_days = time_secs / (24.*3600.)
-    return time_days
-
-
-def __get_jobfile_info(jobfile):
-    '''
-    Takes in a path to the jobfile and returns a dictionary containing
-    all the directives set by PBS -l. This code is specific to the PBS
-    load scheduler present on the Cray systems
-    '''
-    job_f = common.open_text_file(jobfile, 'r')
-    pbs_l_dict = {}
-
-    for line in job_f.readlines():
-        # Grab key value pairs of the PBS variables. The pairs are delimited
-        # by colons in the PBS directive. Times are also however defined using
-        # colons (for example on hour is 01:00:00).
-        if line.strip().startswith('#PBS -l'):
-            for item in re.findall(r'(\w+)=(\w+(:\d+)*)', line):
-                pbs_l_dict[item[0]] = item[1]
-    job_f.close()
-    return pbs_l_dict
-
-
-def __get_um_io(pe0_output):
-    '''
-    Grab the UM timing information for IO routines if avaliable. These
-    routines are AS STASH, DUMPCTL, MEANCTL, IOS_Shutdown,
-    IOS_stash_client_fini
-    Note that not all these routines may be avaliable in a given
-    Run
-    '''
-    get_times = False
-    possible_routines = ['AS STASH', 'DUMPCTL', 'MEANCTL',
-                         'IOS_Shutdown', 'IOS_stash_client_fini']
-    present = []
-    times = []
-    with open(pe0_output, 'r') as f_pe0:
-        for line in f_pe0:
-            if 'MPP : Inclusive timer summary' in line:
-                get_times = True
-            if 'CPU TIMES (sorted by wallclock times)' in line:
-                get_times = False
-            if get_times:
-                for routine in possible_routines:
-                    routine_regex = re.compile(
-                        r"\d+\s*%s\s*(\d+.\d+)" % routine)
-                    routine_match = routine_regex.search(line)
-                    if routine_match:
-                        present.append(routine)
-                        cpu_time = float(routine_match.group(1))
-                        times.append(cpu_time)
-    missing = set(possible_routines) - set(present)
-    missing = list(missing)
-    if missing:
-        for missing_routine in missing:
-            sys.stdout.write('[INFO] IO timings running, routine %s'
-                             ' unavaliable in this configuration\n' %
-                             (missing_routine,))
-    total_io_times = sum(times)
-    return total_io_times
-
-
-
-def __get_um_info(pe0_output):
-    '''
-    Grab the UM output. Returns the UM CPU time (sans coupling), and the time
-    spent in the UMs coupling routines
-    '''
-    get_times = False
-
-    # Zero times in case they're not in output
-    geto2a_time = 0
-    puta2o_time = 0
-    inita2o_time = 0
-    get_hyb_time = 0
-    put_hyb_time = 0
-    init_hyb_time = 0
-
-    geto2a_regex = re.compile(r"\d+\s*oasis3_geto2a\s*(\d+.\d+)")
-    puta2o_regex = re.compile(r"\d+\s*oasis3_puta2o\s*(\d+.\d+)")
-    inita2o_regex = re.compile(r"\d+\s*oasis3_inita2o\s*(\d+.\d+)")
-    get_hyb_regex = re.compile(r"\d+\s*oasis3_get_hybrid\s*(\d+.\d+)")
-    put_hyb_regex = re.compile(r"\d+\s*oasis3_put_hybrid\s*(\d+.\d+)")
-    init_hyb_regex = re.compile(r"\d+\s*oasis_init_hybrid\s*(\d+.\d+)")
-    um_shell_regex = re.compile(r"\d+\s*UM_SHELL\s*(\d+.\d+)")
-    with open(pe0_output, 'r') as f_pe0:
-        for line in f_pe0:
-            if 'MPP : Non Inclusive timer summary' in line:
-                get_times = True
-            if 'CPU TIMES (sorted by wallclock times)' in line:
-                get_times = False
-            # Pull out the average times for the coupling routines
-            if get_times:
-                geto2a_match = geto2a_regex.search(line)
-                puta2o_match = puta2o_regex.search(line)
-                inita2o_match = inita2o_regex.search(line)
-                get_hyb_match = get_hyb_regex.search(line)
-                put_hyb_match = put_hyb_regex.search(line)
-                init_hyb_match = init_hyb_regex.search(line)
-                um_shell_match = um_shell_regex.search(line)
-                if geto2a_match:
-                    geto2a_time = float(geto2a_match.group(1))
-                if puta2o_match:
-                    puta2o_time = float(puta2o_match.group(1))
-                if inita2o_match:
-                    inita2o_time = float(inita2o_match.group(1))
-                if get_hyb_match:
-                    get_hyb_time = float(get_hyb_match.group(1))
-                if put_hyb_match:
-                    put_hyb_time = float(put_hyb_match.group(1))
-                if init_hyb_match:
-                    init_hyb_time = float(init_hyb_match.group(1))
-                if um_shell_match:
-                    um_shell_time = float(um_shell_match.group(1))
-    try:
-        model_time = um_shell_time
-        put_time = puta2o_time + put_hyb_time
-        coupling_time = put_time + geto2a_time + inita2o_time + \
-            get_hyb_time + init_hyb_time
-    except NameError:
-        sys.stderr.write('[FAIL] Unable to determine Oasis timings from'
-                         ' the UM standard output\n')
-        sys.exit(error.MISSING_CONTROLLER_FILE_ERROR)
-    return model_time, coupling_time, put_time
-
-
-def __get_nemo_io(nemo_timing_output='timing.output'):
-    '''
-    Grab NEMO IO timing output. Takies an optional argument, the path to the
-    NEMO timing.output file for NEMO/CICE. Returns the time spent in the
-    restart file writing routines (not including file writing in XIOS)
-    '''
-    # Both put and get may not necessarily be in the timing.output file
-    rstget_measurement = False
-    rstput_measurement = False
-    total_time_regex = re.compile(r"\s*Total\s*\|\s*(\d+.\d+)")
-    # These regexes will pull out a percentage
-    iom_rstget_regex = re.compile(r"\s*iom_rstget\s*\d+.\d+\s*(\d+.\d+)")
-    iom_rstput_regex = re.compile(r"\s*iom_rstput\s*\d+.\d+\s*(\d+.\d+)")
-    with common.open_text_file(nemo_timing_output, 'r') as nemo_timing_handle:
-        for line in nemo_timing_handle.readlines():
-            tot_match = total_time_regex.search(line)
-            iom_rstget_match = iom_rstget_regex.search(line)
-            iom_rstput_match = iom_rstput_regex.search(line)
-            if tot_match:
-                total_time = float(tot_match.group(1))
-            if iom_rstget_match:
-                iom_rstget_percentage = float(iom_rstget_match.group(1))
-                rstget_measurement = True
-            if iom_rstput_match:
-                iom_rstput_percentage = float(iom_rstput_match.group(1))
-                rstput_measurement = True
-    restart_io_time = 0.0
-    if rstget_measurement:
-        rstget_io_time = total_time * iom_rstget_percentage * 0.01
-        restart_io_time += rstget_io_time
-    if rstput_measurement:
-        rstput_io_time = total_time * iom_rstput_percentage * 0.01
-        restart_io_time += rstput_io_time
-    return restart_io_time
-
-
-def __get_nemo_info(nemo_timing_output='timing.output'):
-    '''
-    Grab NEMO timing output. Takes an optional argument, the path to the NEMO
-    timing.output file for NEMO/CICE. Returns the time spent in the NEMO
-    model, less the time spent in the coupling routines, and the time spent
-    in the coupling routines themselves, as well as the (inclusive) time in
-    CICE.
-    '''
-    # There are three coupling routines we need to remove from the total time
-    # sbc_cpl_rcv, sbc_cpl_init, and sbc_cpl_snd.
-    # Compile the regular expressions needed to pull out the timings. Use the
-    # elapsed times
-    # This searches for a time
-    total_time_regex = re.compile(r"\s*Total\s*\|\s*(\d+.\d+)")
-    # These regexes will pull out a percentage
-    sbc_cpl_rcv_regex = re.compile(r"\s*sbc_cpl_rcv\s*\d+.\d+\s*(\d+.\d+)")
-    sbc_cpl_init_regex = re.compile(r"\s*sbc_cpl_init\s*\d+.\d+\s*(\d+.\d+)")
-    sbc_cpl_snd_regex = re.compile(r"\s*sbc_cpl_snd\s*\d+.\d+\s*(\d+.\d+)")
-    sbc_ice_cice_regex = re.compile(r"\s*sbc_ice_cice\s*\d+.\d+\s*(\d+.\d+)")
-
-    #depending on the particular configuration we may not be able to determine
-    #the time spent in CICE
-    cice_measurement = False
-    with common.open_text_file(nemo_timing_output, 'r') as nemo_timing_handle:
-        for line in nemo_timing_handle.readlines():
-            tot_match = total_time_regex.search(line)
-            cpl_rcv_match = sbc_cpl_rcv_regex.search(line)
-            cpl_init_match = sbc_cpl_init_regex.search(line)
-            cpl_snd_match = sbc_cpl_snd_regex.search(line)
-            sbc_ice_cice_match = sbc_ice_cice_regex.search(line)
-            if tot_match:
-                total_time = float(tot_match.group(1))
-            if cpl_rcv_match:
-                rcv_percentge = float(cpl_rcv_match.group(1))
-            if cpl_init_match:
-                init_percentge = float(cpl_init_match.group(1))
-            if cpl_snd_match:
-                snd_percentge = float(cpl_snd_match.group(1))
-            if sbc_ice_cice_match:
-                cice_percentage = float(sbc_ice_cice_match.group(1))
-                cice_measurement = True
-
-    try:
-        model_time = total_time * \
-            (100.0 - rcv_percentge - init_percentge - snd_percentge) * 0.01
-        coupling_time = total_time * \
-            (rcv_percentge + init_percentge + snd_percentge) * 0.01
-        put_time = total_time * snd_percentge * 0.01
-    except NameError:
-        sys.stderr.write('[FAIL] Unable to determine Oasis timings from'
-                         ' the NEMO standard output\n')
-        sys.exit(error.MISSING_CONTROLLER_FILE_ERROR)
-
-    if cice_measurement:
-        cice_time = total_time * cice_percentage * 0.01
-    else:
-        sys.stdout.write('[INFO] Unable to determine time in CICE for this'
-                         ' configuration')
-        cice_time = False
-
-    return model_time, coupling_time, put_time, cice_time
-
-
-def __update_namelists_for_timing_um(cpmip_envar, nml_shared, nml_ioscntl):
-    '''
-    Update the UM namelists to ensure that the timers are set
-    to be running
-    '''
-    mod_shared_nl = common.ModNamelist(nml_shared)
-    try:
-        num_version = float(cpmip_envar['VN'])
-    except ValueError:
-        sys.stderr.write('Expecting a numerical value for UM Version in'
-                         ' environment variable VN. Instead got %s\n' %
-                         cpmip_envar['VN'])
-        sys.exit(error.INVALID_EVAR_ERROR)
-    # For versions of UM prior to 10.7 the oasis timers can not be run
-    # independently from the general UM timers
-    if num_version < 10.7:
-        mod_shared_nl.var_val('ltimer', '.true.')
-    else:
-        mod_shared_nl.var_val('ltimer', '.false.')
-    mod_shared_nl.var_val('l_oasis_timers', '.true.')
-
-    #If required update the namelist for IO timing.
-    if cpmip_envar['IO_COST'] in ('true', 'True'):
-        mod_shared_nl.var_val('lstashdumptimer', '.true.')
-        nn_timing_val = 2
-    else:
-        nn_timing_val = 1
-
-    mod_shared_nl.replace()
-
-    # Let the UM only write out on the first task (rank 0) to attempt to
-    # avoid too much skewing of load balancing information. prnt_writers
-    # takes integer values: 1 - all tasks, 2 - rank 0, 3 - rank 0 and head
-    # IO servers
-    mod_ioscntl_nl = common.ModNamelist(nml_ioscntl)
-    mod_ioscntl_nl.var_val('prnt_writers', 2)
-    mod_ioscntl_nl.replace()
-
-    # Ocean needs to know about nn_timing_val
-    return nn_timing_val
-
-def __update_namelists_for_timing_nemo(cpmip_envar, nn_timing_val):
-    '''
-    Update NEMO namelist to ensure that timers are running
-    '''
-    mod_namelist_cfg = common.ModNamelist(cpmip_envar['NEMO_NL'])
-    mod_namelist_cfg.var_val('nn_timing', nn_timing_val)
-    mod_namelist_cfg.replace()
-
-
-def __update_namelists_for_timing(common_env, cpmip_envar):
+def _update_namelists_for_metrics(common_env, cpmip_envar):
     '''
     Update the UM and NEMO namelists to ensure that the timers are set
     to be running
@@ -640,136 +75,16 @@ def __update_namelists_for_timing(common_env, cpmip_envar):
     # Update namelists for UM
     if 'um' in common_env['models']:
         nn_timing_val = \
-            __update_namelists_for_timing_um(cpmip_envar, 'SHARED',
-                                             'IOSCNTL')
+            cpmip_um.update_input_for_metrics_um(cpmip_envar, 'SHARED',
+                                                 'IOSCNTL')
 
     # Update namelists for Jnr
     if 'jnr' in common_env['models']:
-        _ = __update_namelists_for_timing_um(cpmip_envar, 'SHARED_JNR',
-                                             'IOSCNTL_JNR')
+        _ = cpmip_um.update_input_for_metrics_um(cpmip_envar, 'SHARED_JNR', 'IOSCNTL_JNR')
 
     # Update namelist for NEMO
     if 'nemo' in common_env['models']:
-        __update_namelists_for_timing_nemo(cpmip_envar, nn_timing_val)
-
-
-def _get_component_resolution(nlist_file, resolution_variables):
-    '''
-    Get the total componenet resolution nx x ny x nz from a given namelist
-    file. The arguments are a namelist file, and a list of the resolution
-    variables within that namelist. Returns a single value
-    '''
-    resolution = 1
-    for res_var in resolution_variables:
-        _, out = common.exec_subproc(['grep', res_var, nlist_file],
-                                     verbose=True)
-        i_res = int(re.search(r'(\d+)', out).group(0))
-        resolution *= i_res
-    return resolution
-
-
-def __increment_dump(datestr, resub, resub_units):
-    '''
-    Increment the dump date to end of cycle, so it can be found to
-    calculate complexity
-    '''
-    resub = int(resub)
-    if 'm' in resub_units.lower():
-        resub *= 30
-    year = int(datestr[:4])
-    month = int(datestr[4:6])
-    day = int(datestr[6:])
-    day += resub
-    if day > 30:
-        day = day - 30
-        month += 1
-    if month > 12:
-        month = month - 12
-        year += 1
-    return '%04d%02d%02d' % (year, month, day)
-
-
-def _get_complexity_um(model_name, runid, datam_dir, cycle_date,
-                       msg, total_complexity):
-    '''
-    Calculate the UM complexity
-    '''
-    dump_name = '%sa.da%s_00' % (runid, cycle_date)
-    dump_path = os.path.join(datam_dir, dump_name)
-
-    # Get the fraction of fields within the model that are prognostic
-    if MULE_AVAIL and os.path.isfile(dump_path):
-        umfile = mule.UMFile.from_file(dump_path,
-                                       remove_empty_lookups=True)
-        # What number of our fields are prognostics?
-        prog_fields = umfile.fixed_length_header.raw[153]
-        # How many levels are in the model (p_levels)
-        number_p_levels = umfile.integer_constants.raw[8]
-        # What is the resolution of the model?
-        um_res = umfile.integer_constants.raw[6] * \
-            umfile.integer_constants.raw[7] * number_p_levels
-        um_complexity = float(prog_fields) / float(number_p_levels)
-        msg += 'The %s complexity is %i, and total resolution %i\n' % \
-            (model_name, um_complexity, um_res)
-        total_complexity += um_complexity
-    else:
-        msg += 'Unable to calculate %s complexity and %s resolution\n' % \
-            (model_name, model_name)
-
-    return msg, total_complexity
-
-def _get_complexity(common_env, cpmip_envar):
-    '''
-    Calculate the model complexity. Takes in the cpmip_envar object and
-    returns a message containing the complexity and resolution of indivdual
-    models, and the total complexity of the coupled configuration to be
-    written to standard output and cpmip.output
-    '''
-    cycle_date = cpmip_envar['CYLC_TASK_CYCLE_POINT'].split('T')[0]
-    msg = ''
-    total_complexity = 0.0
-
-    cycle_date = __increment_dump(cycle_date, cpmip_envar['RESUB'],
-                                  cpmip_envar['CYCLE'])
-    if 'um' in common_env['models']:
-        msg, total_complexity = \
-            _get_complexity_um('UM', common_env['RUNID'],
-                               cpmip_envar['DATAM'], cycle_date,
-                               msg, total_complexity)
-
-    if 'jnr' in common_env['models']:
-        msg, total_complexity = \
-            _get_complexity_um('Jnr', cpmip_envar['RUNID_JNR'],
-                               cpmip_envar['DATAM'], cycle_date,
-                               msg, total_complexity)
-
-    if 'nemo' in common_env['models']:
-        nemo_res = _get_component_resolution(cpmip_envar['NEMO_NL'],
-                                             ('jpiglo', 'jpjglo', 'jpkdta'))
-        size_k = _get_glob_usage('%s/NEMOhist/*%s*' %
-                                 (cpmip_envar['DATAM'], cycle_date))
-        if size_k > 0.0:
-            nemo_words = size_k * (1024./8)
-            nemo_complexity = nemo_words / float(nemo_res)
-            msg += 'NEMO complexity is %i, and total resolution %i\n' % \
-                (nemo_complexity, nemo_res)
-            total_complexity += nemo_complexity
-
-    if 'cice' in common_env['models']:
-        cice_cycle_date = '%s-%s-%s' % (cycle_date[:4],
-                                        cycle_date[4:6], cycle_date[6:])
-        cice_res = int(cpmip_envar['CICE_COL']) * int(cpmip_envar['CICE_ROW'])
-        size_k = _get_glob_usage('%s/CICEhist/*%s*' %
-                                 (cpmip_envar['DATAM'], cice_cycle_date))
-        if size_k > 0.0:
-            cice_words = size_k * (1024./8)
-            cice_complexity = cice_words / float(cice_res)
-            msg += 'CICE complexity is %i, and total resolution %i\n' % \
-                (cice_complexity, cice_res)
-            total_complexity += cice_complexity
-
-    msg += 'Total model complexity is %i\n' % (total_complexity)
-    return msg
+        cpmip_nemo.update_namelists_for_timing_nemo(cpmip_envar, nn_timing_val)
 
 
 def _load_environment_variables(cpmip_envar):
@@ -811,14 +126,14 @@ def _setup_cpmip_controller(common_env):
     cpmip_envar['ATMOS_KEEP_MPP_STDOUT'] = 'true'
 
     # Modify namelists, so information is available to plot later
-    __update_namelists_for_timing(common_env, cpmip_envar)
+    _update_namelists_for_metrics(common_env, cpmip_envar)
 
     # Are we prerforming the data intensity or data cost calculations
     # Modify iodef.xml file so that timing files are produced
     if (cpmip_envar['DATA_INTENSITY'] in ('true', 'True') or \
         cpmip_envar['IO_COST'] in ('true', 'True')) and \
         'nemo' in common_env['models']:
-        data_metrics_setup_nemo(common_env)
+        cpmip_xios.data_metrics_setup_nemo()
 
     if cpmip_envar['DATA_INTENSITY'] in ('true', 'True'):
         sys.stdout.write('[INFO] Calculating the data intensity metric.'
@@ -827,7 +142,7 @@ def _setup_cpmip_controller(common_env):
                          ' model drivers\n')
         # Get the intial data size for DATAM directory (for all model
         # components)
-        data_intensity_initial(common_env, cpmip_envar)
+        cpmip_metrics.data_intensity_initial(common_env, cpmip_envar)
 
 
     return cpmip_envar
@@ -839,21 +154,6 @@ def _set_launcher_command(_):
     '''
     launch_cmd = ''
     return launch_cmd
-
-
-def _time_resources_um(cpmip_envar, mpi_tasks_total, stdout_file_str):
-    '''
-    Finalize code for UM
-    '''
-    # Determine the name of the UM pe0 output file.
-    pe0_suffix = '0'*(len(str(mpi_tasks_total - 1)))
-    um_pe0_stdout_file = '%s%s' % (cpmip_envar[stdout_file_str],
-                                   pe0_suffix)
-
-    # UM time is for one processor
-    um_time, um_coupling_time, um_put_time = __get_um_info(um_pe0_stdout_file)
-
-    return um_time, um_coupling_time, um_put_time, um_pe0_stdout_file
 
 
 def _finalize_cpmip_controller(common_env):
@@ -878,19 +178,20 @@ def _finalize_cpmip_controller(common_env):
     # Time resources for UM
     if 'um' in common_env['models']:
         um_time, um_coupling_time, um_put_time, um_pe0_stdout_file = \
-            _time_resources_um(cpmip_envar, mpi_tasks['UM'], 'STDOUT_FILE')
+            cpmip_um.time_resources_um(cpmip_envar,
+                                       mpi_tasks['UM'], 'STDOUT_FILE')
 
     # Time resources for Jnr
     if 'jnr' in common_env['models']:
         jnr_time, jnr_coupling_time, jnr_put_time, jnr_pe0_stdout_file = \
-            _time_resources_um(cpmip_envar, mpi_tasks['JNR'],
-                               'STDOUT_FILE_JNR')
+            cpmip_um.time_resources_um(cpmip_envar, mpi_tasks['JNR'],
+                                       'STDOUT_FILE_JNR')
 
     # NEMO time is integrated over all processors when returned from
-    # __get_nemo_info()
+    # get_nemo_info()
     if 'nemo' in common_env['models']:
         nemo_time, nemo_coupling_time, nemo_put_time, cice_time = \
-            __get_nemo_info()
+            cpmip_nemo.get_nemo_info()
         nemo_time /= nemo_cpus
         nemo_coupling_time /= nemo_cpus
         nemo_put_time /= nemo_cpus
@@ -900,7 +201,7 @@ def _finalize_cpmip_controller(common_env):
         cice_time = False
 
     # Get the arguments from the -l PBS directive
-    pbs_l_dict = __get_jobfile_info(cpmip_envar['CYLC_TASK_LOG_ROOT'])
+    pbs_l_dict = cpmip_utils.get_jobfile_info(cpmip_envar['CYLC_TASK_LOG_ROOT'])
 
     # Determine the total number of CPUS ALLOCATED for the run. If the
     # coretype can not be determined we can not calculate this value
@@ -973,8 +274,8 @@ def _finalize_cpmip_controller(common_env):
                        - nemo_resource - xios_resource) / total_resource
 
     # Run in years per day (as measured by APRUN)
-    years_run = tasklength_to_years(cpmip_envar['TASKLENGTH'])
-    runtime_days = seconds_to_days(int(cpmip_envar['time_in_aprun']))
+    years_run = cpmip_utils.tasklength_to_years(cpmip_envar['TASKLENGTH'])
+    runtime_days = cpmip_utils.seconds_to_days(int(cpmip_envar['time_in_aprun']))
     years_per_day = years_run / runtime_days
 
     aprun_time_message = 'Time in APRUN: %s s\n' % cpmip_envar['time_in_aprun']
@@ -1003,7 +304,7 @@ def _finalize_cpmip_controller(common_env):
 
     # Other metrics
     if allocated_cpus:
-        chsy_message = chsy_metric(allocated_cpus, total_cpus, years_run, \
+        chsy_message = cpmip_metrics.chsy_metric(allocated_cpus, total_cpus, years_run, \
                                        int(cpmip_envar['time_in_aprun']) * \
                                        secs_to_hours)
         cores_message = 'Cores per node: %s\n' % plat_cores_per_node
@@ -1020,21 +321,21 @@ def _finalize_cpmip_controller(common_env):
 
         # Determine for the UM
         if 'um' in common_env['models']:
-            um_io_time = __get_um_io(um_pe0_stdout_file)
+            um_io_time = cpmip_um.get_um_io(um_pe0_stdout_file)
             um_io_frac = float(um_io_time) / float(um_time)
             um_io_frac_mess = 'The UM spends %i s performing IO\n   This' \
                 ' is a fraction of %.2f\n' % (um_io_time, um_io_frac)
 
         # Determine for Jnr
         if 'jnr' in common_env['models']:
-            jnr_io_time = __get_um_io(jnr_pe0_stdout_file)
+            jnr_io_time = cpmip_um.get_um_io(jnr_pe0_stdout_file)
             jnr_io_frac = float(jnr_io_time) / float(jnr_time)
             jnr_io_frac_mess = 'Jnr spends %i s performing IO\n   This' \
                 ' is a fraction of %.2f\n' % (jnr_io_time, jnr_io_frac)
 
         # Determine for NEMO
         if 'nemo' in common_env['models']:
-            nemo_io_time = __get_nemo_io()
+            nemo_io_time = cpmip_nemo.get_nemo_io()
             nemo_io_time /= nemo_cpus
             nemo_io_frac = float(nemo_io_time) / float(nemo_time)
             nemo_io_frac_mess = 'NEMO spends %i s performing IO\n   This' \
@@ -1042,7 +343,7 @@ def _finalize_cpmip_controller(common_env):
 
         # Determine XIOS client
         if 'xios' in common_env['models']:
-            xios_client_mean, xios_client_max = _measure_xios_client_times()
+            xios_client_mean, xios_client_max = cpmip_xios.measure_xios_client_times()
             xios_io_mess = 'XIOS spends on average %i s in each client, and' \
                 ' a maxiumum time of %i s\n' % (xios_client_mean,
                                                 xios_client_max)
@@ -1056,7 +357,7 @@ def _finalize_cpmip_controller(common_env):
         core_hour_cycle = total_cpus * \
             float(int(cpmip_envar['time_in_aprun']) * secs_to_hours)
         data_produced, data_intensity = \
-            data_intensity_final(core_hour_cycle, common_env, cpmip_envar)
+            cpmip_metrics.data_intensity_final(core_hour_cycle, common_env, cpmip_envar)
         if data_intensity > -1:
             data_intensity_msg = 'This cycle produces %.2f GiB of data.\n' \
                 '  The data intensity metric is %.6f GiB per core hour\n' % \
@@ -1070,12 +371,13 @@ def _finalize_cpmip_controller(common_env):
 
 
     if 'true' in cpmip_envar['COMPLEXITY'].lower():
-        complexity_msg = _get_complexity(common_env, cpmip_envar)
+        complexity_msg = cpmip_metrics.complexity_metric(common_env, cpmip_envar)
     else:
         complexity_msg = ''
-    jpsy_msg = jpsy_metric(cpmip_envar['TOTAL_POWER_CONSUMPTION'],
-                           cpmip_envar['NODES_IN_HPC'], number_nodes,
-                           cpmip_envar['time_in_aprun'], years_run)
+    jpsy_msg = cpmip_metrics.jpsy_metric(
+        cpmip_envar['TOTAL_POWER_CONSUMPTION'],
+        cpmip_envar['NODES_IN_HPC'], number_nodes,
+        cpmip_envar['time_in_aprun'], years_run)
 
 
 
@@ -1097,7 +399,7 @@ def _finalize_cpmip_controller(common_env):
     sys.stdout.write(ypd_message)
     sys.stdout.write('\nResource for components in units of core hours\n')
     if 'um' in common_env['models']:
-        sys.stdout.write('  UM Resource %.2f\n' % (um_resource * 
+        sys.stdout.write('  UM Resource %.2f\n' % (um_resource *
                                                    secs_to_hours,))
     if 'jnr' in common_env['models']:
         sys.stdout.write('  Jnr Resource %.2f\n' % (jnr_resource *
