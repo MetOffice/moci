@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2020 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -478,6 +478,7 @@ class MeaningTests(unittest.TestCase):
         self.flagdir = os.path.join(os.getcwd(), 'mean_archflags')
 
         self.atmos.suite = mock.Mock()
+        self.atmos.suite.finalcycle = False
         self.atmos.suite.meanref = [1978, 9, 1]
         self.atmos.suite.prefix = 'RUNID'
         self.atmos.share = os.getcwd()
@@ -1070,6 +1071,53 @@ class MeaningTests(unittest.TestCase):
                          ('1998', '01', '01'))
         self.assertEqual(mock_create.call_args[0][0].component_files,
                          [os.path.join(os.getcwd(), 'decadeset')])
+
+    @mock.patch('atmos.utils.get_subset')
+    @mock.patch('atmos.climatemean.create_mean')
+    def test_do_meaning_ssn_finalcycle(self, mock_create, mock_set):
+        ''' Test call to do_meaning - seasonal only, base=1m'''
+        func.logtest('Assert call to do_meaning - create seasonal mean only:')
+        self.atmos.naml.atmospp.create_monthly_mean = False
+        self.atmos.naml.atmospp.create_seasonal_mean = True
+        self.atmos.naml.atmospp.create_annual_mean = False
+        self.atmos.naml.atmospp.create_decadal_mean = False
+
+        self.atmos.naml.atmospp.meanbase_stream = 'a'
+        self.atmos.naml.atmospp.meanbase_period = '1m'
+        self.atmos.requested_means = self.atmos._requested_means()
+        self.atmos.suite.finalcycle = True
+
+        # Calls to mock_set - get files matching:
+        #   [0] .arch file to move to flags directory
+        #   [1] .arch files in flags directory representing seasons set-ends
+        #   [2] seasonal mean component files for Jun-Jul-Aug
+        #   [3] Setend files present in share but not yet marked for archive
+        #   [4] seasonal mean component files for Dec-Jan-Feb
+        mock_set.side_effect = [[],
+                                ['RUNIDa.pa1990aug'], ['seasonsetJJA'],
+                                ['RUNIDa.pa1991feb'], ['seasonsetDJF']]
+        self.atmos.do_meaning()
+
+        self.assertListEqual(
+            mock_set.mock_calls,
+            [mock.call(os.getcwd(),
+                       r'^RUNIDa\.([pm][a])\d{4}(\d{4}|\w{3})(_\d{2})?.arch$'),
+             mock.call(self.flagdir,
+                       r'^RUNIDa\.([pm][a])\d{4}(aug|nov|feb|may).arch$'),
+             mock.call(os.getcwd(),
+                       r'^RUNIDa\.([pm][a])(1990jun|1990jul|1990aug)(\.pp)?$'),
+             mock.call(self.atmos.share,
+                       r'^RUNIDa\.([pm][a])\d{4}(aug|nov|feb|may)$'),
+             mock.call(os.getcwd(),
+                       r'^RUNIDa\.([pm][a])(1990dec|1991jan|1991feb)(\.pp)?$')]
+            )
+
+        self.assertEqual(mock_create.call_args[0][0].fname['file'],
+                         'RUNIDa.ps1991djf')
+        self.assertEqual(mock_create.call_args[0][0].periodend,
+                         ('1991', '03', '01'))
+        self.assertEqual(mock_create.call_args[0][0].component_files,
+                         [os.path.join(os.getcwd(), 'seasonsetDJF')])
 
 
 class PropertyTests(unittest.TestCase):

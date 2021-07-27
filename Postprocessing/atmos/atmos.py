@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2020 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -506,6 +506,12 @@ class AtmosPostProc(control.RunPostProc):
                         arch = os.path.join(flagdir, cmpt + '.arch')
                         if os.path.exists(arch):
                             utils.move_files(arch, self.work)
+
+            if self.suite.finalcycle:
+                # Check for base components not yet reinitialised
+                for setend in housekeeping.get_marked_files(self.share, endpatt,
+                                                            ''):
+                    _ = self.update_meanfile(meanfile, setend)
 
             basestream = 'p' + meanfile.period[-1]
 
