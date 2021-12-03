@@ -1,7 +1,7 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2017 Met Office. All rights reserved.
+ (C) Crown copyright 2017-2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -20,7 +20,7 @@ DESCRIPTION
     Perturb at the bit level the atmosphere theta field used by the ENDGame
     model (Section 0, Item 388).
     An option is provided to perturb an alternative STASH item if required.
- 
+
     The perturbation is deterministic since the random number seed used is
     generated from a hash of the input filename.
 
@@ -61,7 +61,7 @@ class ArgumentsError(Exception):
     Exception raised when there is an error detected in the argument list.
     '''
     def __init__(self, msg):
-        print '[FATAL ERROR] ', msg
+        print('[FATAL ERROR] ' + msg)
         raise SystemExit
 
 
@@ -125,7 +125,7 @@ def main():
     args = parser.parse_args()
 
     if args.stash == 388:
-        print 'Perturbing Field - Sec 0, Item 388: ThetaVD After Timestep'
+        print('Perturbing Field - Sec 0, Item 388: ThetaVD After Timestep')
     else:
         item = str(args.stash)
         if args.stash > 1000:
@@ -133,7 +133,7 @@ def main():
             item = item[-3:]
         else:
             sec = '0'
-        print 'Perturbing Field - Sec {}, Item {}'.format(sec, item)
+        print('Perturbing Field - Sec {}, Item {}'.format(sec, item))
 
     dump_in = args.inputfile
     if not os.path.exists(dump_in):
@@ -141,7 +141,7 @@ def main():
 
     if args.output == '':
         dump_out = os.path.join(os.getcwd(), dump_in + '_perturbed')
-        print 'Output dump name unspecified\n --> Output file = ' + dump_out
+        print('Output dump name unspecified\n --> Output file = ' + dump_out)
     else:
         dump_out = args.output
 
@@ -166,16 +166,15 @@ def main():
         dfile.to_file(dump_out)
     except mule.validators.ValidateError as err:
         if 'incompatible grid type' in str(err) and 'Field grid: 3' in str(err):
-            print str(err)
-            print '[WARN] Mule is unable to validate due to subdomain ' + \
-                'fields present - Skipping Mule validation'
+            print(str(err))
+            print('[WARN] Mule is unable to validate due to subdomain '
+                  'fields present - Skipping Mule validation')
             # Overwrite the validation it would normally use
             dfile.validate = dummy_mule_validate
             dfile.to_file(dump_out)
         else:
-            print ''
-            print '[ERROR] Mule failed to validate fields writing to file: ',
-            print dump_out
+            print('\n[ERROR] Mule failed to validate fields writing to file: ')
+            print(dump_out)
             raise mule.validators.ValidateError(dump_in, '')
 
 
