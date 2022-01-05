@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2018 Met Office. All rights reserved.
+ (C) Crown copyright 2021-2022 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -174,25 +174,29 @@ def extract_to_netcdf(fieldsfile, fields, ncftype, complevel):
         icode = -1
 
     if icode == 0:
+        current_output = ''
         # Loop over requested fields
         for field in sorted(all_cubes.field_attributes):
             fattr = all_cubes.field_attributes[field]
             descriptor = '_' + stream_id
             if fattr['Descriptor']:
                 descriptor += '-' + fattr['Descriptor']
-                ncfilename = os.path.join(
-                    dirname,
-                    NCF_TEMPLATE.format(P=ncf_prefix,
-                                        B=fattr['DataFrequency'],
-                                        S=fattr['StartDate'],
-                                        E=fattr['EndDate'],
-                                        C=descriptor)
-                    )
+            ncfilename = NCF_TEMPLATE.format(P=ncf_prefix,
+                                             B=fattr['DataFrequency'],
+                                             S=fattr['StartDate'],
+                                             E=fattr['EndDate'],
+                                             C=descriptor)
+            if ncfilename != current_output:
+                # Failure recovery - remove any pre-existing files
+                utils.remove_files(ncfilename, ignore_non_exist=True)
+                current_output = ncfilename
             icode += iris_transform.save_format(fattr['IrisCube'],
                                                 ncfilename,
                                                 'netcdf',
                                                 kwargs={'complevel': complevel,
                                                         'ncftype': ncftype})
+            if dirname:
+                utils.move_files(ncfilename, dirname)
 
     return icode
 

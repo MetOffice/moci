@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2021 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2022 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -307,7 +307,7 @@ class AtmosPostProc(control.RunPostProc):
         '''
         Return a list of fields/pp files eligible to file transformation
         or archive.
-        Filenames returned will always incude full path.
+        Filenames returned will always include full path.
         '''
         datadir = self.share if finalcycle else self.work
         suffix = r'(\.pp)?' if finalcycle else '.arch'
@@ -343,16 +343,17 @@ class AtmosPostProc(control.RunPostProc):
                 msg = 'File for processing {} does not exist'.format(fnfull)
                 utils.log_msg(msg, level='WARN')
 
-        # Collect any previously created netCDF files
-        ncfiles = utils.get_subset(
-            self.share,
-            NCF_TEMPLATE.format(P='atmos_{}a'.format(self.suite.prefix),
-                                B=r'\d+[hdmsyx]',
-                                S=r'\d{8}',
-                                E=r'\d{8}',
-                                C='.*') + '$'
+        if self.naml.archiving.archive_ncf:
+            # Collect any previously created netCDF files for archiving
+            ncfiles = utils.get_subset(
+                self.share,
+                NCF_TEMPLATE.format(P='atmos_{}a'.format(self.suite.prefix),
+                                    B=r'\d+[hdmsyx]',
+                                    S=r'\d{8}(\d{2})?',
+                                    E=r'\d{8}(\d{2})?',
+                                    C='.*') + '$'
             )
-        process_files += [os.path.join(self.share, fn) for fn in ncfiles]
+            process_files += [os.path.join(self.share, fn) for fn in ncfiles]
 
         return process_files
 
@@ -544,7 +545,11 @@ class AtmosPostProc(control.RunPostProc):
                             finalcycle is True
                             )
 
-            if self.ff_match(self.netcdf_streams, filename=basename):
+            # Ensure previously created pp files are picked up from here on
+            if basename.endswith('.pp'):
+                basename = basename[:-3]
+
+            if self.ff_match(self.netcdf_streams, basename):
                 icode = transform.extract_to_netcdf(
                     fname, self.netcdf_fields,
                     self.naml.atmospp.netcdf_filetype,

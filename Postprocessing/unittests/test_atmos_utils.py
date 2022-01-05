@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2020 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2022 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -772,8 +772,7 @@ class AtmosTransformTests(unittest.TestCase):
         icode = atmos_transform.extract_to_netcdf(self.ppfile,
                                                   {'air_temperature': 'F1'},
                                                   'NETCDF4', None)
-        outfile = os.path.join(os.path.dirname(self.ppfile),
-                               'atmos_suiteIDa_4y_19941201-19981201_p9-F1.nc')
+        outfile = 'atmos_suiteIDa_4y_19941201-19981201_p9-F1.nc'
         mock_save.assert_called_once_with(mock.ANY, outfile, 'netcdf',
                                           kwargs={'ncftype': 'NETCDF4',
                                                   'complevel': None})
@@ -790,8 +789,7 @@ class AtmosTransformTests(unittest.TestCase):
         icode = atmos_transform.extract_to_netcdf(self.ppfile,
                                                   {'air_temperature': 'F1'},
                                                   'NETCDF', 5)
-        outfile = os.path.join(os.path.dirname(self.ppfile),
-                               'atmos_suiteIDa_4y_19941201-19981201_p9-F1.nc')
+        outfile = 'atmos_suiteIDa_4y_19941201-19981201_p9-F1.nc'
         mock_save.assert_called_once_with(mock.ANY, outfile, 'netcdf',
                                           kwargs={'ncftype': 'NETCDF',
                                                   'complevel': 5})

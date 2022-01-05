@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2021 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2022 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -262,6 +262,7 @@ class ArchiveDeleteTests(unittest.TestCase):
         func.logtest('Assert netCDF diagnostics files list created:')
         mock_getfiles.return_value = []
         mock_set.return_value = self.ncfiles
+        self.atmos.naml.archiving.archive_ncf = True
 
         ncfiles = self.atmos.diags_to_process(False)
         self.assertListEqual(ncfiles,
@@ -274,8 +275,19 @@ class ArchiveDeleteTests(unittest.TestCase):
                        '.arch')]
             )
         mock_set.assert_called_once_with(
-            os.getcwd(), r'atmos_Ra_\d+[hdmsyx]_\d{8}-\d{8}.*.nc$'
+            os.getcwd(), r'atmos_Ra_\d+[hdmsyx]_\d{8}(\d{2})?-\d{8}(\d{2})?.*.nc$'
             )
+    @mock.patch('atmos.housekeeping.get_marked_files')
+    @mock.patch('atmos.transform.utils.get_subset')
+    def test_noarchive_netcdf_diags(self, mock_set, mock_getfiles):
+        '''Test not archivng netCDF diagnostic files'''
+        func.logtest('Assert netCDF diagnostics files list not created:')
+        mock_getfiles.return_value = []
+        self.atmos.naml.archiving.archive_ncf = False
+
+        ncfiles = self.atmos.diags_to_process(False)
+        self.assertListEqual(mock_set.mock_calls, [])
+        self.assertListEqual(ncfiles, [])
 
     @mock.patch('atmos.housekeeping.get_marked_files')
     def test_select_diags_non_existent(self, mock_getfiles):
@@ -374,6 +386,22 @@ class ArchiveDeleteTests(unittest.TestCase):
         self.atmos.do_transform()
         mock_getfiles.assert_called_once_with(False)
         mock_ncf.assert_called_once_with(self.ffiles[1], {'field1': 'F1'},
+                                         'NETCDF4', None)
+
+    @mock.patch('atmos.AtmosPostProc.diags_to_process')
+    @mock.patch('atmos.transform.extract_to_netcdf', return_value=0)
+    def test_transform_netcdf_ppfiles(self, mock_ncf, mock_getfiles):
+        '''Test do_transform - collect netCDF files - pp available'''
+        func.logtest('Assert netCDF files list for do_tranform:')
+        self.atmos.naml.atmospp.convert_pp = False
+        self.atmos.naml.atmospp.fields_to_netcdf = ['field1', 'F1']
+        self.atmos.netcdf_streams = '([pm][b])'
+
+        mock_getfiles.return_value = self.ppfiles
+
+        self.atmos.do_transform()
+        mock_getfiles.assert_called_once_with(False)
+        mock_ncf.assert_called_once_with(self.ppfiles[0], {'field1': 'F1'},
                                          'NETCDF4', None)
 
     @mock.patch('atmos.AtmosPostProc.diags_to_process')

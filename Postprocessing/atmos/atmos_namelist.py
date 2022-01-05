@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2018 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2022 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -64,6 +64,7 @@ class Archiving(object):
     arch_timestamps = []
     archive_dumps = False
     archive_pp = False
+    archive_ncf = False
     arch_year_month = None
 
 

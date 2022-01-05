@@ -37,6 +37,7 @@
 module unload scitools um_tools
 {% if PYTHON3 %}
 module load scitools scitools/default-current ;
+module swap ifort/16.0_64 ;
 module load um_tools ;
 {% else %}
 module load scitools/production_legacy-os42-1

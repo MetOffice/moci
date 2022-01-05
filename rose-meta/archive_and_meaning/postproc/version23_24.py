@@ -16,16 +16,16 @@ class UpgradeError(Exception):
       __str__ = __repr__
 
 
-class pp23_tXXX(rose.upgrade.MacroUpgrade):
+class pp23_t550(rose.upgrade.MacroUpgrade):
 
-    """Upgrade macro for ticket #XXX by <Author>."""
+    """Upgrade macro for ticket #550, committed under #548 by EricaNeininger."""
     BEFORE_TAG = "postproc_2.3"
-    AFTER_TAG = "pp23_tXXX"
+    AFTER_TAG = "pp23_t548"
 
     def upgrade(self, config, meta_config=None):
         """Upgrade a Postproc make app configuration."""
-        # Add changes here...
-
+        self.add_setting(config,
+                         ["namelist:archiving", "archive_ncf",], "true")
         return config, self.reports
 
 
