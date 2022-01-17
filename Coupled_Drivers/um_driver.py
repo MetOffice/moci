@@ -158,8 +158,11 @@ def _calc_current_model_date(xhistfile, calendar, prev_work_dir):
     '''
     ref_date_format = 'seconds since %Y-%m-%d %H:%M:%S'
 
+    # modify the calendar names for compatability with cf_units module
     if calendar == "360day":
         calendar = "360_day"
+    if calendar == "365day":
+        calendar = "365_day"
 
     # Retrieve the model start date for this model run, and
     # the number of completed steps from the UM history file.

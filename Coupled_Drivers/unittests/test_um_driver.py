@@ -164,6 +164,18 @@ class TestGrabFileInfo(unittest.TestCase):
                 self.xhist, calendar, self.prev_work_dir)
             )
 
+    def test_calc_current_model_date_365day(self):
+        """Check that the current UM model step date is returned for a
+        365-day calendar."""
+        expected_value = cf_units.cftime.DatetimeNoLeap(2019, 3, 17)
+        calendar = '365day'
+
+        self.assertEqual(
+            expected_value,
+            um_driver._calc_current_model_date(
+                self.xhist, calendar, self.prev_work_dir)
+            )
+
     def test_verify_rst_fix_dates_match(self):
         """Check that the function correctly validates the dump if the dump
         date and model progress match.

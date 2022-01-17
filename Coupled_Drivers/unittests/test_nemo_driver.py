@@ -94,6 +94,18 @@ class TestCalcModelDate(unittest.TestCase):
                 self.nemo_last_step, calendar)
             )
 
+    def test_model_date_365day(self):
+        """Check that the correct date is returned for a 365 day calendar"""
+        expected_restart_date = cf_units.cftime.DatetimeNoLeap(1993, 11, 16)
+        calendar = '365day'
+        
+        self.assertEqual(
+            expected_restart_date,
+            nemo_driver._calc_current_model_date(
+                self.model_step_start, self.nemo_step_int,
+                self.nemo_last_step, calendar)
+            )
+
 
 class TestVerifyFixRestart(unittest.TestCase):
     """Unit tests for the _verify_fix_restart function"""

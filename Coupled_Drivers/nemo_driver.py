@@ -139,8 +139,11 @@ def _calc_current_model_date(model_basis_time, time_step, num_steps,
     '''
     ref_date_format = 'seconds since %Y-%m-%d %H:%M:%S'
 
+    # modify the calendar names for compatability with cf_units module
     if calendar == "360day":
         calendar = "360_day"
+    if calendar == "365day":
+        calendar = "365_day"
 
     # Provide a reference time for the timestep incrementation.
     ref_time = model_basis_time.strftime(ref_date_format)
