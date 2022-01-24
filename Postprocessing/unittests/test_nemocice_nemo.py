@@ -813,7 +813,7 @@ fchunksize=54321
         with mock.patch('nemo.utils.exec_subproc') as mock_exec:
             mock_exec.return_value = (0, '')
             self.nemo.rebuild_icebergs('TestDir', 'filebase', '1')
-        cmd = 'python2.7 {} -f TestDir/filebase_ -n 1 -o TestDir/filebase.nc'.\
+        cmd = 'python {} -f TestDir/filebase_ -n 1 -o TestDir/filebase.nc'.\
             format(self.defaults.exec_rebuild_icebergs)
         mock_exec.assert_called_once_with(cmd, cwd='TestDir')
         self.assertIn('Successfully rebuilt', func.capture())
@@ -970,7 +970,7 @@ class AdditionalArchiveTests(unittest.TestCase):
         self.nemo.naml.archiving.archive_iceberg_trajectory = True
         self.nemo.create_general()
 
-        cmd = 'python2.7 ICB_PP -t HERE/file1_ -n 2 -o HERE/RUNIDo_file1.nc'
+        cmd = 'python ICB_PP -t HERE/file1_ -n 2 -o HERE/RUNIDo_file1.nc'
         mock_exec.assert_called_once_with(cmd)
         mock_rm.assert_called_once_with(['file1_0000.nc', 'file1_0001.nc'],
                                         path='HERE')

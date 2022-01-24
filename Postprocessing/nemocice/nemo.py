@@ -488,7 +488,7 @@ class NemoPostProc(mt.ModelTemplate):
 
         fcm:NEMO/trunk/NEMOGCM/TOOLS/REBUILD_NEMO/icb_combrest.py
         '''
-        cmd = 'python2.7 {} -f {} -n {} -o {}'.format(
+        cmd = 'python {} -f {} -n {} -o {}'.format(
             self.rebuild_iceberg_cmd, os.path.join(datadir, filebase + '_'),
             ndom, os.path.join(datadir, filebase + '.nc')
             )
@@ -525,7 +525,7 @@ class NemoPostProc(mt.ModelTemplate):
             outputfile = os.path.join(self.share,
                                       '{}o_{}.nc'.format(self.prefix,
                                                          corename))
-            cmd = 'python2.7 {} -t {} -n {} -o {}'.format(
+            cmd = 'python {} -t {} -n {} -o {}'.format(
                 self.rebuild_iberg_traj_cmd,
                 os.path.join(self.share, corename + '_'),
                 len(bldset),
