@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016-2021 Met Office. All rights reserved.
+ (C) Crown copyright 2016-2022 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -421,15 +421,15 @@ class RestartFilesTests(unittest.TestCase):
         func.logtest('Assert list of archived nemo ice dumps:')
         # Default setting is bi-annual archive
         self.files.rst_types.append('nemo_ice_rst')
-        expect = ['PREFIXo_19951201_restart_ice.nc',
-                  'PREFIXo_19960601_restart_ice.nc',
-                  'PREFIXo_19961201_restart_ice.nc',
-                  'PREFIXo_19970601_restart_ice.nc',
-                  'PREFIXo_19971201_restart_ice.nc',
-                  'PREFIXo_19980601_restart_ice.nc']
+        expect = sorted(['PREFIXo_19951201_restart_ice.nc',
+                         'PREFIXo_19960601_restart_ice.nc',
+                         'PREFIXo_19961201_restart_ice.nc',
+                         'PREFIXo_19970601_restart_ice.nc',
+                         'PREFIXo_19971201_restart_ice.nc',
+                         'PREFIXo_19980601_restart_ice.nc'])
         actual = self.files.expected_files()
-        self.assertListEqual(actual['ida.file'], expect)
-        self.assertListEqual(list(actual.keys()), ['oda.file', 'ida.file'])
+        self.assertListEqual(sorted(actual['ida.file']), expect)
+        self.assertListEqual(sorted(actual.keys()), ['ida.file', 'oda.file'])
 
     def test_expected_nemo_dumps_buffer(self):
         ''' Test calculation of expected nemo restart files buffer=3'''

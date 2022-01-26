@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2018 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2022 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -27,12 +27,6 @@ import testing_functions as func
 import utils
 
 DUMMY = ['fileone', 'filetwo', 'filethree']
-
-if sys.version_info[:2] > (2, 7):
-    func.logtest('\n*** `rose date`, required for Gregorian calendar tests, '
-                 'is not compatible with Python 3.\n'
-                 '1 UTILS test (date_gregorian) will be skipped.\n')
-
 
 class EnvironTests(unittest.TestCase):
     '''Unit tests for loading environment variables'''
@@ -225,28 +219,17 @@ class DateCheckTests(unittest.TestCase):
         date = utils.add_period_to_date(self.indate, self.delta)
         self.assertListEqual(date, outdate)
 
-    @unittest.skipIf(sys.version_info[:2] > (2, 7),
-                     '`rose date` incompatible with Python3')
     def test_date_gregorian(self):
         '''Test adding period to Gregorian date'''
         func.logtest('Cylc6 date manipulation with Gregorian calendar:')
         outdate = [2004, 3, 6, 0, 30]
-        try:
-            with mock.patch('utils.calendar', return_value='gregorian'):
-                date = utils.add_period_to_date(self.indate, self.delta)
-                self.assertListEqual(date, outdate)
 
-                date = utils.add_period_to_date([2004, 2, 15], [0, 1, -1])
-                self.assertListEqual(date, [2004, 3, 14, 0, 0])
-        except SystemExit:
-            if 'SyntaxError: invalid syntax' in func.capture('err'):
-                # For the case where Python2.7 has been invoked (pass skipIf)
-                # but Python3 libraries are loaded:
-                #   `rose date` is incompatible with Python3 due to
-                #   `print` statement.
-                pass
-            else:
-                raise
+        with mock.patch('utils.calendar', return_value='gregorian'):
+            date = utils.add_period_to_date(self.indate, self.delta)
+            self.assertListEqual(date, outdate)
+
+            date = utils.add_period_to_date([2004, 2, 15], [0, 1, -1])
+            self.assertListEqual(date, [2004, 3, 14, 0, 0])
 
     def test_short_date(self):
         '''Test date input with short array'''
@@ -257,17 +240,9 @@ class DateCheckTests(unittest.TestCase):
         date = utils.add_period_to_date(indate, self.delta)
         self.assertListEqual(date, outdate)
 
-        try:
-            with mock.patch('utils.calendar', return_value='gregorian'):
-                date = utils.add_period_to_date(indate, self.delta)
-                self.assertListEqual(date, outdate)
-        except SystemExit:
-            if 'SyntaxError: invalid syntax' in func.capture('err'):
-                # `rose date` is incompatible with Python 3 libraries
-                # due to `print` statement
-                pass
-            else:
-                raise
+        with mock.patch('utils.calendar', return_value='gregorian'):
+            date = utils.add_period_to_date(indate, self.delta)
+            self.assertListEqual(date, outdate)
 
     def test_zero_date(self):
         '''Test date input with zero date input'''
@@ -283,19 +258,11 @@ class DateCheckTests(unittest.TestCase):
         date = utils.add_period_to_date(self.indate, delta)
         self.assertListEqual(date, outdate)
 
-        try:
-            delta = [0, -1, -20]
-            outdate = [2003, 12, 26, 0, 0]
-            with mock.patch('utils.calendar', return_value='gregorian'):
-                date = utils.add_period_to_date(self.indate, delta)
-                self.assertListEqual(date, outdate)
-        except SystemExit:
-            if 'SyntaxError: invalid syntax' in func.capture('err'):
-                # `rose date` is incompatible with Python 3 libraries
-                # due to `print` statement
-                pass
-            else:
-                raise
+        delta = [0, -1, -20]
+        outdate = [2003, 12, 26, 0, 0]
+        with mock.patch('utils.calendar', return_value='gregorian'):
+            date = utils.add_period_to_date(self.indate, delta)
+            self.assertListEqual(date, outdate)
 
     def test_bad_date(self):
         '''Test date input with bad date input'''

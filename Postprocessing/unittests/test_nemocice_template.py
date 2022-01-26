@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2018 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2022 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -1575,20 +1575,13 @@ class MethodsTests(unittest.TestCase):
             )
         self.assertEqual(target, '1d')
 
-        try:
-            with mock.patch('modeltemplate.utils.calendar',
-                            return_value='gregorian'):
-                target = self.model.datestamp_period(
-                    'RUNIDx_10d_19901001_19901101_FIELD.nc'
-                    )
-                self.assertEqual(target, '30d')
-        except SystemExit:
-            if 'SyntaxError: invalid syntax' in func.capture('err'):
-                # `rose date` is incompatible with Python 3 libraries
-                # due to `print` statement
-                pass
-            else:
-                raise
+        with mock.patch('modeltemplate.utils.calendar',
+                        return_value='gregorian'):
+            target = self.model.datestamp_period(
+                'RUNIDx_10d_19901001_19901101_FIELD.nc'
+            )
+            self.assertEqual(target, '30d')
+
 
         with mock.patch('modeltemplate.utils.calendar',
                         return_value='360day'):

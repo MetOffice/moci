@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2021 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2022 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -112,7 +112,8 @@ class FixTimeTests(unittest.TestCase):
                               NCDF_time_module._cftime.DatetimeNoLeap
                               (1950, 1, 2, 0, 0, 0, 0, 0, 2)])
             except AttributeError:
-                # Prior to introduction of NCDF_time_module._NCDF_time_module attribute
+                # Prior to introduction of NCDF_time_module._NCDF_time_module
+                # attribute
                 rtnval = '[1950-01-01 00:00:00, 1950-01-02 00:00:00]'
             self.assertEqual(date.__repr__(), rtnval)
 
@@ -126,16 +127,15 @@ class FixTimeTests(unittest.TestCase):
             mock_data().__enter__().variables[''].bounds = 'time_counter_bounds'
             mock_data().__enter__().variables[''].__getitem__.side_effect = \
                 [numpy.array([0., 86400])]
-            date = netcdf_utils.time_bounds_var_to_date('fname', 'timevar')
-            # # Different versions of NetCDF4 return slightly different date
-            # # representations - check the date against a list of possibles
-            rtn = ['[datetime.datetime(1950, 1, 1, 0, 0), ' \
-                       'datetime.datetime(1950, 1, 2, 0, 0)]',
-                   '[datetime.datetime(1950, 1, 1, 0, 0, tzinfo=tzutc()), ' \
-                       'datetime.datetime(1950, 1, 2, 0, 0, tzinfo=tzutc())]',
-                   '[real_datetime(1950, 1, 1, 0, 0), ' \
-                       'datetime.datetime(1950, 1, 2, 0, 0)]']
-            self.assertIn(date.__repr__(), rtn)
+            bounds = netcdf_utils.time_bounds_var_to_date('fname', 'timevar')
+            self.assertListEqual(
+                [bounds[0].year, bounds[0].month, bounds[0].day],
+                [1950, 1, 1]
+            )
+            self.assertListEqual(
+                [bounds[-1].year, bounds[-1].month, bounds[-1].day],
+                [1950, 1, 2]
+            )
 
     def test_first_and_last(self):
         '''Test of results from first_and_last_dates'''

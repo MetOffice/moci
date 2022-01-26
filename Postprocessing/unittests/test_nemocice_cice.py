@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2018 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2022 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -15,7 +15,6 @@
 import unittest
 import os
 import re
-import sys
 try:
     # mock is integrated into unittest as of Python 3.3
     import unittest.mock as mock
@@ -29,11 +28,6 @@ import runtime_environment
 # Import of cice requires 'RUNID' from runtime environment
 runtime_environment.setup_env()
 import cice
-
-if sys.version_info[:2] > (2, 7):
-    func.logtest('\n*** `rose date`, required for Gregorian calendar tests, '
-                 'is not compatible with Python 3.\n'
-                 '1 CICE test (concat_1dfiles) will be skipped.\n')
 
 
 class StencilTests(unittest.TestCase):
@@ -285,8 +279,6 @@ class MeansProcessingTests(unittest.TestCase):
     @mock.patch('cice.utils.get_subset')
     @mock.patch('cice.utils.remove_files')
     @mock.patch('cice.netcdf_filenames.os.rename')
-    @unittest.skipIf(sys.version_info[:2] > (2, 7),
-                     '`rose date` incompatible with Python3')
     def test_create_concat_1dfiles(self, mock_rn, mock_rm, mock_set):
         '''Test compile list of means to concatenate: _1d_ Gregorian files'''
         func.logtest('Assert compilation of means to concatenate - _1d_ files:')
@@ -295,49 +287,40 @@ class MeansProcessingTests(unittest.TestCase):
         mock_set.side_effect = [[],
                                 ['END_1d_11110228-11110301.nc'],
                                 catsets]
-        try:
-            with mock.patch('cice.utils.calendar', return_value='gregorian'):
-                _ = self.cice.create_concat_daily_means()
-                procsets = sorted(['./' + s for s in catsets])
-                self.cice.suite.preprocess_file.assert_called_with(
-                    'ncrcat', procsets,
-                    outfile='./cicecat'
-                    )
-            self.assertListEqual(sorted(mock_rm.call_args[0][0]),
-                                 sorted(procsets))
 
-            mock_rn.assert_called_once_with(
-                './cicecat',
-                './cice_runidi_1d_11110201-11110301.nc'
-                )
-            # Check call to get_subset for end-of-set files:
-            self.assertEqual(mock_set.mock_calls[0],
-                             mock.call('.', r'^RUNIDi\.[0-9hdm]*_?24h\.\d{4}' +
-                                       r'-\d{2}-01(-\d{5})?\.nc$'))
-            # Check call to get_subset for netCDF fname object:
-            self.assertEqual(mock_set.mock_calls[1],
-                             mock.call('.', r'^cice_runidi_1d_\d{8,10}-\d{4}' +
-                                       r'\d{2}01(00)?\.nc$'))
+        with mock.patch('cice.utils.calendar', return_value='gregorian'):
+            _ = self.cice.create_concat_daily_means()
+            procsets = sorted(['./' + s for s in catsets])
+            self.cice.suite.preprocess_file.assert_called_with(
+                'ncrcat', procsets,
+                outfile='./cicecat'
+            )
+        self.assertListEqual(sorted(mock_rm.call_args[0][0]),
+                             sorted(procsets))
 
-            self.assertEqual(
-                mock_set.mock_calls[2],
-                mock.call('.', '^cice_runidi_1d_(11110201|11110202|11110203|' +
-                          '11110204|11110205|11110206|11110207|11110208|' +
-                          '11110209|11110210|11110211|11110212|11110213|' +
-                          '11110214|11110215|11110216|11110217|11110218|' +
-                          '11110219|11110220|11110221|11110222|11110223|' +
-                          '11110224|11110225|11110226|11110227|11110228)' +
-                          r'(\d{2})?-\d{8,10}\.nc$')
-                )
-        except SystemExit:
-            if 'SyntaxError: invalid syntax' in func.capture('err'):
-                # For the case where Python2.7 has been invoked (pass skipIf)
-                # but Python3 libraries are loaded:
-                #   `rose date` is incompatible with Python3 due to
-                #   `print` statement.
-                pass
-            else:
-                raise
+        mock_rn.assert_called_once_with(
+            './cicecat',
+            './cice_runidi_1d_11110201-11110301.nc'
+        )
+        # Check call to get_subset for end-of-set files:
+        self.assertEqual(mock_set.mock_calls[0],
+                         mock.call('.', r'^RUNIDi\.[0-9hdm]*_?24h\.\d{4}' +
+                                   r'-\d{2}-01(-\d{5})?\.nc$'))
+        # Check call to get_subset for netCDF fname object:
+        self.assertEqual(mock_set.mock_calls[1],
+                         mock.call('.', r'^cice_runidi_1d_\d{8,10}-\d{4}' +
+                                   r'\d{2}01(00)?\.nc$'))
+
+        self.assertEqual(
+            mock_set.mock_calls[2],
+            mock.call('.', '^cice_runidi_1d_(11110201|11110202|11110203|' +
+                      '11110204|11110205|11110206|11110207|11110208|' +
+                      '11110209|11110210|11110211|11110212|11110213|' +
+                      '11110214|11110215|11110216|11110217|11110218|' +
+                      '11110219|11110220|11110221|11110222|11110223|' +
+                      '11110224|11110225|11110226|11110227|11110228)' +
+                      r'(\d{2})?-\d{8,10}\.nc$')
+        )
 
     @mock.patch('cice.utils.get_subset')
     @mock.patch('cice.utils.remove_files')
