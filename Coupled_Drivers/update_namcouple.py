@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2021 Met Office. All rights reserved.
+ (C) Crown copyright 2022 Met Office. All rights reserved.
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
  of the code, the use, duplication or disclosure of it is strictly
@@ -28,7 +28,7 @@ import os
 import error
 import common
 
-class _UpdateComponents(object):
+class _UpdateComponents:
     '''
     Update the namcouple file relating to the components to be coupled
     with MCT
@@ -55,7 +55,7 @@ class _UpdateComponents(object):
             try:
                 self.models_to_update[model]()
             except KeyError:
-                sys.stdout.write('[FAIL] update_namcouple can not update the'
+                sys.stderr.write('[FAIL] update_namcouple can not update the'
                                  ' %s component' % model)
                 sys.exit(error.INVALID_DRIVER_ARG_ERROR)
 
@@ -64,14 +64,12 @@ class _UpdateComponents(object):
         Update namcouple details specifcally relevant to the UM.
         '''
         # Nothing to do currently
-        pass
 
     def add_nemo_details(self):
         '''
         Update namcouple details specifically relevant to NEMO.
         '''
         # Nothing to do currently
-        pass
 
     def add_mct_details(self):
         '''
@@ -92,7 +90,13 @@ class _UpdateComponents(object):
             # startwith the presence of a $ in column 2 thus: " $"
             # Thus, triggers are based on testing for this at the start
             # of the line.
-            if re.match(r'^ \$RUNTIME', line):
+            # namcouple files cannot contain blank lines, so if we encounter
+            # any of these, we make them a comment to preserve the layout of
+            # the file.
+            if re.match(r'^\s*$', line):
+                # This is a blank line
+                namc_file_out.write('#\n')
+            elif re.match(r'^ \$RUNTIME', line):
                 edit_runtime = True
                 namc_file_out.write(line)
             elif edit_runtime:

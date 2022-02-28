@@ -42,7 +42,8 @@ def main():
         'nemo_driver': 'test_nemo_driver.py',
         'um_driver': 'test_um_driver.py',
         'cice_driver': 'test_cice_driver.py',
-        'common': 'test_common.py'
+        'common': 'test_common.py',
+        'namcouple': 'test_update_namcouple.py'
     }
 
     parser = argparse.ArgumentParser(
