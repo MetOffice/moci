@@ -292,8 +292,8 @@ class OzoneDataProcessingTests(unittest.TestCase):
             rval = retrieve_ozone_data.shell_cmd('run this command')
 
         self.assertNotEqual(rval, 0)
-        self.assertIn(mock.call('[SUBPROCESS] No such file or directory'),
-                      mock_out.write.mock_calls)
+        self.assertIn('[SUBPROCESS] No such file or directory',
+                      str(mock_out.write.mock_calls[0]))
 
 
 class OzoneMainTests(unittest.TestCase):
@@ -484,34 +484,36 @@ class OzoneOneYearTests(unittest.TestCase):
             self.year1998.load_data()
         self.assertTrue('Mismatch in data points' in str(exc.exception))
 
-    @mock.patch('retrieve_ozone_data.OneYear._load_stashcode')
+    @mock.patch('retrieve_ozone_data.iris')
     @mock.patch('retrieve_ozone_data.OneYear.check_time_coords')
-    def test_load_data(self, mock_time, mock_load):
+    def test_load_data(self, mock_time, mock_iris):
         '''Test load_data method'''
-        mock_load.side_effect = [['cube1'], ['cube2']]
+        mock_iris.load.side_effect = [['cube1'], ['cube2']]
         self.year1998.load_data()
 
         source = os.path.join(os.path.dirname(__file__), '*a.??1998*.pp')
-        mock_load.assert_called_once_with(source, 'm01s16i203')
+        mock_iris.load.assert_called_once_with(source, constraints=mock.ANY)
+        self.assertListEqual(mock_iris.AttributeConstraint.mock_calls,
+                             [mock.call(time=mock.ANY),
+                              mock.call(STASH='m01s16i203')])
         mock_time.assert_called_once_with('cube1')
 
     @mock.patch('retrieve_ozone_data.iris')
-    def test_load_stashcode(self, mock_iris):
-        '''Test private method load_stashcode'''
-        rval = self.year1998._load_stashcode('sourcepath', 'STASHcode')
-        self.assertListEqual(mock_iris.AttributeConstraint.mock_calls,
-                             [mock.call(time=mock.ANY),
-                              mock.call(STASH='STASHcode')])
-        self.assertIsInstance(rval, type(mock_iris.load()))
-
-    @mock.patch('retrieve_ozone_data.iris')
-    def test_load_stashcode_error(self, mock_iris):
-        '''Test private method load_stashcode'''
-        mock_iris.load.side_effect = OSError
+    @mock.patch('retrieve_ozone_data.OneYear.check_time_coords')
+    def test_load_data_error(self, mock_time, mock_iris):
+        '''Test load_data method - error'''
+        mock_iris.load.side_effect = [OSError]
         with self.assertRaises(retrieve_ozone_data.
                                OzoneSourceNotFoundError) as exc:
-            _ = self.year1998._load_stashcode('sourcepath', 'STASHcode')
-        self.assertTrue('No files found matching "sourcepath"'
+            self.year1998.load_data()
+
+        source = os.path.join(os.path.dirname(__file__), '*a.??1998*.pp')
+        mock_iris.load.assert_called_once_with(source, constraints=mock.ANY)
+        self.assertListEqual(mock_iris.AttributeConstraint.mock_calls,
+                             [mock.call(time=mock.ANY),
+                              mock.call(STASH='m01s16i203')])
+        self.assertEqual(len(mock_time.mock_calls), 0)
+        self.assertTrue('No files found matching "{}"'.format(source)
                         in str(exc.exception))
 
 

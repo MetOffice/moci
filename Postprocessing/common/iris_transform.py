@@ -286,7 +286,7 @@ def extract_data(filename, fields):
         data_cube = iris.load(filename, constraints=load_vars)
     except IOError:
         msg = 'Iris extract data - File does not exist: '
-        utils.log_msg(msg + filename, level='WARN')
+        utils.log_msg(msg + str(filename), level='WARN')
         data_cube = None
 
     return data_cube

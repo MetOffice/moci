@@ -33,6 +33,13 @@ from netcdf_filenames import NCF_TEMPLATE
 from validation import MULE_AVAIL, VALID_STR, identify_dates
 
 try:
+    # Establish exception raised when a file does not exist
+    FileNotFoundError
+except NameError:
+    # Python2 raises an IOError in lieu of FileNotFoundError
+    FileNotFoundError = IOError
+
+try:
     import iris_transform
     IRIS_AVAIL = True
 except ImportError:
@@ -42,6 +49,8 @@ except ImportError:
 
 if MULE_AVAIL:
     import mule
+    from mule.pp import fields_from_pp_file, fields_to_pp_file
+
     class WeightedMeanOperator(mule.DataOperator):
         '''
         Operator which calculates a weighted mean between a number of fields
@@ -206,46 +215,157 @@ def extract_to_netcdf(fieldsfile, fields, ncftype, complevel):
 @timer.run_timer
 def extract_to_pp(sourcefiles, fields, outstream, data_freq=None):
     '''
-    Extract given field(s) to PP format.
-
+    Extract given fields to PP format - First choice using Mule
     Multiple instances of the same field in the same file will result
     in only the final instance being extracted.
 
     Arguments:
        sourcefiles - <type str>  Full filename(s), including path, of
                                  source data.  List permitted.
-       fields      - <type list> fieldnames or STASHcodes
+       fields      - <type list> fieldnames or STASHcodes.
+                                 Mule only works with STASHcodes.
        outstream   - <type str>  2char stream identifier for output
     Optional Arguments:
        data_freq   - <type str>  Data frequency \d+[ymdh]
     '''
-    if IRIS_AVAIL is False:
-        utils.log_msg(
-            'IRIS module required to extract fields to PP format',
-            level='WARN'
-        )
-        return None
-
     # Regular expression to match UM output filename:
-    #    "<RUNID>a.<STREAM ID><YEAR>"
-    #  <match.group(1) = Filename datestamp year (4 digit)
+    #    "(<RUNID>a.)<STREAM ID>(<YEAR>)"
+    #  match.group(1) = Filename prefix
+    #  match.group(2) = Filename datestamp year (4 digit)
     source_regex = re.compile(r'^(.+a\.)\w{2}(\d{4})')
     current_year = utils.CylcCycle().startcycle['strlist'][0]
     sources = []
 
+    prefix = os.environ['CYLC_SUITE_NAME'] + 'a.'
     for sfile in utils.ensure_list(sourcefiles):
+        if not os.path.exists(sfile):
+            continue
         try:
             prefix, year = source_regex.match(sfile).groups()
         except AttributeError:
             year = current_year
-            prefix = os.path.dirname(sfile)
-            prefix = os.path.join(prefix, os.environ['CYLC_SUITE_NAME'] + 'a.')
-
+            prefix = os.path.join(os.path.dirname(sfile),
+                                  os.path.basename(prefix))
         if year == current_year:
             # Only process source file from the current year
             sources.append(sfile)
 
-    source_items = iris_transform.IrisCubes(sources,
+    outfile = prefix + outstream + current_year + '.pp'
+    tmpfile = None
+    if len(sources) < 1:
+        utils.log_msg('No source files found for field extraction\n\t',
+                      level='WARN')
+    elif MULE_AVAIL:
+        tmpfile = _extract_to_pp_mule(sources, fields, outfile, data_freq)
+    elif IRIS_AVAIL:
+        tmpfile = _extract_to_pp_iris(sources, fields, outfile, data_freq)
+    else:
+        utils.log_msg(
+            'Either Mule or IRIS required to extract fields to PP format',
+            level='WARN'
+        )
+    if tmpfile:
+        # Copy temporary file to destination
+        utils.log_msg('Writing fields to ' + str(outfile))
+        utils.move_files(tmpfile, os.path.dirname(outfile), fail_on_err=True)
+
+    return 0 if tmpfile else None
+
+@timer.run_timer
+def _extract_to_pp_mule(sourcefiles, fields, outfile, data_freq):
+    '''
+    Extract given field(s) to PP format using Mule.
+
+    Arguments:
+       sourcefiles - <type list < type str>>
+                                 Full filename(s), including path, of
+                                 source data
+       fields      - <type list> Fieldnames or STASHcodes
+       outstream   - <type str>  Fully filename for output, including path
+       data_freq   - <type str>  Data frequency \d+[ymdh]
+    '''
+    rval = None
+    stashcodes = [int(x) for x in fields if str(x).isdigit()]
+    try:
+        # Update the existing PPfile contents
+        output_items = fields_from_pp_file(outfile)
+    except FileNotFoundError:
+        output_items = []
+
+    # Compare integer constants in lookup only, since reals may differ between
+    # 64bit fieldsfile source and 32bit ppfile output.
+    # Exclude data length and address info:
+    #    15=LBLREC, 21=LBPACK, 29=LBEGIN, 30=LBNREC, 40=NADDR
+    match_int_consts = [x for x in range(46) if x not in [15, 21, 29, 30, 40]]
+    for sfile in sourcefiles:
+        new_fields = []
+        for field in mule.FieldsFile.from_file(sfile).fields:
+            if field.lbrel not in (2, 3) or field.lbuser4 not in stashcodes:
+                # Exclude fields not matching requested STASHcode
+                continue
+
+            if data_freq:
+                # Exclude fields not matching the required data frequency
+                freq = utils.add_period_to_date([0]*5,
+                                                [field.lbyrd - field.lbyr,
+                                                 field.lbmond - field.lbmon,
+                                                 field.lbdatd - field.lbdat,
+                                                 field.lbhrd - field.lbhr])
+                if freq[2] < 0:
+                    # Adjust over the end of a month
+                    freq[1] -= 1
+                    freq[2] += utils.monthlength(field.lbmon, field.lbyr)
+                if freq[1] < 0:
+                    # Adjust over the end of a year
+                    freq[0] -= 1
+                    freq[1] += 12
+                freq = ''.join([str(freq[x]) + p for x, p in enumerate('ymdh')
+                                if freq[x] > 0])
+                if freq != data_freq:
+                    continue
+
+            # Check we're not duplicating the field
+            for field_id, existing_field in enumerate(output_items[:]):
+                for raw_id in match_int_consts:
+                    if field.raw[raw_id] != existing_field.raw[raw_id]:
+                        break
+                else:
+                    # Replace existing field
+                    output_items[field_id] = field
+                    break
+            else:
+                new_fields.append(field)
+        output_items += new_fields
+
+    if len(output_items) > 0:
+        tmpfile = os.path.basename(outfile)
+        fields_to_pp_file(tmpfile, output_items)
+        if os.path.exists(tmpfile):
+            rval = tmpfile
+        else:
+            utils.log_msg('Failed to extract field(s) to PP with Mule',
+                          level='WARN')
+    else:
+        utils.log_msg('No requested fields found in source file:\n\t'
+                      + sourcefiles[0],
+                      level='WARN')
+    return rval
+
+@timer.run_timer
+def _extract_to_pp_iris(sourcefiles, fields, outfile, data_freq):
+    '''
+    Extract given field(s) to PP format using Iris.
+
+    Arguments:
+       sourcefiles - <type list < type str>>
+                                 Full filename(s), including path, of
+                                 source data
+       fields      - <type list> Fieldnames or STASHcodes
+       outstream   - <type str>  Fully filename for output, including path
+       data_freq   - <type str>  Data frequency \d+[ymdh]
+    '''
+    rval = None
+    source_items = iris_transform.IrisCubes(sourcefiles,
                                             {f: None for f in fields})
 
     if data_freq:
@@ -253,17 +373,12 @@ def extract_to_pp(sourcefiles, fields, outstream, data_freq=None):
             if item.data_frequency != data_freq:
                 source_items.fields.remove(item)
 
-    if len(sourcefiles) < 1:
-        utils.log_msg('No source files found for field extraction\n\t',
-                      level='WARN')
-        return 0
     if len(source_items.fields) < 1:
         utils.log_msg('No requested fields found in source file:\n\t'
                       + sourcefiles[0],
                       level='WARN')
-        return 0
+        return rval
 
-    outfile = prefix + outstream + current_year + '.pp'
     if os.path.isfile(outfile):
         # Update the existing file contents
         existing_items = iris_transform.IrisCubes(outfile, None)
@@ -273,17 +388,17 @@ def extract_to_pp(sourcefiles, fields, outstream, data_freq=None):
 
     # Write source_items to file - first item to new file, then append
     icode = 0
-    tmpfile = 'tmp.pp'
+    tmpfile = os.path.basename(outfile)
     utils.remove_files(tmpfile, ignore_non_exist=True)
     for field in source_items.fields:
         icode += iris_transform.save_format(field.cube, tmpfile, 'pp',
                                             kwargs={'append': True})
     if icode == 0:
-        # Copy temporary file to destination
-        utils.log_msg('Writing fields to ' + str(outfile))
-        os.rename(tmpfile, outfile)
-
-    return icode
+        rval = tmpfile
+    else:
+        utils.log_msg('Failed to extract field(s) to PP with Iris',
+                      level='WARN')
+    return rval
 
 @timer.run_timer
 def cutout_subdomain(full_fname, mule_utils, coord_type, coords):

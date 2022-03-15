@@ -132,21 +132,20 @@ class OneYear(object):
         '''
         sourcedata = os.path.join(ENV.OZONE_SHARE,
                                   '*a.??{}*.pp'.format(self.year))
-        for stashcode in self._fields:
-            for cube in self._load_stashcode(sourcedata, stashcode):
-                self.check_time_coords(cube)
 
-    def _load_stashcode(self, sourcedata, stashcode):
-        ''' Load cube for a single STASHcode '''
-        constrain = [iris.AttributeConstraint(time=lambda cell:
-                                              cell.point.year == self.year),
-                     iris.AttributeConstraint(STASH=stashcode)]
+        constraints = [iris.AttributeConstraint(time=lambda cell:
+                                                cell.point.year == self.year)]
+        for stashcode in self._fields:
+            constraints.append(iris.AttributeConstraint(STASH=stashcode))
+
         try:
-            return iris.load(sourcedata, constraints=constrain)
-        except OSError as exc:
+            cubes = iris.load(sourcedata, constraints=constraints)
+        except OSError:
             raise OzoneSourceNotFoundError(
                 '\n[ERROR] No files found matching "{}"'.format(sourcedata)
-                )
+            )
+        for cube in cubes:
+            self.check_time_coords(cube)
 
 
 class Environment(object):
@@ -244,7 +243,7 @@ def cyclepoint(cycle):
     ''' Return an integer list representation of the Cylc cyclepoint '''
     try:
         date = PT_REGEX.match(cycle).groups()
-    except AttributeError as exc:
+    except AttributeError:
         raise OzoneEnvironmentError(
             '\n[ERROR] Cannot parse the cycle point: ' + cycle
             )

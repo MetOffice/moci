@@ -277,7 +277,8 @@ class ArchiveDeleteTests(unittest.TestCase):
                        '.arch')]
             )
         mock_set.assert_called_once_with(
-            os.getcwd(), r'atmos_Ra_\d+[hdmsyx]_\d{8}(\d{2})?-\d{8}(\d{2})?.*.nc$'
+            os.getcwd(),
+            r'atmos_Ra_\d+[hdmsyx]_\d{8}(\d{2})?-\d{8}(\d{2})?.*.nc$'
             )
     @mock.patch('atmos.housekeeping.get_marked_files')
     @mock.patch('atmos.transform.utils.get_subset')
@@ -1350,9 +1351,9 @@ class OzoneTests(unittest.TestCase):
         self.assertListEqual(
             sorted(mock_convert.mock_calls),
             [mock.call(spaths[0], '/projects/um1/vn10.8/xc40/utilities',
-                       True),
+                       None, True),
              mock.call(spaths[2], '/projects/um1/vn10.8/xc40/utilities',
-                       False)]
+                       None, False)]
         )
         self.assertListEqual(sorted(mock_extract.mock_calls), [])
 

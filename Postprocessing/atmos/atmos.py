@@ -614,6 +614,7 @@ class AtmosPostProc(control.RunPostProc):
                 if utils.compare_mod_times([sfile, sfile + '.pp']) == sfile:
                     transform.convert_to_pp(sfile,
                                             self.naml.atmospp.um_utils,
+                                            self.naml.atmospp.mule_utils,
                                             not rmff)
                 elif rmff:
                     utils.remove_files(sfile, ignore_non_exist=True)

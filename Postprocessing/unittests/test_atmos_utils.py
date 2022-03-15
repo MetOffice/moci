@@ -36,15 +36,13 @@ import atmos_transform
 runtime_environment.setup_env()
 import atmos
 
-IRIS_AVAIL = hasattr(atmos_transform, 'iris_transform')
-if not IRIS_AVAIL:
+if not atmos_transform.IRIS_AVAIL:
     func.logtest('\n*** Iris is not available.  '
-                 '4 ATMOS_UTILS tests (TransformTests) will be skipped.\n')
+                 '7 ATMOS_UTILS tests (TransformTests) will be skipped.\n')
 if not atmos_transform.MULE_AVAIL:
     func.logtest('\n*** Mule is not available.\n'
-                 '3 ATMOS_UTILS tests (HeaderTests) will be skipped.\n'
-                 '3 ATMOS_UTILS tests (MeaningTests) will be skipped.\n')
-
+                 '3 ATMOS_UTILS tests (MeaningTests) will be skipped.\n'
+                 '3 ATMOS_UTILS tests (TransformTests) will be skipped.\n')
 
 class HousekeepTests(unittest.TestCase):
     """
@@ -459,15 +457,11 @@ class HeaderTests(unittest.TestCase):
         self.assertListEqual(list(headers.values()), [x for x in range(1, 40)])
         self.assertTrue(empty_file)
 
-    @unittest.skipUnless(validation.MULE_AVAIL,
-                         'Python module "Mule" is not available')
     @mock.patch('validation.MULE_AVAIL', False)
-    @mock.patch('validation.mule')
-    def test_mule_headers_not_avail(self, mock_mule):
+    def test_mule_headers_not_avail(self):
         ''' Test mule_headers - Mule not available'''
         func.logtest('Assert no headers using Mule - not available:')
         headers, empty_file = validation.mule_headers('Filename')
-        self.assertListEqual(mock_mule.mock_calls, [])
         self.assertFalse(empty_file)
         self.assertIsNone(headers)
 
@@ -705,7 +699,8 @@ class AtmosTransformTests(unittest.TestCase):
         self.umutils = 'UMDIR/../utilities'
         self.ppfile = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                    'air_temp.pp')
-
+        self.ffile = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                   'air_temp.ff')
     def tearDown(self):
         for fname in ['FNAME', 'FNAME.cut']:
             try:
@@ -722,9 +717,9 @@ class AtmosTransformTests(unittest.TestCase):
                 ppfile = atmos_transform.convert_to_pp('Here/Filename',
                                                        self.umutils, None,
                                                        True)
-                self.assertListEqual(mock_rm.mock_calls, [])
-            cmd = 'mule-convpp Here/Filename Here/Filename.pp'
-            mock_exec.assert_called_with(cmd, cwd='Here')
+        self.assertListEqual(mock_rm.mock_calls, [])
+        cmd = 'mule-convpp Here/Filename Here/Filename.pp'
+        mock_exec.assert_called_with(cmd, cwd='Here')
         self.assertEqual(ppfile, 'Here/Filename.pp')
 
     def test_convert_umconvpp(self):
@@ -736,9 +731,9 @@ class AtmosTransformTests(unittest.TestCase):
                 ppfile = atmos_transform.convert_to_pp('Here/Filename',
                                                        self.umutils,
                                                        'NoMule', True)
-                self.assertListEqual(mock_rm.mock_calls, [])
-            cmd = self.umutils + '/um-convpp Here/Filename Here/Filename.pp'
-            mock_exec.assert_called_with(cmd, cwd='Here')
+        self.assertListEqual(mock_rm.mock_calls, [])
+        cmd = self.umutils + '/um-convpp Here/Filename Here/Filename.pp'
+        mock_exec.assert_called_with(cmd, cwd='Here')
         self.assertEqual(ppfile, 'Here/Filename.pp')
 
     def test_convert_ff2pp(self):
@@ -751,9 +746,9 @@ class AtmosTransformTests(unittest.TestCase):
                 ppfile = atmos_transform.convert_to_pp('Here/Filename',
                                                        um_utils_path,
                                                        'NoMule', False)
-                mock_rm.assert_called_with('Here/Filename', path='Here')
-            cmd = um_utils_path + '/um-ff2pp Here/Filename Here/Filename.pp'
-            mock_exec.assert_called_with(cmd, cwd='Here')
+        mock_rm.assert_called_with('Here/Filename', path='Here')
+        cmd = um_utils_path + '/um-ff2pp Here/Filename Here/Filename.pp'
+        mock_exec.assert_called_with(cmd, cwd='Here')
         self.assertEqual(ppfile, 'Here/Filename.pp')
 
     def test_convert_to_pp_fail(self):
@@ -767,7 +762,8 @@ class AtmosTransformTests(unittest.TestCase):
         self.assertIn('Conversion to pp format failed', func.capture('err'))
         self.assertIn('I failed', func.capture('err'))
 
-    @unittest.skipUnless(IRIS_AVAIL, 'Python module "Iris" is not available')
+    @unittest.skipUnless(atmos_transform.IRIS_AVAIL,
+                         'Python module "Iris" is not available')
     @mock.patch('atmos_transform.iris_transform.save_format', return_value=0)
     def test_extract_to_netcdf(self, mock_save):
         '''Test extraction of single field from single fieldsfile'''
@@ -784,7 +780,8 @@ class AtmosTransformTests(unittest.TestCase):
         self.assertEqual(icode, 0)
         self.assertIn('Fieldsfile name does not match', func.capture('err'))
 
-    @unittest.skipUnless(IRIS_AVAIL, 'Python module "Iris" is not available')
+    @unittest.skipUnless(atmos_transform.IRIS_AVAIL,
+                         'Python module "Iris" is not available')
     @mock.patch('atmos_transform.iris_transform.save_format', return_value=10)
     def test_extract_to_netcdf_failsave(self, mock_save):
         '''Test failure to save netCDF file'''
@@ -798,7 +795,8 @@ class AtmosTransformTests(unittest.TestCase):
                                                   'complevel': 5})
         self.assertEqual(icode, 10)
 
-    @unittest.skipUnless(IRIS_AVAIL, 'Python module "Iris" is not available')
+    @unittest.skipUnless(atmos_transform.IRIS_AVAIL,
+                         'Python module "Iris" is not available')
     @mock.patch('atmos_transform.iris_transform.IrisCubes')
     @mock.patch('atmos_transform.iris_transform.save_format')
     def test_extract_to_netcdf_suiteid(self, mock_save, mock_load):
@@ -826,7 +824,8 @@ class AtmosTransformTests(unittest.TestCase):
                                                   'complevel': None})
         mock_load.assert_called_once_with('RUNIDa.mf2000', {})
 
-    @unittest.skipUnless(IRIS_AVAIL, 'Python module "Iris" is not available')
+    @unittest.skipUnless(atmos_transform.IRIS_AVAIL,
+                         'Python module "Iris" is not available')
     @mock.patch('atmos_transform.iris_transform')
     def test_iris_load_fail(self, mock_iris):
         '''Test failed import of iris_transform module'''
@@ -840,135 +839,166 @@ class AtmosTransformTests(unittest.TestCase):
                         return_value=True):
             rtnval = atmos_transform.extract_to_netcdf('RUNIDa.mf2000',
                                                        {}, 'TYPE', None)
-            self.assertEqual(rtnval, -1)
+        self.assertEqual(rtnval, -1)
         self.assertIn('Iris module is not available', func.capture('err'))
 
-    @unittest.skipUnless(IRIS_AVAIL, 'Python module "Iris" is not available')
-    @mock.patch('atmos_transform.iris_transform.save_format', return_value=0)
-    @mock.patch('atmos_transform.os.rename')
-    def test_extract_to_pp(self, mock_rename, mock_save):
-        '''Test extraction of single field to PP format'''
-        func.logtest('Assert extract to PP - single field:')
-        sourcefiles = [os.path.join(os.path.dirname(self.ppfile),
-                                    'RUNIDa.pa{}feb'.format(f))
-                       for f in [1999, 2000]]
-        shutil.copy(self.ppfile, sourcefiles[1])
-        icode = atmos_transform.extract_to_pp(sourcefiles,
-                                              ['air_temperature'],
-                                              'po')
-        os.remove(sourcefiles[1])
-
-        mock_save.assert_called_once_with(mock.ANY, 'tmp.pp', 'pp',
-                                          kwargs={'append': True})
-        self.assertIsInstance(mock_save.call_args[0][0],
-                              atmos_transform.iris_transform.iris.cube.Cube)
-        self.assertEqual(icode, 0)
-
-    @unittest.skipUnless(IRIS_AVAIL, 'Python module "Iris" is not available')
-    @mock.patch('atmos_transform.iris_transform.save_format', return_value=0)
-    @mock.patch('atmos_transform.os.rename')
-    def test_extract_to_pp_duplicate(self, mock_rename, mock_save):
-        '''Test extraction of single field to PP format - duplicate found'''
-        func.logtest('Assert extract to PP - single field:')
-        source_load = atmos_transform.iris_transform.iris.load(self.ppfile)
-        existing_load = atmos_transform.iris_transform.iris.cube.CubeList()
-        existing_load.append(source_load[0].copy())
-        outfile = 'suiteIDa.po2000.pp'
-        with mock.patch('atmos_transform.iris_transform.iris.load',
-                        side_effect=[source_load, existing_load]):
-            with mock.patch('atmos_transform.os.path.isfile',
-                            return_value=True):
-                icode = atmos_transform.extract_to_pp('filename',
-                                                      ['air_temperature'],
-                                                      'po')
-                mock_save.assert_called_once_with(source_load[0],
-                                                  'tmp.pp', 'pp',
-                                                  kwargs={'append': True})
-                mock_rename.assert_called_once_with('tmp.pp', outfile)
-        self.assertEqual(source_load, existing_load)
-        self.assertEqual(icode, 0)
-
-    @unittest.skipUnless(IRIS_AVAIL, 'Python module "Iris" is not available')
-    @mock.patch('atmos_transform.iris_transform.save_format', return_value=0)
-    @mock.patch('atmos_transform.os.rename')
-    def test_extract_to_pp_append(self, mock_rename, mock_save):
-        '''Test extraction of single field to PP format - append time slice'''
-        func.logtest('Assert extract to PP - apend time slice:')
-        source_load = atmos_transform.iris_transform.iris.load(self.ppfile)
-        existing_load = atmos_transform.iris_transform.iris.cube.CubeList()
-        existing_load.append(source_load[0].copy())
-        source_load[0].replace_coord(
-            source_load[0].coord('time') + (4 * 360 * 30)
-            )
-        outfile = 'suiteIDa.po2000.pp'
-        with mock.patch('atmos_transform.iris_transform.iris.load',
-                        side_effect=[source_load, existing_load]):
-            with mock.patch('atmos_transform.os.path.isfile',
-                            return_value=True):
-                icode = atmos_transform.extract_to_pp('filename',
-                                                      ['air_temperature'],
-                                                      'po')
-        mock_save.assert_called_once_with(
-            (existing_load + source_load).merge()[0],
-            'tmp.pp', 'pp', kwargs={'append': True}
-        )
-        mock_rename.assert_called_once_with('tmp.pp', outfile)
-        self.assertEqual(icode, 0)
-
-    @unittest.skipUnless(IRIS_AVAIL, 'Python module "Iris" is not available')
-    @mock.patch('atmos_transform.iris_transform.save_format', return_value=0)
-    @mock.patch('atmos_transform.os.rename')
-    def test_extract_to_pp_noinfo(self, mock_rename, mock_save):
-        '''Test extraction of single field to PP format without source info'''
-        func.logtest('Assert extract to PP - single field:')
-        sourcefile = self.ppfile
-        icode = atmos_transform.extract_to_pp(sourcefile, ['air_temperature'],
-                                              'po', data_freq='4y')
-
-        mock_save.assert_called_once_with(mock.ANY, 'tmp.pp', 'pp',
-                                          kwargs={'append': True})
-        self.assertIsInstance(mock_save.call_args[0][0],
-                              atmos_transform.iris_transform.iris.cube.Cube)
-        outfile = os.path.join(os.path.dirname(self.ppfile),
-                               'suiteIDa.po2000.pp')
-        mock_rename.assert_called_once_with('tmp.pp', outfile)
-        self.assertEqual(icode, 0)
-
-    @unittest.skipUnless(IRIS_AVAIL, 'Python module "Iris" is not available')
-    @mock.patch('atmos_transform.iris_transform.save_format', return_value=0)
-    def test_extract_to_pp_no_data(self, mock_save):
-        '''Test extraction to pp - no source cubes found'''
-        func.logtest('Assert extract to PP - no source cubes:')
-        rval = atmos_transform.extract_to_pp(self.ppfile,
-                                             ['air_temperature'],
-                                             'po',
-                                             data_freq='1d')
-        self.assertIn('No requested fields found', func.capture('err'))
-        self.assertListEqual(mock_save.mock_calls, [])
+    @mock.patch('atmos_transform._extract_to_pp_mule', return_value='filename')
+    @mock.patch('atmos_transform.utils.move_files')
+    def test_extract_to_pp_mule_avail(self, mock_move, mock_ppmule):
+        '''Test extraction to pp - Mule available'''
+        func.logtest('Assert extract to PP - Mule available:')
+        with mock.patch('atmos_transform.os.path.exists', return_value=True):
+            with mock.patch('atmos_transform.MULE_AVAIL', True):
+                rval = atmos_transform.extract_to_pp(
+                    'dir/sfile', ['field'], 'po'
+                    )
         self.assertEqual(rval, 0)
+        mock_ppmule.assert_called_once_with(['dir/sfile'], ['field'],
+                                            'dir/suiteIDa.po2000.pp', None)
+        mock_move.assert_called_once_with('filename', 'dir',
+                                          fail_on_err=True)
 
-    @unittest.skipUnless(IRIS_AVAIL, 'Python module "Iris" is not available')
-    @mock.patch('atmos_transform.iris_transform.save_format', return_value=0)
-    def test_extract_to_pp_no_sourcefile(self, mock_save):
+    @mock.patch('atmos_transform._extract_to_pp_iris', return_value='filename')
+    @mock.patch('atmos_transform.utils.move_files')
+    def test_extract_to_pp_iris_avail(self, mock_move, mock_ppiris):
+        '''Test extraction to pp - Iris available'''
+        func.logtest('Assert extract to PP -Iris available:')
+        with mock.patch('atmos_transform.os.path.exists', return_value=True):
+            with mock.patch('atmos_transform.MULE_AVAIL', False):
+                with mock.patch('atmos_transform.IRIS_AVAIL', True):
+                    rval = atmos_transform.extract_to_pp(
+                        'dir/sfile', ['field'], 'po', '1m'
+                    )
+        self.assertEqual(rval, 0)
+        mock_ppiris.assert_called_once_with(['dir/sfile'], ['field'],
+                                            'dir/suiteIDa.po2000.pp', '1m')
+        mock_move.assert_called_once_with('filename', 'dir',
+                                          fail_on_err=True)
+
+    def test_extract_to_pp_no_method(self):
+        '''Test extraction to pp - no Mule or Iris available'''
+        func.logtest('Assert extract to PP - no Iris or Mule:')
+        with mock.patch('atmos_transform.os.path.exists', return_value=True):
+            with mock.patch('atmos_transform.MULE_AVAIL', False):
+                with mock.patch('atmos_transform.IRIS_AVAIL', False):
+                    self.assertIsNone(
+                        atmos_transform.extract_to_pp('sfile', ['field'], 'po')
+                    )
+        self.assertIn(
+            'Either Mule or IRIS required to extract fields to PP format',
+            func.capture('err')
+        )
+
+    def test_extract_to_pp_no_sourcefile(self):
         '''Test extraction to pp - no source files found'''
-        func.logtest('Assert extract to PP - no source cubes:')
-        rval = atmos_transform.extract_to_pp('',
+        func.logtest('Assert extract to PP - no source files:')
+        rval = atmos_transform.extract_to_pp('filename',
                                              ['air_temperature'],
                                              'po',
                                              data_freq='1d')
         self.assertIn('No source files found', func.capture('err'))
-        self.assertListEqual(mock_save.mock_calls, [])
-        self.assertEqual(rval, 0)
+        self.assertEqual(rval, None)
 
-    def test_extract_to_pp_no_iris(self):
-        '''Test extraction to pp - no source files found'''
-        func.logtest('Assert extract to PP - no source cubes:')
-        with mock.patch('atmos_transform.IRIS_AVAIL', False):
-            self.assertIsNone(atmos_transform.extract_to_pp('sfile',
-                                                            ['field'],
-                                                            'po'))
-        self.assertIn('IRIS module required to extract fields to PP format',
+    @mock.patch('atmos_transform._extract_to_pp_mule', return_value=None)
+    def test_extract_to_pp_fail(self, mock_ppmule):
+        '''Test extraction to pp - failure'''
+        func.logtest('Assert extract to PP - failure:')
+        with mock.patch('atmos_transform.os.path.exists', return_value=True):
+            with mock.patch('atmos_transform.MULE_AVAIL', return_value=True):
+                rval = atmos_transform.extract_to_pp('fname',
+                                                     ['field'], 'po')
+        mock_ppmule.assert_called_once_with(['fname'], ['field'],
+                                            'suiteIDa.po2000.pp', None)
+        self.assertEqual(func.capture('err'), '')
+        self.assertEqual(rval, None)
+
+    @unittest.skipUnless(atmos_transform.MULE_AVAIL,
+                         'Python module "Mule" is not available')
+    def test_extract_to_pp_mule(self):
+        '''Test call to Mule to extract a single field to PP format'''
+        func.logtest('Assert extract to PP via Mule - single field:')
+        outfile = 'outfile.pp'
+        shutil.copy(self.ppfile, outfile)
+        rval = atmos_transform._extract_to_pp_mule(
+            [self.ffile], ['16203'], outfile, None
+        )
+        outfields = atmos_transform.fields_from_pp_file(outfile)
+        self.assertEqual(len(outfields), 1)
+        self.assertEqual(rval, outfile)
+        os.remove(outfile)
+
+    @unittest.skipUnless(atmos_transform.MULE_AVAIL,
+                         'Python module "Mule" is not available')
+    def test_extract_to_pp_mule_no_data(self):
+        '''Test Mule to extract a single field to PP format - no data'''
+        func.logtest('Assert extract to PP via Mule - no data:')
+        rval = atmos_transform._extract_to_pp_mule(
+            [self.ffile], ['16203'], 'outfile.pp', '1m'
+        )
+
+        self.assertIn('No requested fields found in source file:\n\t'
+                      + self.ffile, func.capture('err'))
+        self.assertFalse(os.path.exists('outfile.pp'))
+        self.assertEqual(rval, None)
+
+    @unittest.skipUnless(atmos_transform.MULE_AVAIL,
+                         'Python module "Mule" is not available')
+    def test_extract_to_pp_mule_fail(self):
+        '''Test Mule to extract a single field to PP format - fail save'''
+        func.logtest('Assert extract to PP via Mule - fail save:')
+        with mock.patch('atmos_transform.os.path.exists', return_value=False):
+            rval = atmos_transform._extract_to_pp_mule(
+                [self.ffile], ['16203'], 'outfile.pp', '4y'
+            )
+        os.remove('outfile.pp')
+        self.assertIn('Failed to extract field(s) to PP with Mule',
                       func.capture('err'))
+        self.assertEqual(rval, None)
+
+    @unittest.skipUnless(atmos_transform.IRIS_AVAIL,
+                         'Python module "Iris" is not available')
+    @mock.patch('atmos_transform.iris_transform.save_format', return_value=0)
+    def test_extract_to_pp_iris(self, mock_save):
+        '''Test call to Iris to extract a single field to PP format'''
+        func.logtest('Assert extract to PP via Iris - single field:')
+        rval = atmos_transform._extract_to_pp_iris(
+            [self.ffile], ['air_temperature'], 'dir/outfile.pp', None
+        )
+        mock_save.assert_called_once_with(mock.ANY, 'outfile.pp', 'pp',
+                                          kwargs={'append': True})
+        self.assertIsInstance(mock_save.call_args[0][0],
+                              atmos_transform.iris_transform.iris.cube.Cube)
+        self.assertEqual(rval, 'outfile.pp')
+
+
+    @unittest.skipUnless(atmos_transform.IRIS_AVAIL,
+                         'Python module "Iris" is not available')
+    @mock.patch('atmos_transform.iris_transform.save_format', return_value=0)
+    def test_extract_to_pp_iris_nodata(self, mock_save):
+        '''Test Iris to extract a single field to PP format - no data'''
+        func.logtest('Assert extract to PP via Iris - no data:')
+        rval = atmos_transform._extract_to_pp_iris(
+            [self.ffile], ['air_temperature'], 'dir/outfile.pp', '1m'
+        )
+        self.assertEqual(len(mock_save.mock_calls), 0)
+        self.assertIn('No requested fields found in source file:\n\t'
+                      + self.ffile, func.capture('err'))
+        self.assertEqual(rval, None)
+
+    @unittest.skipUnless(atmos_transform.IRIS_AVAIL,
+                         'Python module "Iris" is not available')
+    @mock.patch('atmos_transform.iris_transform.save_format', return_value=-1)
+    def test_extract_to_pp_iris_fail(self, mock_save):
+        '''Test Iris to extract a single field to PP format - fail save'''
+        func.logtest('Assert extract to PP via Iris - fail save:')
+        rval = atmos_transform._extract_to_pp_iris(
+            [self.ffile], ['air_temperature'], 'dir/outfile.pp', '4y'
+        )
+        mock_save.assert_called_once_with(mock.ANY, 'outfile.pp', 'pp',
+                                          kwargs={'append': True})
+        self.assertIn('Failed to extract field(s) to PP with Iris',
+                      func.capture('err'))
+        self.assertEqual(rval, None)
 
     @mock.patch('atmos_transform.MULE_AVAIL', True)
     @mock.patch('atmos_transform.utils.exec_subproc',
