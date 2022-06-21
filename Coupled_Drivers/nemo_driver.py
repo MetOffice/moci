@@ -199,9 +199,9 @@ def _verify_fix_rst(restartdate, nemo_rst, model_basis_time, time_step,
         #Remove all nemo restart files that are later than the correct
         #cycle times
         #Make our generic restart regular expression, to cover normal NEMO
-        #restart, and potential iceberg or passive tracer restart files, for
+        #restart, and potential iceberg, SI3 or passive tracer restart files, for
         #both the rebuilt and non rebuilt cases
-        generic_rst_regex = r'(icebergs)?.*restart(_trc)?(_\d+)?\.nc'
+        generic_rst_regex = r'(icebergs)?.*restart(_trc)?(_ice)?(_\d+)?\.nc'
         all_restart_files = [f for f in os.listdir(nemo_rst) if
                              re.findall(generic_rst_regex, f)]
         for restart_file in all_restart_files:
