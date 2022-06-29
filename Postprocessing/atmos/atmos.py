@@ -101,21 +101,34 @@ class AtmosPostProc(control.RunPostProc):
         Returns a dictionary of methods available for this model to the
         main program
         '''
-        process = self.suite.naml.process_toplevel is True
-        archive = self.suite.naml.archive_toplevel is True
-        return OrderedDict(
-            [('do_ozone', self.naml.atmospp.preserve_ozone),
-             ('do_meaning', self.naml.atmospp.create_means),
-             ('do_transform', process and
-              (self.naml.atmospp.convert_pp or
-               self.naml.atmospp.streams_to_netcdf)),
-             ('do_archive', archive and self.naml.archiving.archive_switch),
-             ('do_delete', archive and self.naml.delete_sc.del_switch),
-             ('finalcycle_archive', self.suite.finalcycle and
-              any([self.naml.archiving.archive_switch,
-                   self.naml.atmospp.convert_pp,
-                   self.naml.atmospp.streams_to_netcdf])),
-             ('finalise_debug', self.naml.atmospp.debug)])
+        all_methods = self._process_methods
+        all_methods.update(self._archive_methods)
+        all_methods['finalcycle_complete'] = self.suite.finalcycle
+        all_methods['finalise_debug'] = self.naml.atmospp.debug
+        return all_methods
+
+    @property
+    def _process_methods(self):
+        ''' Return <type OrderedDict> List of processing methods '''
+        process_methods = OrderedDict()
+        print(self.suite.naml.process_toplevel)
+        if self.suite.naml.process_toplevel is True:
+            process_methods['do_ozone'] = self.naml.atmospp.preserve_ozone
+            process_methods['do_meaning'] = self.naml.atmospp.create_means
+            process_methods['do_transform'] = (
+                self.naml.atmospp.convert_pp or
+                self.naml.atmospp.streams_to_netcdf
+            )
+        return process_methods
+            
+    @property
+    def _archive_methods(self):
+        ''' Return <type OrderedDict> List of archiving methods '''
+        archive_methods = OrderedDict()
+        if self.suite.naml.archive_toplevel is True:
+            archive_methods['do_archive'] = self.naml.archiving.archive_switch
+            archive_methods['do_delete'] = self.naml.delete_sc.del_switch
+        return archive_methods
 
     @property
     def _work(self):
@@ -674,7 +687,7 @@ class AtmosPostProc(control.RunPostProc):
         '''
         Function to collate the files to archive and pass them to the
         archiving script.
-        Optional argument: finalcycle=True when called from finalcycle_archive.
+        Optional argument: finalcycle=True when called from finalcycle_complete.
         '''
         # Open our log files
         action = 'a' if os.path.exists(self.suite.logfile) else 'w'
@@ -723,7 +736,7 @@ class AtmosPostProc(control.RunPostProc):
             utils.log_msg(' -> Nothing to archive')
 
     @timer.run_timer
-    def finalcycle_archive(self):
+    def finalcycle_complete(self):
         '''
         Archive but do not delete potentially incomplete fieldsfiles left
         on disk at the completion of the final cycle.

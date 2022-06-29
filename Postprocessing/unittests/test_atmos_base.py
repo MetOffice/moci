@@ -1164,6 +1164,25 @@ class PropertyTests(unittest.TestCase):
             except OSError:
                 pass
 
+    def test_process_methods(self):
+        '''Test return list of processing only methods'''
+        func.logtest('Assert list of processing methods')
+        self.atmos.suite.naml.process_toplevel = True
+        self.assertListEqual(
+            list(self.atmos.methods.keys()),
+            ['do_ozone', 'do_meaning', 'do_transform', 'finalcycle_complete',
+             'finalise_debug']
+        )
+
+    def test_archive_methods(self):
+        '''Test return list of archiving only methods'''
+        func.logtest('Assert list of processing methods')
+        self.atmos.suite.naml.archive_toplevel = True
+        self.assertListEqual(
+            list(self.atmos.methods.keys()),
+            ['do_archive', 'do_delete', 'finalcycle_complete', 'finalise_debug']
+        )
+        
     def test_dumpname(self):
         '''Test dumpname creation'''
         func.logtest('Assert return of dumpname for current cycle:')
