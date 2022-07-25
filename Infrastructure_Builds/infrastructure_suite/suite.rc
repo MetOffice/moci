@@ -16,12 +16,10 @@ MODULE_STR = {{ MODULES|join(' ') }}
 [scheduling]
     [[dependencies]]
 	graph = """
-                prepare_hpc_host => extract_oasis & extract_xios_background
-                extract_oasis => build_oasis => run_oasis_tutorial => create_oasis_module
-                create_oasis_module & extract_xios_background => build_xios
-                build_xios => create_xios_module
-                create_oasis_module & create_xios_module => create_prgenv_module
-                create_xios_module => create_prgenv_module
+                prepare_hpc_host => extract_xios_background => build_xios => create_xios_module => create_prgenv_module => run_xios_toy
+{% if not XIOS_ONLY %}
+                prepare_hpc_host => extract_oasis => build_oasis => run_oasis_tutorial => create_oasis_module => build_xios
+{% endif %}
                 """
 
 [runtime]
@@ -56,6 +54,10 @@ MODULE_STR = {{ MODULES|join(' ') }}
         [[[directives]]]
             -l select=1:ncpus=1
             -q = shared
+        [[prepare_hpc_host]]
+            inherit = HPC_SERIAL
+	    script = 'echo Preparing HPC for file transfer'
+{% if not XIOS_ONLY %}
     [[OASIS]]
         [[[environment]]]
 	    PRISMPATH=$CYLC_SUITE_RUN_DIR/share/oasis3-mct
@@ -78,9 +80,6 @@ MODULE_STR = {{ MODULES|join(' ') }}
 {% else %}
             OASIS_WC_DIR={{OASIS_WC_DIR}}
 {% endif %}
-    [[prepare_hpc_host]]
-        inherit = HPC_SERIAL
-	script = 'echo Preparing HPC for file transfer'
     [[build_oasis]]
         inherit = None, HPC_SERIAL, OASIS
         [[[job]]]
@@ -125,6 +124,8 @@ MODULE_STR = {{ MODULES|join(' ') }}
 {% if MODULE_BASE is defined %}
             MODULE_BASE={{MODULE_BASE}}
 {% endif %}
+#end not XIOS only
+{% endif %}
     [[XIOS]]
         [[[environment]]]
             XIOSPATH=$CYLC_SUITE_RUN_DIR/share/xios
@@ -143,11 +144,15 @@ MODULE_STR = {{ MODULES|join(' ') }}
         inherit = None, HPC, XIOS
 	env-script = """
 		     {{MODULE_CMD}};
+{% if not XIOS_ONLY %}
 		     eval $(cat $CYLC_SUITE_RUN_DIR/share/use_oasis_mod.sh);
 		     module use $OASIS_MODULE_USE_PATH;
 		     module load $OASIS_MODULE_PATH;
+{% endif %}
 		     module list;
 		     """
+        [[[environment]]]
+            XIOS_ONLY={{XIOS_ONLY}}
         [[[job]]]
             execution time limit = PT2H
 	[[[directives]]]
@@ -169,17 +174,36 @@ MODULE_STR = {{ MODULES|join(' ') }}
 {% if MODULE_BASE is defined %}
             MODULE_BASE={{MODULE_BASE}}
 {% endif %}
+    [[run_xios_toy]]
+        inherit = None, HPC_SERIAL
+        env-script = """
+                     eval $(cat $CYLC_SUITE_RUN_DIR/share/load_prgenv_mod.sh);
+                     module use $TEST_PRGENV_MODULE_PATH
+                     module load $TEST_PRGENV_MODULE_NAME
+                     module list
+                     """
+        [[[environment]]]
+            ROSE_TASK_APP=xios_toy
+            XIOS_ONLY={{XIOS_ONLY}}
     [[create_prgenv_module]]
         inherit = None, HPC_SERIAL
 	env-script = """
 		     {{MODULE_CMD}};
+{% if not XIOS_ONLY %}
 		     eval $(cat $CYLC_SUITE_RUN_DIR/share/use_oasis_mod.sh);
+{% endif %}
 		     eval $(cat $CYLC_SUITE_RUN_DIR/share/use_xios_mod.sh);
 		     """
         [[[environment]]]
+            XIOS_ONLY={{XIOS_ONLY}}
 	    MODULE_STR={{MODULE_STR}}
-	    GC_PRG_ENV_VERSION={{GC_PRG_ENV_VERSION}}
-	    GC_PRG_ENV_NAME={{GC_PRG_ENV_NAME}}
+{% if not XIOS_ONLY %}
+	    PRG_ENV_VERSION={{GC_PRG_ENV_VERSION}}
+	    PRG_ENV_NAME={{GC_PRG_ENV_NAME}}
+{% else %}
+            PRG_ENV_VERSION={{XIOS_PRG_ENV_VERSION}}
+	    PRG_ENV_NAME={{XIOS_PRG_ENV_NAME}}
+{% endif %} 
 {% if SUITE_URL is defined %}
       	    SUITE_URL={{SUITE_URL}}
 {% endif %}

@@ -26,4 +26,4 @@ cp -f $tutorial_dir/$TEST_MODEL1_EXE ./
 cp -f $tutorial_dir/$TEST_MODEL2_EXE ./
 
 # Run the models using mpiexec
-cray mpiexec -n $NPROC_EXE1 -d 1 ./$TEST_MODEL1_EXE : -n $NPROC_EXE2 -d 1 ./$TEST_MODEL2_EXE
+mpiexec -n $NPROC_EXE1 -d 1 ./$TEST_MODEL1_EXE : -n $NPROC_EXE2 -d 1 ./$TEST_MODEL2_EXE

@@ -16,7 +16,7 @@ A key part of this process is having a suite to build the libraries they depend 
 The suite is contained within the \texttt{infrastructure\_suite} directory. All changes, be it to the build scripts or suite paramaters are carried out in this one location. The suite contains a
 full set of metadata. Paramaters can be changed by running the rose-edit command and different paramaters can be found in the following locations under \textbf{suite conf}
 \begin{itemize}
- \item[] \textbf{Top Level Control} Change the host, and also any preloaded modules before the build process. If different compilers were to be used these would be specified by the preloaded modules, and these are encapsulated in the programming environment created.
+ \item[] \textbf{Top Level Control} Change the host, and also any preloaded modules before the build process. If different compilers were to be used these would be specified by the preloaded modules, and these are encapsulated in the programming environment created. By checking the XIOS Only box, XIOS will be built without OASIS3-MCT, along with a corresponding programming environment module.
  \item[] \textbf{OASIS} Extraction and build of OASIS3-MCT from the nitrox Git repository. Takes in a Git hash in OASIS Branch to allow for repeatability of builds.
  \item[] \textbf{XIOS} XIOS branch/revision to allow for repeatability of builds.
  \item[] \textbf{Modules} The modules to be created by the suite (Names, version numbers etc.)

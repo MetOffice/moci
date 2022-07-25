@@ -6,8 +6,8 @@
 #              relative paths to the OASIS3-MCT and XIOS modules
 #
 # ENVIRONMENT VARIABLES (COMPULSORY):
-#    GC_PRG_ENV_NAME
-#    GC_PRG_ENV_VERSION
+#    PRG_ENV_NAME
+#    PRG_ENV_VERSION
 #    MODULE_STR
 # 
 # ENVIRONMENT VARIABLES (OPTIONAL):
@@ -31,26 +31,45 @@ else
     revision=$(echo $SUITE_REVISION | grep -oP '\d+')
 fi
 
-module_file_path=$MODULE_BASE/modules/$GC_PRG_ENV_NAME/$GC_PRG_ENV_VERSION
+module_file_path=$MODULE_BASE/modules/$PRG_ENV_NAME/$PRG_ENV_VERSION
 mkdir -p $module_file_path
 module_file=$module_file_path/$revision
 
 rm -r $module_file
-cat <<EOF >$module_file
+cat <<EOF >>$module_file
 #%Module1.0
 proc ModulesHelp { } {
+EOF
+if [ "$XIOS_ONLY" = "True" ]; then
+    cat <<EOF >>$module_file
+    puts stderr "Sets up the programming environment for XIOS
+EOF
+else
+    cat <<EOF >>$module_file
     puts stderr "Sets up the programming environment for XIOS and Oasis3-mct
+EOF
+fi
+cat <<EOF >>$module_file
 Build by Rose suite:
 Suite URL: $SUITE_URL
 Suite Revision Number: $SUITE_REVISION
 "
 }
-
-module-whatis The XIOS I/O server for use with weather/climate models 
+EOF
+if [ "$XIOS_ONLY" = "True" ]; then
+    cat <<EOF >>$module_file
+module-whatis The XIOS I/O server for use with weather/climate models
+EOF
+else
+    cat <<EOF >>$module_file
+module-whatis The XIOS I/O server and Oasis3-MCT coupler for use with weather/clmiate models
+EOF
+fi
+cat <<EOF >>$module_file
 
 conflict GC3-PrgEnv
 
-set version $GC_PRG_ENV_VERSION
+set version $PRG_ENV_VERSION
 
 EOF
 
@@ -64,13 +83,28 @@ for mod in $MODULE_STR; do
 $line
 EOF
 done
+
 # now do the oasis and xios modules
-for mod in $OASIS_MODULE_PATH $XIOS_MODULE_PATH; do
-    line="module load $mod"
+if [ "XIOS_ONLY" = "True" ]; then
+    line="module load $XIOS_MODULE_PATH";
     cat <<EOF >>$module_file
 $line
 EOF
-done
+else
+    for mod in $OASIS_MODULE_PATH $XIOS_MODULE_PATH; do
+	line="module load $mod"
+	cat <<EOF >>$module_file
+$line
+EOF
+    done
+fi
+
+# create a script to allow the PrgEnv module to be used by subsequent tasks
+rm $CYLC_SUITE_RUN_DIR/share/load_prgenv_mod.sh
+cat <<EOF > $CYLC_SUITE_RUN_DIR/share/load_prgenv_mod.sh
+export TEST_PRGENV_MODULE_PATH=$MODULE_BASE/modules
+export TEST_PRGENV_MODULE_NAME=$PRG_ENV_NAME/$PRG_ENV_VERSION/$revision
+EOF
 
 #End of script test
 ls $module_file_path

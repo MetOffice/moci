@@ -49,6 +49,7 @@ def read_arch_logfile(logfile, prefix, inst, mean, ncfile):
     to dumps, instantaneous pp files, and mean pp files, and separate
     '''
     for line in open(logfile, 'r').readlines():
+        print('[DEBUG] line:', line)
         fname, tag = line.split(' ', 1)
         tag = 'FAILED' not in tag
         for ftype in FILETYPE:
@@ -57,8 +58,7 @@ def read_arch_logfile(logfile, prefix, inst, mean, ncfile):
             elif ftype == 'pp_mean_names':
                 stream = mean
             elif ftype == 'nc_names':
-                # ncfile could potentially be of NoneType - cast to string
-                stream = str(ncfile)
+                stream = ncfile if ncfile else '*'
             else:
                 stream = '*'
             if stream and FILETYPE[ftype][REGEX](prefix, stream).\

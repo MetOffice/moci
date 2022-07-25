@@ -20,9 +20,11 @@ import shutil
 try:
     # mock is integrated into unittest as of Python 3.3
     import unittest.mock as mock
+    OPEN_FUNC = 'builtins.open'
 except ImportError:
     # mock is a standalone package (back-ported)
     import mock
+    OPEN_FUNC = '__builtin__.open'
 
 import testing_functions as func
 import runtime_environment
@@ -74,6 +76,15 @@ class HousekeepTests(unittest.TestCase):
                 os.remove(fname)
             except OSError:
                 pass
+
+    @mock.patch(OPEN_FUNC)
+    def test_read_arch_log(self, mock_open):
+        ''' Test read arch log file '''
+        func.logtest('Assert reading of arch_log file')
+        mock_open.readlines.return_value = ['line1', 'line2']
+        print('[DEBUG] readlines:', mock_open.readlines())
+        self.assertEqual(1,2)
+            
 
     @mock.patch('housekeeping.utils.remove_files')
     def test_delete_inst_pp_archived(self, mock_rm):
