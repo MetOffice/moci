@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2021 Met Office. All rights reserved.
+ (C) Crown copyright 2023 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -150,7 +150,6 @@ def seconds_to_days(time_secs):
     time_days = time_secs / (24.*3600.)
     return time_days
 
-
 def get_jobfile_info(jobfile):
     '''
     Takes in a path to the jobfile and returns a dictionary containing
@@ -169,6 +168,32 @@ def get_jobfile_info(jobfile):
                 pbs_l_dict[item[0]] = item[1]
     job_f.close()
     return pbs_l_dict
+
+
+def get_select_nodes(jobfile):
+    '''
+    Takes in a path to the jobfile and returns a dictionary containing
+    the selected nodes for each component MPMD model
+    '''
+    pbs_line = ''
+    model_nodes = []
+
+    with common.open_text_file(jobfile, 'r') as job_handle:
+        for line in job_handle.readlines():
+            # Grab the line containing the -l select command
+            if line[:14] == '#PBS -l select':
+                pbs_line = line
+                break
+    #break up the line
+    #First model
+    first_model_nodes = re.match(r'#PBS -l select=(\d+)', pbs_line).group(1)
+    model_nodes.append(int(first_model_nodes))
+    # Any additional models
+    split_pbs_line = pbs_line.split('+')[1:]
+    for i_model in split_pbs_line:
+        i_model_node = re.match(r'(\d+):', i_model).group(1)
+        model_nodes.append(int(i_model_node))
+    return model_nodes
 
 
 def increment_dump(datestr, resub, resub_units):

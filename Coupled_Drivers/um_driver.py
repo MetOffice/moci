@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2022 Met Office. All rights reserved.
+ (C) Crown copyright 2023 Met Office. All rights reserved.
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
  of the code, the use, duplication or disclosure of it is strictly
@@ -27,16 +27,15 @@ import stat
 try:
     import cf_units
 except ImportError:
-    error = ('Unable to import cf_units. Ensure scitools module '
-             'has been loaded first.')
-    sys.exit(error)
+    IMPORT_ERROR_MSG = ('Unable to import cf_units. Ensure scitools module '
+                        'has been loaded first.')
+    sys.exit(IMPORT_ERROR_MSG)
 
 import common
 import error
 import save_um_state
 import dr_env_lib.um_def
 import dr_env_lib.env_lib
-import write_namcouple
 try:
     import f90nml
 except ImportError:
@@ -551,6 +550,7 @@ def _add_hybrid_cpl(n_cpl_freq, cpl_list, origin, dest, name_out_ident,
                     sys.exit(error.MISSING_DEFAULT_RMP)
 
             # Add entry
+            import write_namcouple
             hybrid_snd_list.append(
                 write_namcouple.NamcoupleEntry(name_out,
                                                (100000 + stash_code),
@@ -715,6 +715,7 @@ def _sent_coupling_fields(run_info):
     if 'oasis_atm_send' in oasis_nml['oasis_send_nml']:
         # Check that we have some fields in here
         if oasis_nml['oasis_send_nml']['oasis_atm_send']:
+            import write_namcouple
             model_snd_list = write_namcouple.add_to_cpl_list(
                 'ATM', False, 0,
                 oasis_nml['oasis_send_nml']['oasis_atm_send'])

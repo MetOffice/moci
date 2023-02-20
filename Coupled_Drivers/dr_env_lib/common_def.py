@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2022 Met Office. All rights reserved.
+ (C) Crown copyright 2023 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -34,6 +34,7 @@ COMMON_ENVIRONMENT_VARS_INIT_FIN = {
     'ROSE_LAUNCHER': {},
     'CYLC_TASK_WORK_DIR': {},
     'CYLC_TASK_NAME': {},
+    'CUSTOM_LAUNCH_COMMAND': {'default_val': ''},
     # the following two variables are used for Coupled NWP to allow resubmission
     # within the same cylc cycle as coupled_run1, couled_run2
     'CNWP_SUB_CYCLING': {'default_val': 'False'},

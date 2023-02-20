@@ -83,7 +83,7 @@ def data_intensity_final(core_hour_cycle, common_envar, cpmip_envar):
 
 
 def jpsy_metric(total_power, total_hpc_nodes, number_nodes,
-                aprun_time, years_run):
+                launcher_time, years_run):
     '''
     Calculate the Joules per simulated year metric, and return an appropriate
     message to be written to stdout and the cpmip.out file. Takes arguments
@@ -96,7 +96,7 @@ def jpsy_metric(total_power, total_hpc_nodes, number_nodes,
     else:
         power_for_run_w = (float(total_power) / float(total_hpc_nodes)) * \
             (float(number_nodes) * 1000 * 1000)
-        energy_for_run_joules = float(aprun_time) * power_for_run_w
+        energy_for_run_joules = float(launcher_time) * power_for_run_w
         jpsy = energy_for_run_joules / years_run
         message = 'Energy cost for run %.2E Joules per simulated year\n' % \
             jpsy

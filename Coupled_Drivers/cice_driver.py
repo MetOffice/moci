@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2022 Met Office. All rights reserved.
+ (C) Crown copyright 2023 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -245,13 +245,14 @@ def _setup_executable(common_env):
         # This is probably a coupled NWP suite
         cmd = ['rose', 'date', str(run_start[0])+'0101T0000Z',
                cice_envar['TASK_START_TIME']]
-        time_since_year_start = subprocess.check_output(cmd)
+        _, time_since_year_start = common.exec_subproc(cmd)
         #The next command works because rose date assumes
         # 19700101T0000Z is second 0
         cmd = ['rose', 'date', '--print-format=%s', '19700101T00Z',
                '--offset='+time_since_year_start]
         # Account for restarting from a failure in next line
-        seconds_since_year_start = int(subprocess.check_output(cmd)) \
+        # common.exec_subproc returns a tuple containing (return_code, output)
+        seconds_since_year_start = int(common.exec_subproc(cmd)[1]) \
                                      + last_dump_seconds
         cice_istep0 = seconds_since_year_start/cice_step_int
 

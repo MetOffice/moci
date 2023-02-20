@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2021 Met Office. All rights reserved.
+ (C) Crown copyright 2023 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -32,13 +32,14 @@ import cpmip_xios
 import dr_env_lib.cpmip_def
 import dr_env_lib.env_lib
 
-CORES_PER_NODE_UKMO_XC40 = {'broadwell': 36,
-                            'haswell': 32}
+CORES_PER_NODE = {'broadwell': 36,
+                  'haswell' :32,
+                  'exz' : 128}
 
 
 def get_allocated_cpus(cpmip_envar):
     '''
-    Grab the allocated nproc for the UM XC40
+    Grab the allocated CPUs for all component models
     '''
     models = ['UM', 'JNR', 'NEMO', 'XIOS']
     allocated_cpu = {}
@@ -207,49 +208,76 @@ def _finalize_cpmip_controller(common_env):
     else:
         cice_time = False
 
-    # Get the arguments from the -l PBS directive
-    pbs_l_dict = cpmip_utils.get_jobfile_info(cpmip_envar['CYLC_TASK_LOG_ROOT'])
+    if cpmip_envar['COUPLED_PLATFORM'].lower() == 'exz':
+        # Get the number of nodes from the -l PBS directives for each model.
+        # These come in the same order they appear in the models environment
+        # variable
+        pbs_l_nodes = cpmip_utils.get_select_nodes(
+            cpmip_envar['CYLC_TASK_LOG_ROOT'])
+        plat_cores_per_node = CORES_PER_NODE['exz']
+        number_nodes = sum(pbs_l_nodes)
+        allocated_cpus = number_nodes * plat_cores_per_node
+        allocated_um = 0
+        allocated_jnr = 0
+        allocated_nemo = 0
+        allocated_xios = 0
+        for i_model in common_env['models'].split():
+            if i_model == 'cice':
+                pass
+            elif i_model == 'um':
+                allocated_um = pbs_l_nodes.pop(0) * plat_cores_per_node
+            elif i_model == 'jnr':
+                allocated_jnr = pbs_l_nodes.pop(0) * plat_cores_per_node
+            elif i_model == 'nemo':
+                allocated_nemo = pbs_l_nodes.pop(0) * plat_cores_per_node
+            elif i_model == 'xios':
+                allocated_xios = pbs_l_nodes.pop(0) * plat_cores_per_node
 
-    # Determine the total number of CPUS ALLOCATED for the run. If the
-    # coretype can not be determined we can not calculate this value
-    # and so allocated_cpus will be set to zero. If we cant pick up a
-    # coretype, override the allocated figures for the components to the
-    # number of cpus used per component to allow the CPMIP coupling metric
-    # to be calculated, albiet with a slightly reduced accuracy.
-    number_nodes = int(pbs_l_dict['select'])
-    if 'coretype' in pbs_l_dict.keys():
-        plat_cores_per_node = \
-            CORES_PER_NODE_UKMO_XC40[pbs_l_dict['coretype'].lower()]
-        allocated_cpus = number_nodes * plat_cores_per_node
-        allocated_um = int(math.ceil(um_cpus/float(plat_cores_per_node))) \
-            * plat_cores_per_node
-        allocated_jnr = int(math.ceil(jnr_cpus/float(plat_cores_per_node))) \
-            * plat_cores_per_node
-        allocated_nemo = int(math.ceil(nemo_cpus/float(plat_cores_per_node))) \
-            * plat_cores_per_node
-        allocated_xios = int(math.ceil(xios_cpus/float(plat_cores_per_node))) \
-            * plat_cores_per_node
-    elif int(cpmip_envar['PPN']) > 0:
-        plat_cores_per_node = int(cpmip_envar['PPN'])
-        sys.stdout.write('[INFO] plat_cores_per_node = %s\n' %
-                         plat_cores_per_node)
-        allocated_cpus = number_nodes * plat_cores_per_node
-        allocated_um = int(math.ceil(um_cpus/float(plat_cores_per_node))) \
-            * plat_cores_per_node
-        allocated_jnr = int(math.ceil(jnr_cpus/float(plat_cores_per_node))) \
-            * plat_cores_per_node
-        allocated_nemo = int(math.ceil(nemo_cpus/float(plat_cores_per_node))) \
-            * plat_cores_per_node
-        allocated_xios = int(math.ceil(xios_cpus/float(plat_cores_per_node))) \
-            * plat_cores_per_node
     else:
-        allocated_cpus = 0
-        sys.stdout.write('[INFO] Can not determine coretype, unable to '
-                         'calculate CHSY metric\n')
-        allocated_um = um_cpus
-        allocated_jnr = jnr_cpus
-        allocated_nemo = nemo_cpus
-        allocated_xios = xios_cpus
+        # Get the arguments from the -l PBS directive (for the XC40 systems)
+        pbs_l_dict = cpmip_utils.get_jobfile_info(
+            cpmip_envar['CYLC_TASK_LOG_ROOT'])
+
+        # Determine the total number of CPUS ALLOCATED for the run. If the
+        # coretype can not be determined we can not calculate this value
+        # and so allocated_cpus will be set to zero. If we cant pick up a
+        # coretype, override the allocated figures for the components to the
+        # number of cpus used per component to allow the CPMIP coupling metric
+        # to be calculated, albiet with a slightly reduced accuracy.
+        number_nodes = int(pbs_l_dict['select'])
+        if 'coretype' in pbs_l_dict.keys():
+            plat_cores_per_node = CORES_PER_NODE[pbs_l_dict['coretype'].lower()]
+            allocated_cpus = number_nodes * plat_cores_per_node
+            allocated_um = int(math.ceil(
+                um_cpus/float(plat_cores_per_node))) * plat_cores_per_node
+            allocated_jnr = int(math.ceil(
+                jnr_cpus/float(plat_cores_per_node))) * plat_cores_per_node
+            allocated_nemo = int(math.ceil(
+                nemo_cpus/float(plat_cores_per_node))) * plat_cores_per_node
+            allocated_xios = int(math.ceil(
+                xios_cpus/float(plat_cores_per_node))) *plat_cores_per_node
+        elif int(cpmip_envar['PPN']) > 0:
+            plat_cores_per_node = int(cpmip_envar['PPN'])
+            sys.stdout.write('[INFO] plat_cores_per_node = %s\n' %
+                             plat_cores_per_node)
+            allocated_cpus = number_nodes * plat_cores_per_node
+            allocated_um = int(math.ceil(
+                um_cpus/float(plat_cores_per_node))) * plat_cores_per_node
+            allocated_jnr = int(math.ceil(
+                jnr_cpus/float(plat_cores_per_node))) * plat_cores_per_node
+            allocated_nemo = int(math.ceil(
+                nemo_cpus/float(plat_cores_per_node))) * plat_cores_per_node
+            allocated_xios = int(math.ceil(
+                    xios_cpus/float(plat_cores_per_node))) * plat_cores_per_node
+        else:
+            allocated_cpus = 0
+            sys.stdout.write('[INFO] Can not determine coretype, unable to '
+                             'calculate CHSY metric\n')
+            allocated_um = um_cpus
+            allocated_jnr = jnr_cpus
+            allocated_nemo = nemo_cpus
+            allocated_xios = xios_cpus
+
 
     # calculate the CPMIP coupling
     # metric. This provides a fractional value
@@ -257,7 +285,8 @@ def _finalize_cpmip_controller(common_env):
     # used by a model run in units of (number cores * time). Where possible
     # use allocated cores to ensure consistancy with the definition of the
     # metric
-    total_resource = float(allocated_cpus * int(cpmip_envar['time_in_aprun']))
+    total_resource = float(
+        allocated_cpus * int(cpmip_envar['time_in_launcher']))
     if 'um' in common_env['models']:
         um_resource = float(allocated_um * um_time)
     else:
@@ -272,7 +301,7 @@ def _finalize_cpmip_controller(common_env):
         # XIOS is not used, or used in attatched mode xios_cpus will be 0,
         # so this line still makes sense
         xios_resource = float(allocated_xios *
-                              int(cpmip_envar['time_in_aprun']))
+                              int(cpmip_envar['time_in_launcher']))
     else:
         nemo_resource = 0
         xios_resource = 0
@@ -280,13 +309,14 @@ def _finalize_cpmip_controller(common_env):
     coupling_metric = (total_resource - um_resource - jnr_resource
                        - nemo_resource - xios_resource) / total_resource
 
-    # Run in years per day (as measured by APRUN)
+    # Run in years per day (as measured by the time spent in the launcher)
     years_run = cpmip_utils.tasklength_to_years(cpmip_envar['TASKLENGTH'])
     runtime_days = cpmip_utils.seconds_to_days(
-        int(cpmip_envar['time_in_aprun']))
+        int(cpmip_envar['time_in_launcher']))
     years_per_day = years_run / runtime_days
 
-    aprun_time_message = 'Time in APRUN: %s s\n' % cpmip_envar['time_in_aprun']
+    launcher_time_message \
+        = 'Time in MPI Launcher: %s s\n' % cpmip_envar['time_in_launcher']
     if 'um' in common_env['models']:
         um_time_message = 'Time in UM model code: %i s\nTime in UM' \
             ' coupling code: %i s\n   Time in UM put code: %i s\n' % \
@@ -314,7 +344,7 @@ def _finalize_cpmip_controller(common_env):
     if allocated_cpus:
         chsy_message = cpmip_metrics.chsy_metric(
             allocated_cpus, total_cpus, years_run,
-            int(cpmip_envar['time_in_aprun']) * secs_to_hours)
+            int(cpmip_envar['time_in_launcher']) * secs_to_hours)
         cores_message = 'Cores per node: %s\n' % plat_cores_per_node
     else:
         chsy_message = ''
@@ -354,8 +384,8 @@ def _finalize_cpmip_controller(common_env):
             xios_client_mean, xios_client_max \
                 = cpmip_xios.measure_xios_client_times()
             xios_io_mess = 'XIOS spends on average %i s in each client, and' \
-                ' a maxiumum time of %i s\n' % (xios_client_mean,
-                                                xios_client_max)
+                ' a maxiumum time of %i s\n' % (int(xios_client_mean),
+                                                int(xios_client_max))
     else:
         um_io_frac_mess = ''
         jnr_io_frac_mess = ''
@@ -364,7 +394,7 @@ def _finalize_cpmip_controller(common_env):
 
     if cpmip_envar['DATA_INTENSITY'] in ('true', 'True'):
         core_hour_cycle = total_cpus * \
-            float(int(cpmip_envar['time_in_aprun']) * secs_to_hours)
+            float(int(cpmip_envar['time_in_launcher']) * secs_to_hours)
         data_produced, data_intensity = \
             cpmip_metrics.data_intensity_final(core_hour_cycle,
                                                common_env,
@@ -389,7 +419,7 @@ def _finalize_cpmip_controller(common_env):
     jpsy_msg = cpmip_metrics.jpsy_metric(
         cpmip_envar['TOTAL_POWER_CONSUMPTION'],
         cpmip_envar['NODES_IN_HPC'], number_nodes,
-        cpmip_envar['time_in_aprun'], years_run)
+        cpmip_envar['time_in_launcher'], years_run)
 
 
 
@@ -398,7 +428,7 @@ def _finalize_cpmip_controller(common_env):
     sys.stdout.write('%s\n' % ('-'*80,))
     sys.stdout.write(cores_message)
     sys.stdout.write('%s\n' % ('-'*80,))
-    sys.stdout.write(aprun_time_message)
+    sys.stdout.write(launcher_time_message)
     if 'um' in common_env['models']:
         sys.stdout.write(um_time_message)
     if 'jnr' in common_env['models']:
@@ -407,7 +437,7 @@ def _finalize_cpmip_controller(common_env):
         sys.stdout.write(nemo_time_message)
     if xios_cpus:
         sys.stdout.write('It is assumed that XIOS takes the same time as '
-                         'APRUN\n')
+                         'the time spent in the MPI launcher\n')
     sys.stdout.write(ypd_message)
     sys.stdout.write('\nResource for components in units of core hours\n')
     if 'um' in common_env['models']:
@@ -441,13 +471,12 @@ def _finalize_cpmip_controller(common_env):
 
     # Write an output file containing runtime and processor number information
     # gleaned from the model output file to enable further analysis on this
-    # data that can not be performed by the drivers for reasons of performance
-    # (MOM node restrictiions in the case of the UKMO Cray XC40
+    # data
     output_file = 'cpmip.output'
     with common.open_text_file(output_file, 'w') as cpmip_f:
         if allocated_cpus:
             cpmip_f.write('%s' % cores_message)
-        cpmip_f.write('%s' % aprun_time_message)
+        cpmip_f.write('%s' % launcher_time_message)
         if 'um' in common_env['models']:
             cpmip_f.write('%s' % um_time_message)
         if 'jnr' in common_env['models']:
@@ -466,12 +495,16 @@ def _finalize_cpmip_controller(common_env):
         cpmip_f.write(data_intensity_msg)
         if 'um' in common_env['models']:
             cpmip_f.write('UM Processors: %i\n' % um_cpus)
+            cpmip_f.write('UM Available Processors: %i\n' % allocated_um)
         if 'jnr' in common_env['models']:
             cpmip_f.write('Jnr Processors: %i\n' % jnr_cpus)
+            cpmip_f.write('Jnr Available Processors: %i\n' % allocated_jnr)
         if 'nemo' in common_env['models']:
             cpmip_f.write('NEMO Processors: %i\n' % nemo_cpus)
+            cpmip_f.write('NEMO Available Processors: %i\n' % allocated_nemo)
         if xios_cpus:
             cpmip_f.write('XIOS Processors: %i\n' % xios_cpus)
+            cpmip_f.write('XIOS Available Processors: %i\n' % allocated_xios)
         cpmip_f.write(complexity_msg)
         cpmip_f.write(jpsy_msg)
 

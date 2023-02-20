@@ -97,21 +97,24 @@ done
 
 # Export the enviromnent variables from all the drivers
 source driver_envar
-# Run the aprun command and provide timing information if required
+# Run the MPI launcher command and provide timing information if required
 start=$(date +%s)
 source driver_cmd
 end=$(date +%s)
 
-time_in_aprun=$((end-start))
-echo "[DRIVER_TEST_SCRIPT] $time_in_aprun seconds are spent in APRUN"
+time_in_launcher=$((end-start))
+echo "[DRIVER_TEST_SCRIPT] $time_in_launcher seconds are spent in the"
+echo "[DRIVER_TEST_SCRIPT] MPI Launcher"
 
-#export time_in_aprun variable so the cpmip controller can find it if required
-export time_in_aprun
+#export time_in_launcher variable so the cpmip controller can find it 
+#if required
+export time_in_launcher
 
 # Run the drivers in finalize mode (after completion of the model). This deals
 # with model standard out / standard error, and also with any file details
 # required prior to the start of the next model cycle (if applicable). If
-# aprun has failed, we run the drivers in a stripped down failure mode
+# the MPI launcher has failed, we run the drivers in a stripped down failure 
+# mode
 echo '[DRIVER_TEST_SCRIPT] Finalizing drivers'
 ./link_drivers --finalize;
 export DRIVERS_FINALISED=true

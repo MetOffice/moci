@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2021 Met Office. All rights reserved.
+ (C) Crown copyright 2023 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -33,8 +33,8 @@ class TestGlobals(unittest.TestCase):
         '''
         Test the controller global variables
         '''
-        self.assertEqual(cpmip_controller.CORES_PER_NODE_UKMO_XC40,
-                         {'broadwell': 36, 'haswell': 32})
+        self.assertEqual(cpmip_controller.CORES_PER_NODE,
+                         {'broadwell': 36, 'haswell': 32, 'exz': 128})
 
 class TestAllocatedCpus(unittest.TestCase):
     '''

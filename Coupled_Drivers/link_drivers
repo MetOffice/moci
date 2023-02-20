@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2021 Met Office. All rights reserved.
+ (C) Crown copyright 2023 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -27,7 +27,6 @@ import os
 import argparse
 import error
 import common
-import write_namcouple
 import dr_env_lib.common_def
 import dr_env_lib.env_lib
 
@@ -118,17 +117,23 @@ def _setup_common():
 
     return common_env
 
-def _export_cmd_str_XC40(launchcmds, common_env):
+def _export_cmd_str(launchcmds, common_env):
     '''
-    Create an aprun launch command for the coupled configuration on the
-    XC40
+    Create an MPI launch command for the model configuration
     '''
+    message_str = '[LINK_DRIVERS] attemting to run with command: %s\n'
+    # If a custom command is used we write that straight into cmd variable
+    # rather than constructing the command string
+    if common_env['CUSTOM_LAUNCH_COMMAND']:
+        cmd = common_env['CUSTOM_LAUNCH_COMMAND']
+        sys.stdout.write(message_str % cmd)
+        return cmd
+
     cmd = '%s ' % common_env['ROSE_LAUNCHER']
     for launchcmd in launchcmds:
         if launchcmd != '':
             cmd += launchcmd+' : '
-    sys.stdout.write('[LINK_DRIVERS] attemting to run with command: %s\n'
-                     % cmd[:-3])
+    sys.stdout.write(message_str % cmd[:-3])
     return cmd[:-3]
 
 
@@ -137,9 +142,9 @@ def _export_cmd_str_XC40(launchcmds, common_env):
 
 
 if __name__ == '__main__':
-    # Owing to the limitations of aprun and passing information between the
-    # shell and the python drivers, prepare two command files, one containing
-    # an aprun command to execute, the other containing a command allowing
+    # Owing to the limitations of the MPI launchers and passing information
+    # between the shell and the python drivers, prepare two command files, one
+    # containing a command to execute, the other containing a command allowing
     # environment variables to be exported
 
     try:
@@ -199,6 +204,7 @@ if __name__ == '__main__':
 
         # Create the namcouple file
         if not run_info['l_namcouple']:
+            import write_namcouple
             write_namcouple.write_namcouple(
                 common_env, run_info, coupling_list)
 
@@ -206,8 +212,8 @@ if __name__ == '__main__':
         # environment variable definitions that can be run by the shell
         envar_str = dr_env_lib.env_lib.string_for_export(envinsts)
 
-        # Create the aprun command
-        cmd_str = _export_cmd_str_XC40(launchcmds, common_env)
+        # Create the MPI launcher command
+        cmd_str = _export_cmd_str(launchcmds, common_env)
 
         # Write the export commands for common and model specific environment
         # variables (envar_str) into the file driver_envar

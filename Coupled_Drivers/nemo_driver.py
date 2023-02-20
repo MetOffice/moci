@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2022 Met Office. All rights reserved.
+ (C) Crown copyright 2023 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -32,13 +32,12 @@ import error
 try:
     import cf_units
 except ImportError:
-    error = ('Unable to import cf_units. Ensure the scitools module has '
-             'been loaded first.')
-    sys.exit(error)
+    IMPORT_ERROR_MSG = ('Unable to import cf_units. Ensure the scitools module'
+                        'has been loaded first.')
+    sys.exit(IMPORT_ERROR_MSG)
 
 import dr_env_lib.nemo_def
 import dr_env_lib.env_lib
-import write_namcouple
 try:
     import f90nml
 except ImportError:
@@ -863,6 +862,7 @@ def _sent_coupling_fields(nemo_envar, run_info):
         sys.exit(error.MISSING_OASIS_OCN_SEND)
 
     # Create a list of fields sent from OCN
+    import write_namcouple
     model_snd_list = \
         write_namcouple.add_to_cpl_list( \
         'OCN', False, 0,

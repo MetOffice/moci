@@ -58,7 +58,7 @@ if os.path.isfile(os.path.join(cpmip_fn)):
     # check the cpmip output file contains what we think it should, against
     # a list of line starts
     line_starts = ['Cores per node',
-                   'Time in APRUN',
+                   'Time in MPI Launcher',
                    'Time in UM model', 'Time in UM coupling',
                    'Time in UM put',
                    'Time in NEMO model', 'Time in NEMO coupling',
@@ -67,7 +67,9 @@ if os.path.isfile(os.path.join(cpmip_fn)):
                    'The CPMIP coupling', 'The UM spends', 'This is a fraction',
                    'NEMO spends', 'This is a fraction', 'XIOS spends',
                    'This cycle produces', 'The data intensity metric',
-                   'UM Processors', 'NEMO Processors', 'XIOS Processors',
+                   'UM Processors', 'UM Available Processors',
+                   'NEMO Processors', 'NEMO Available Processors',
+                   'XIOS Processors', 'XIOS Available Processors',
                    'Energy cost for run']
     line_number = 1
     with open(cpmip_fn) as cpmip_fh:

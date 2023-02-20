@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2021 Met Office. All rights reserved.
+ (C) Crown copyright 2023 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -123,8 +123,7 @@ class TestTimeFunctions(unittest.TestCase):
         self.assertEqual(cpmip_utils.tasklength_to_years(
             '0001,01,01,01,01,01'), 1.0362288130144035)
 
-
-class TestPBSJobFile(unittest.TestCase):
+class TestPBSJobFileXc40Case(unittest.TestCase):
     '''
     Test the reading of an example PBS job file
     '''
@@ -169,6 +168,63 @@ export CYLC_DIR='/common/fcm/cylc-7.8.6'
                            'coretype': 'broadwell'}
 
         result = cpmip_utils.get_jobfile_info(self.jobfile_name)
+        self.assertEqual(result, expected_result)
+
+
+class TestPBSJobFileExzCase(unittest.TestCase):
+    '''
+    Test the reading of an example PBS job file
+    '''
+    def setUp(self):
+        '''
+        Create example jobfiles
+        '''
+        # A fully fledged jobfile
+        self.jobfile_name = 'test_jobfile'
+        example_input = '''# DIRECTIVES:
+#PBS -N coupled.19780901T0000Z.mi-bd155_add_cpmip_metrics
+#PBS -o cylc-run/mi-bd155_add_cpmip_metrics/log/job/19780901T0000Z/coupled/01/job.out
+#PBS -e cylc-run/mi-bd155_add_cpmip_metrics/log/job/19780901T0000Z/coupled/01/job.err
+#PBS -l walltime=900
+#PBS -q normal
+#PBS -l select=2:ncpus=256:mpiprocs=90+5:ncpus=256:mpiprocs=120+1:ncpus=256:mpiprocs=6
+# N.B. CYLC_DIR has been updated on the remote host
+    '''
+        with open(self.jobfile_name, 'w') as test_jobfile:
+            test_jobfile.write(example_input)
+
+        # A jobfile with one model
+        self.onemodel_jobfile_name = 'test_onemodel_jobfile'
+        example_input='''#PBS -l select=24:ncpus=256'''
+        with open(self.onemodel_jobfile_name, 'w') as test_jobfile:
+            test_jobfile.write(example_input)
+
+    def tearDown(self):
+        '''
+        Remove the example job file at end of test
+        '''
+        jobfiles = (self.jobfile_name, self.onemodel_jobfile_name)
+        for jobfile in jobfiles:
+            try:
+                os.remove(jobfile)
+            except OSError:
+                pass
+
+    def test_jobfile(self):
+        '''
+        Test the retrival of the pbs -l select directive for nodes for each
+        model in MPMD mode is correct
+        '''
+        expected_result = [2, 5, 1]
+        result = cpmip_utils.get_select_nodes(self.jobfile_name)
+        self.assertEqual(result, expected_result)
+
+    def test_jobfile_one_model(self):
+        '''
+        Test the correct retrieval for a single model in the -l select directive
+        '''
+        expected_result = [24]
+        result = cpmip_utils.get_select_nodes(self.onemodel_jobfile_name)
         self.assertEqual(result, expected_result)
 
 class TestIncrementDump(unittest.TestCase):

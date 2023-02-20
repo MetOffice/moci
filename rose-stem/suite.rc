@@ -68,6 +68,13 @@
     "default" : "default_task",
     "test_drivers_unit" : "fcm_make_drivers => drivers_unittests & mct_validate_unittests" + (" => housekeeping_driver_linux" if HOUSEKEEPING else ""),
     "test_drivers_misc" : "fcm_make_drivers => drivers_check_python_tabs" + (" => housekeeping_driver_linux" if HOUSEKEEPING else ""),
+    "test_drivers_run_exz" : """
+        fcm_make_driversexz => fcm_make2_driversexz => coupledexz
+	fcm_make_umexz => reconexz => coupledexz
+        fcm_make_oceanexz => fcm_make2_oceanexz => reconexz
+        install_ancilexz => reconexz
+        reconexz => coupledexz => check_coupledexz" + (" => housekeeping_driver_hpcexz & housekeeping_driver_linuxexz" if HOUSEKEEPING else "")+"
+	""",
     "test_drivers_run" : """
         fcm_make_drivers => fcm_make2_drivers => coupled
         fcm_make_um => recon => coupled
@@ -85,7 +92,8 @@
 {# If a group option is set, each group or task in the trigger list will be set. -#}
 {%- set groups = {
     "drivers_non_run"   : ['test_drivers_unit', 'test_drivers_verify_metrics', 'test_drivers_plot_cpmip', 'test_drivers_misc'],
-    "drivers"           : ['test_drivers_unit', 'test_drivers_verify_metrics', 'test_drivers_plot_cpmip', 'test_drivers_run', 'test_drivers_misc'],
+    "drivers"           : ['test_drivers_unit', 'test_drivers_verify_metrics', 'test_drivers_plot_cpmip', 'test_drivers_run', 'test_drivers_misc', 'test_drivers_run_exz'],
+    "driversexz"        : ["test_drivers_run_exz"],
     "postproc"          : ["test_postproc"],
     "ALL"               : ["postproc", "drivers"]
     }
@@ -156,3 +164,4 @@
 
 {% include 'tasks-postproc.rc' %}
 {% include 'tasks-drivers.rc' %}
+{% include 'tasks-drivers-exz.rc' %}

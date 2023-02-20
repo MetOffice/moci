@@ -32,6 +32,7 @@ CPMIP_ENVIRONMENT_VARS_INITIAL = {
     'PPN': {'default_val': '0'}}
 
 CPMIP_ENVIRONMENT_VARS_FINAL = {
+    'COUPLED_PLATFORM': {'default_val': 'exz'},
     'DATAM': {},
     'CYLC_TASK_CYCLE_POINT': {},
     'CYCLE': {},
@@ -72,7 +73,7 @@ CPMIP_ENVIRONMENT_VARS_FINAL = {
     'CICE_ROW': {'default_val': '0'},
     'CICE_COL': {'default_val': '0'},
     #Metric related variables
-    'time_in_aprun': {},
+    'time_in_launcher': {},
     'TASKLENGTH': {},
     'CYLC_TASK_LOG_ROOT': {},
     'PPN': {'default_val': '0'},
