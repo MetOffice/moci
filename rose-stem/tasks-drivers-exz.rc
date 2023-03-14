@@ -197,7 +197,7 @@
     [[coupledexz]]
         inherit = None, COUPLEDEXZ, COUPLED_RESOURCEEXZ
         pre-script = "{{MODULE_CMD}} module list"
-        script = "source /common/scitools/profile.d/production-os45-1; . $ROSE_DATA/etc/um_ancils_gl; . $ROSE_DATA/etc/nemo_ancils_gl; rose task-run --verbose {{NON_RIGOROUS_PATH}}"
+        script = "module load scitools; . $ROSE_DATA/etc/um_ancils_gl; . $ROSE_DATA/etc/nemo_ancils_gl; rose task-run --verbose {{NON_RIGOROUS_PATH}}"
         [[[environment]]]
             PPN = {{PPN_EXZ}}
             CICE_ROW = 1205
