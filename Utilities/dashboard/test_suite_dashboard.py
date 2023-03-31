@@ -465,18 +465,23 @@ def read_config(conf_path):
     suite_sections = [s1 for s1 in dash_parser.sections() if 'base' != s1]
     dash_dict = {}
     for suite1 in suite_sections:
+        if suite1.startswith("!"):
+            continue
+        test_dict1 = dict(dash_parser.items(suite1))
+        test_dict1['family_list'] = test_dict1.get('family_list',
+                                                   '').split(',')
+        test_dict1['test_categories'] = test_dict1.get('test_categories',
+                                                       '').split(',')
+        test_avail = False
         for test1 in os.listdir(cylc_run_path):
-            if re.match(suite1, test1):
-                test_dict1 = dict(dash_parser.items(suite1))
-                test_dict1['family_list'] = test_dict1.get('family_list',
-                                                         '').split(',')
-                test_dict1['test_categories'] = test_dict1.get(
-                    'test_categories', ''
-                ).split(',')
+            if re.match(suite1 + r'(_\d{4}-\d{2}-\d{2})?$', test1):
                 test_dict1['cylc_run_path'] = os.path.join(cylc_run_path, test1)
                 test_dict1['rose_bush_url'] = rose_bush_base_url + test1
 
                 dash_dict[test1] = test_dict1
+        if not test_avail:
+            # No test available in  cylc_runs - add default to flag the loss
+            dash_dict[suite1] = test_dict1
 
     return dash_dict, logo_file, wiki_url
 
@@ -498,9 +503,8 @@ def main():
     for suite1 in sorted(dash_dict.keys()):
         try:
             cdb1 = CylcDB(**dash_dict[suite1])
-            suite_started = cdb1.get_suite_start_time()
-            html_output[str(suite_started)] = cdb1.to_html()
-           # print(cdb1.to_html())
+            html_output['{}_{}'.format(cdb1.get_suite_start_time(),
+                                       suite1)] = cdb1.to_html()
         except:
             # no exception type specified as whatever the error,
             # I want the dashboard to report an error for that suite and
