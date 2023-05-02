@@ -41,6 +41,8 @@ try:
 except ImportError:
     pass
 
+# UM control file
+CNTL_NAMELIST_FILE='ATMOSCNTL'
 
 def _expand_fortran_namelist(nl_text):
     """
@@ -149,7 +151,8 @@ def _grab_atmos_timestep_info(atmos_cntl_file):
     return float(n_steps_per_period), float(n_secs_per_period)
 
 
-def _calc_current_model_date(xhistfile, calendar, prev_work_dir):
+def _calc_current_model_date(xhistfile, calendar, prev_work_dir,
+                             atmos_cntl_file):
     '''
     Calculates the current model date based on the model start date
     for the previous model step, and the number of completed
@@ -171,7 +174,7 @@ def _calc_current_model_date(xhistfile, calendar, prev_work_dir):
     # Get the number of time steps per period and the number of
     # seconds per period from the UM namelist.
     n_steps_per_period, n_secs_per_period = _grab_atmos_timestep_info(
-        os.path.join(prev_work_dir, 'ATMOSCNTL'))
+        os.path.join(prev_work_dir, atmos_cntl_file))
 
     timestep_seconds = n_secs_per_period / n_steps_per_period
     progress_seconds = n_completed_steps * timestep_seconds
@@ -188,7 +191,7 @@ def _calc_current_model_date(xhistfile, calendar, prev_work_dir):
 
 
 def verify_fix_rst(xhistfile, cyclepoint, workdir, task_name, temp_hist_name,
-                   calendar, task_param_run=None):
+                   calendar, atmos_cntl_file, task_param_run=None):
     '''
     Verify that the date associated with the restart dump the UM is
     attempting to pick up is consistent with the start date of the
@@ -208,7 +211,7 @@ def verify_fix_rst(xhistfile, cyclepoint, workdir, task_name, temp_hist_name,
         cyclepoint, workdir, task_name, task_param_run)
 
     current_model_date = _calc_current_model_date(
-        xhistfile, calendar, prev_work_dir)
+        xhistfile, calendar, prev_work_dir, atmos_cntl_file)
 
     current_model_date = current_model_date.strftime('%Y%m%d')
 
@@ -299,6 +302,7 @@ def _setup_executable(common_env):
                                common_env['CYLC_TASK_NAME'],
                                'temp_hist',
                                common_env['CALENDAR'],
+                               CNTL_NAMELIST_FILE,
                                common_env['CYLC_TASK_PARAM_run'])
             else:
                 verify_fix_rst(um_envar['HISTORY'],
@@ -306,7 +310,8 @@ def _setup_executable(common_env):
                                common_env['CYLC_TASK_WORK_DIR'],
                                common_env['CYLC_TASK_NAME'],
                                'temp_hist',
-                               common_env['CALENDAR'])
+                               common_env['CALENDAR'],
+                               CNTL_NAMELIST_FILE)
     um_envar.add('HISTORY_TEMP', 'thist')
 
     # Calculate total number of processes
@@ -391,8 +396,9 @@ def get_atmos_resol(um_name, um_resol_file, run_info):
                              um_resol_file)
         sys.exit(error.MISSING_ATM_RESOL_NML)
     if 'global_row_length' not in sizes_nml['nlsizes'] or \
-            'global_rows' not in sizes_nml['nlsizes']:
-        sys.stderr.write('[FAIL] global_row_length or global_rows are '
+            'global_rows' not in sizes_nml['nlsizes'] or \
+            'st_levels' not in sizes_nml['nlsizes']:
+        sys.stderr.write('[FAIL] global_row_length, global_rows or st_levels '
                          'missing from namelist nlsizes in %s\n' % \
                              um_resol_file)
         sys.exit(error.MISSING_ATM_HORIZ_RESOL)
@@ -420,12 +426,15 @@ def get_atmos_resol(um_name, um_resol_file, run_info):
     atmos_lev_name = um_name + '_model_levels'
     run_info[atmos_lev_name] = sizes_nml['nlsizes']['model_levels']
 
+    # Store soil levels
+    atmos_lev_name = um_name + '_soil_levels'
+    run_info[atmos_lev_name] = sizes_nml['nlsizes']['st_levels']
+
     return run_info
 
 def get_jules_levels(jules_resol_file):
     '''
-    Determine the number of soil levels, vegetation tiles and
-    non-vegetation tiles.
+    Determine the number of vegetation tiles and non-vegetation tiles.
     This function is only used when creating the namcouple at run time.
     '''
 
@@ -443,13 +452,6 @@ def get_jules_levels(jules_resol_file):
         sys.stderr.write('[FAIL] jules_soil not found in %s\n' % \
                          jules_resol_file)
         sys.exit(error.MISSING_JULES_RESOL_NML)
-    if 'dzsoil_io' not in sizes_nml['jules_soil']:
-        sys.stderr.write('[FAIL] dzsoil_io is missing from namelist '
-                         'jules_soil in %s\n' % jules_resol_file)
-        sys.exit(error.MISSING_JULES_VERT_RESOL)
-
-    # Store the soil levels
-    n_soil_levs = len(sizes_nml['jules_soil']['dzsoil_io'])
 
     # Check that tile information exists
     if 'jules_surface_types' not in sizes_nml:
@@ -464,9 +466,9 @@ def get_jules_levels(jules_resol_file):
                          'jules_surface_types in %s\n' % jules_resol_file)
         sys.exit(error.MISSING_JULES_TILE_INFO)
 
-    # Return soil levels, number of plant function tiles (npft) and
+    # Return number of plant function tiles (npft) and
     # number of non-vegetation tiles (nnvg).
-    return n_soil_levs, sizes_nml['jules_surface_types']['npft'], \
+    return sizes_nml['jules_surface_types']['npft'], \
         sizes_nml['jules_surface_types']['nnvg']
 
 def _determine_rmp_mapping(rmp_mapping):
@@ -515,7 +517,7 @@ def _determine_rmp_mapping(rmp_mapping):
     return remap
 
 def _add_hybrid_cpl(n_cpl_freq, cpl_list, origin, dest, name_out_ident,
-                    rmp_mapping, hybrid_weight):
+                    rmp_mapping, hybrid_weight, cpl_tstep_info):
     '''
     Write the hybrid coupling fields into hybrid_snd_list.
     This function is only used when creating the namcouple at run time.
@@ -534,20 +536,34 @@ def _add_hybrid_cpl(n_cpl_freq, cpl_list, origin, dest, name_out_ident,
         # Loop across the fields to couple
         hybrid_snd_list = []
         for stash_code in cpl_list:
-            stash_name = '{:05d}'.format(stash_code)
-            name_out = stash_name + name_out_ident + '001s'
 
-            if stash_name in remap:
-                remapping = remap[stash_name]['mapping']
-                mapping_type = remap[stash_name]['map_type']
+            # See if coupling frequency has been overridden
+            if stash_code in cpl_tstep_info:
+                override_cpl_freq = cpl_tstep_info[stash_code]
             else:
-                if 'default' in remap:
-                    remapping = remap['default']['mapping']
-                    mapping_type = remap['default']['map_type']
+                override_cpl_freq = None
+
+            if stash_code < 0:
+                # Passing a scalar
+                stash_name = '{:03d}'.format(-1 * stash_code)
+                name_out = 'sc' + stash_name + name_out_ident
+                remapping = 'OneVal'
+                mapping_type = 1
+            else:
+                stash_name = '{:05d}'.format(stash_code)
+                name_out = stash_name + name_out_ident + '001s'
+
+                if stash_name in remap:
+                    remapping = remap[stash_name]['mapping']
+                    mapping_type = remap[stash_name]['map_type']
                 else:
-                    sys.stderr.write('[FAIL] Require a default remapping '
-                                     'in hybrid_rmp_mapping.\n')
-                    sys.exit(error.MISSING_DEFAULT_RMP)
+                    if 'default' in remap:
+                        remapping = remap['default']['mapping']
+                        mapping_type = remap['default']['map_type']
+                    else:
+                        sys.stderr.write('[FAIL] Require a default remapping '
+                                         'in hybrid_rmp_mapping.\n')
+                        sys.exit(error.MISSING_DEFAULT_RMP)
 
             # Add entry
             import write_namcouple
@@ -557,7 +573,7 @@ def _add_hybrid_cpl(n_cpl_freq, cpl_list, origin, dest, name_out_ident,
                                                '?', origin, dest, -99, '?',
                                                remapping, mapping_type,
                                                hybrid_weight, True,
-                                               n_cpl_freq))
+                                               n_cpl_freq, override_cpl_freq))
 
             # Move to next entry
             hybrid_weight += 1
@@ -573,7 +589,6 @@ def read_hybrid_coupling(hybrid_file_nml, run_info, oasis_nml):
     fields.
     This function is only used when creating the namcouple at run time.
     '''
-
     # Default option is to send no fields
     hybrid_snd_list = None
 
@@ -620,35 +635,85 @@ def read_hybrid_coupling(hybrid_file_nml, run_info, oasis_nml):
             sys.exit(error.MISSING_HYBRID_SEND)
 
         # Default option is to have no stats
-        if 'l_hybrid_stats' not in hybrid_nml['hybrid_cpl']:
-            hybrid_nml['hybrid_cpl']['l_hybrid_stats'] = False
+        if 'i_hybrid_stats' not in hybrid_nml['hybrid_cpl']:
+            hybrid_nml['hybrid_cpl']['i_hybrid_stats'] = 0
+
+        # Check for any overrides to the coupling frequencies
+        cpl_tstep_info = {}
+        if 'cpl_tstep' in hybrid_nml['hybrid_cpl']:
+            n_overrides = int(len(hybrid_nml['hybrid_cpl']['cpl_tstep']) / 2)
+            for i in range(n_overrides):
+                cpl_tstep_info[hybrid_nml['hybrid_cpl']['cpl_tstep'][2*i]] \
+                    = hybrid_nml['hybrid_cpl']['cpl_tstep'][2*i+1]
 
         # Check that we have some hybrid fields to send
         if hybrid_nml['hybrid_cpl']['cpl_hybrid']:
             if hybrid_nml['hybrid_cpl']['l_hybrid_overw'] or \
-               hybrid_nml['hybrid_cpl']['l_hybrid_stats']:
+               hybrid_nml['hybrid_cpl']['i_hybrid_stats'] > 0:
                 hybrid_weight, hybrid_snd_list \
                     = _add_hybrid_cpl(0, hybrid_nml['hybrid_cpl']['cpl_hybrid'],
                                       origin, dest, name_out_ident,
-                                      rmp_mapping, hybrid_weight)
+                                      rmp_mapping, hybrid_weight,
+                                      cpl_tstep_info)
 
                 # Are there any extra stats to send
-                if hybrid_nml['hybrid_cpl']['l_hybrid_stats'] and \
+                if hybrid_nml['hybrid_cpl']['i_hybrid_stats'] > 0 and \
                         'cpl_hybrid_stats' in hybrid_nml['hybrid_cpl']:
                     hybrid_weight, hybrid_snd_stat_list = _add_hybrid_cpl(
                         1, hybrid_nml['hybrid_cpl']['cpl_hybrid_stats'],
                         origin, dest, name_out_ident, rmp_mapping,
-                        hybrid_weight)
+                        hybrid_weight, cpl_tstep_info)
 
                     if hybrid_snd_stat_list:
                         hybrid_snd_list.extend(hybrid_snd_stat_list)
 
-                # Need to store value of l_hybrid_stats in case it's
+                # Need to store value of i_hybrid_stats in case it's
                 # true and any of the coupling frequencies need
                 # modifying as a consequence.
-                if hybrid_nml['hybrid_cpl']['l_hybrid_stats']:
+                if hybrid_nml['hybrid_cpl']['i_hybrid_stats'] > 0:
                     flag_name = 'l_hyb_stats_' + origin + '2' + dest
                     run_info[flag_name] = True
+
+        # See if any additional radiation fields are required.
+        if 'hybrid_jnr' in hybrid_nml:
+            if 'cpl_hybrid_rad_sw' in hybrid_nml['hybrid_jnr'] or \
+               'cpl_hybrid_rad_lw' in hybrid_nml['hybrid_jnr']:
+
+                # See if there an update to weighting for hybrid radiation
+                # coupling fields
+                if 'hybrid_rad_weight' in oasis_nml['oasis_send_nml']:
+                    hybrid_weight \
+                        = oasis_nml['oasis_send_nml']['hybrid_rad_weight']
+
+                # Store SW radiation coupling fields in hybrid_snd_rad_sw_list
+                if 'cpl_hybrid_rad_sw' in hybrid_nml['hybrid_jnr']:
+                    hybrid_weight, hybrid_snd_rad_sw_list = _add_hybrid_cpl(
+                        0, hybrid_nml['hybrid_jnr']['cpl_hybrid_rad_sw'],
+                        origin, dest, name_out_ident,
+                        rmp_mapping, hybrid_weight, cpl_tstep_info)
+
+                    # Add radiation coupling fields to list of hybrid coupling
+                    # fields
+                    if hybrid_snd_rad_sw_list:
+                        if hybrid_snd_list:
+                            hybrid_snd_list.extend(hybrid_snd_rad_sw_list)
+                        else:
+                            hybrid_snd_list = hybrid_snd_rad_sw_list
+
+                # Store LW radiation coupling fields in hybrid_snd_rad_lw_list
+                if 'cpl_hybrid_rad_lw' in hybrid_nml['hybrid_jnr']:
+                    hybrid_weight, hybrid_snd_rad_lw_list = _add_hybrid_cpl(
+                        0, hybrid_nml['hybrid_jnr']['cpl_hybrid_rad_lw'],
+                        origin, dest, name_out_ident,
+                        rmp_mapping, hybrid_weight, cpl_tstep_info)
+
+                    # Add radiation coupling fields to list of hybrid coupling
+                    # fields
+                    if hybrid_snd_rad_lw_list:
+                        if hybrid_snd_list:
+                            hybrid_snd_list.extend(hybrid_snd_rad_lw_list)
+                        else:
+                            hybrid_snd_list = hybrid_snd_rad_lw_list
 
     return run_info, hybrid_snd_list
 
@@ -671,9 +736,9 @@ def _sent_coupling_fields(run_info):
     # Determine the atmosphere resolution
     run_info = get_atmos_resol('ATM', 'SIZES', run_info)
 
-    # Determine the soil levels
-    run_info['ATM_soil_levels'], run_info['ATM_veg_tiles'], \
-        run_info['ATM_non_veg_tiles'] = get_jules_levels('SHARED')
+    # Determine the number of tile types
+    run_info['ATM_veg_tiles'], run_info['ATM_non_veg_tiles'] \
+        = get_jules_levels('SHARED')
 
     # Read the namelist OASIS_ATM_SND (note that this must exist
     # or run_info['l_namecouple'] wouldn't be false and we wouldn't

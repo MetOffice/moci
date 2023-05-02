@@ -30,7 +30,7 @@ JNR_ENVIRONMENT_VARS_INITIAL = {
     'RUNID_JNR': {'default_val': 'junior'},
     'HISTORY_JNR': {'default_val': 'junio.xhist'},
     'FLUME_IOS_NPROC_JNR': {'default_val': '0'},
-    'OCN_RES': {'default_val': ''},
+    'OCN_RES_ATM': {'default_val': ''},
     'ROSE_LAUNCHER_PREOPTS_JNR': {'default_val': 'unset',
                                   'triggers': [
                                       [lambda my_val: my_val == 'unset',

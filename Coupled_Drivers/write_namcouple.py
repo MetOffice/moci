@@ -30,9 +30,9 @@ RMP_MAPPING = {'Bc':'BICUBIC',
                'Bi':'BILINEA',
                'CD':'CONSERV_DESTAREA',
                'CF':'CONSERV_FRACAREA',
+               '0D':'OneVal',
                '1D':'OneD',
                'NB':'nomask_BILINEA',
-               'Sc':'Scalar',
                'remove':'remove'}
 
 class NamcoupleEntry():
@@ -41,7 +41,8 @@ class NamcoupleEntry():
     '''
 
     def __init__(self, name_out, field_id, grid, origin, dest, nlev, l_soil,
-                 mapping, mapping_type, weight, l_hybrid, n_cpl_freq):
+                 mapping, mapping_type, weight, l_hybrid, n_cpl_freq,
+                 override_cpl_freq):
         self.name_out = name_out
         self.field_id = field_id
         self.grid = grid
@@ -54,12 +55,13 @@ class NamcoupleEntry():
         self.weight = weight
         self.l_hybrid = l_hybrid
         self.n_cpl_freq = n_cpl_freq
+        self.override_cpl_freq = override_cpl_freq
 
     def __repr__(self):
         return repr((self.name_out, self.field_id, self.grid, self.origin,
                      self.dest, self.nlev, self.l_soil, self.mapping,
                      self.mapping_type, self.weight, self.l_hybrid,
-                     self.n_cpl_freq))
+                     self.n_cpl_freq, self.override_cpl_freq))
 
 def _print_run_info(run_info):
     '''
@@ -79,12 +81,17 @@ def _print_run_info(run_info):
         # If running ATM<->JNR coupling we can have an ocean resolution
         # without an ocean.
         if 'OCN_resol' in run_info:
-            sys.stdout.write('[INFO] Ocean:             %s (%d, %d)\n' %
+            sys.stdout.write('[INFO] Ocean:             %s (%d, %d)' %
                              (run_info['OCN_grid'], run_info['OCN_resol'][0],
                               run_info['OCN_resol'][1]))
         else:
-            sys.stdout.write('[INFO] Ocean:             %s\n' %
+            sys.stdout.write('[INFO] Ocean:             %s' %
                              run_info['OCN_grid'])
+        if 'NEMO_VERSION' in run_info:
+            sys.stdout.write('   (NEMO version: %s)\n' %
+                             run_info['NEMO_VERSION'])
+        else:
+            sys.stdout.write('\n')
     if 'riv3' in run_info:
         if run_info['riv3'] > 0:
             sys.stdout.write('[INFO] Number of rivers:  %d\n' %
@@ -205,7 +212,7 @@ def add_to_cpl_list(origin, l_hybrid, n_cpl_freq, send_list_raw):
             # Entry will later be filled with the default options
             model_snd_list.append(
                 NamcoupleEntry('default', '?', '?', origin, '?', '?', '?',
-                               '?', '?', '?', l_hybrid, n_cpl_freq))
+                               '?', '?', '?', l_hybrid, n_cpl_freq, None))
         else:
             # A raw coupling entry can have up to 7 arguments:
             # <source name>;<vind>;<grid>;<destination>;<number of level>;
@@ -265,7 +272,7 @@ def add_to_cpl_list(origin, l_hybrid, n_cpl_freq, send_list_raw):
                     model_snd_list.append(
                         NamcoupleEntry(name_out, field_id, grid, origin,
                                        dest, nlev, '?', mapping, mapping_type,
-                                       weighting, l_hybrid, n_cpl_freq))
+                                       weighting, l_hybrid, n_cpl_freq, None))
                     # Just add to the default weighting
                     weighting += 2
             else:
@@ -283,7 +290,7 @@ def write_namcouple(common_env, run_info, coupling_list):
     # Key information is contained in run_info
     _print_run_info(run_info)
 
-    # Run some check on the data in run_info
+    # Run some checks on the data in run_info
     run_info = _checks_on_run_info(run_info)
 
     # See if any default couplings need adding
@@ -293,6 +300,13 @@ def write_namcouple(common_env, run_info, coupling_list):
                 default_couplings.add_default_couplings(run_info,
                                                         coupling_list)
             break
+
+    # See if any couplings need removing
+    store_coupling_list = []
+    for nam_entry in coupling_list:
+        if nam_entry.mapping != 'remove':
+            store_coupling_list.append(nam_entry)
+    coupling_list = store_coupling_list
 
     # Open the file
     nam_file = common.open_text_file('namcouple', 'w')
@@ -310,6 +324,7 @@ def write_namcouple(common_env, run_info, coupling_list):
         nam_file, run_info, coupling_list)
 
     # Close file
+    nam_file.write('#\n$END\n')
     nam_file.close()
 
     # Write cf_name_table.txt file

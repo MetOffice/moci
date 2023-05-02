@@ -149,7 +149,7 @@ class TestGrabFileInfo(unittest.TestCase):
         self.assertEqual(
             expected_value,
             um_driver._calc_current_model_date(
-                self.xhist, self.calendar, self.prev_work_dir)
+                self.xhist, self.calendar, self.prev_work_dir, self.atmoscntl)
             )
 
     def test_calc_current_model_date_360day(self):
@@ -161,7 +161,7 @@ class TestGrabFileInfo(unittest.TestCase):
         self.assertEqual(
             expected_value,
             um_driver._calc_current_model_date(
-                self.xhist, calendar, self.prev_work_dir)
+                self.xhist, calendar, self.prev_work_dir, self.atmoscntl)
             )
 
     def test_calc_current_model_date_365day(self):
@@ -173,7 +173,7 @@ class TestGrabFileInfo(unittest.TestCase):
         self.assertEqual(
             expected_value,
             um_driver._calc_current_model_date(
-                self.xhist, calendar, self.prev_work_dir)
+                self.xhist, calendar, self.prev_work_dir, self.atmoscntl)
             )
 
     def test_verify_rst_fix_dates_match(self):
@@ -187,7 +187,7 @@ class TestGrabFileInfo(unittest.TestCase):
             um_driver.verify_fix_rst(
                 self.xhist, self.cycle_date, self.workdir,
                 self.task_name, self.temp_hist_stub, self.calendar,
-                self.task_param_run)
+                self.atmoscntl, self.task_param_run)
 
         self.assertEqual(output.getvalue(), expected_msg)
 
@@ -232,7 +232,7 @@ class TestGrabFileInfo(unittest.TestCase):
             um_driver.verify_fix_rst(
                 self.xhist, self.cycle_date, self.workdir,
                 self.task_name, self.temp_hist_stub, self.calendar,
-                self.task_param_run)
+                self.atmoscntl, self.task_param_run)
 
         self.assertTrue(expected_mismatch_msg in output.getvalue())
         self.assertTrue(expected_fix_msg in output.getvalue())

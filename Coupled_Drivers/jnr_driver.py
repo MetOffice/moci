@@ -33,6 +33,9 @@ try:
 except ImportError:
     pass
 
+# UM control file for Jnr UM
+CNTL_NAMELIST_FILE_JNR='ATMOSCNTL_JNR'
+
 def _load_run_environment_variables(jnr_envar):
     '''
     Load the UM environment variables required for the model run into the
@@ -76,11 +79,28 @@ def _setup_executable(common_env):
                              jnr_envar['HISTORY_JNR'])
             sys.exit(error.MISSING_DRIVER_FILE_ERROR)
         if common_env['DRIVERS_VERIFY_RST'] == 'True':
-            um_driver.verify_fix_rst(jnr_envar['HISTORY_JNR'],
-                                     common_env['CYLC_TASK_CYCLE_POINT'],
-                                     common_env['CYLC_TASK_WORK_DIR'],
-                                     common_env['CYLC_TASK_NAME'],
-                                     'temp_jnr_hist')
+
+            # In seasonal forecasting, model runs are split into NRUNs and
+            # CRUNs within the same cycle. Use the CYLC_TASK_PARAM_run
+            # variable to access the previous model step work directory.
+            if common_env['SEASONAL'] == 'True':
+                um_driver.verify_fix_rst(jnr_envar['HISTORY_JNR'],
+                                         common_env['CYLC_TASK_CYCLE_POINT'],
+                                         common_env['CYLC_TASK_WORK_DIR'],
+                                         common_env['CYLC_TASK_NAME'],
+                                         'temp_jnr_hist',
+                                         common_env['CALENDAR'],
+                                         CNTL_NAMELIST_FILE_JNR,
+                                         common_env['CYLC_TASK_PARAM_run'])
+            else:
+                um_driver.verify_fix_rst(jnr_envar['HISTORY_JNR'],
+                                         common_env['CYLC_TASK_CYCLE_POINT'],
+                                         common_env['CYLC_TASK_WORK_DIR'],
+                                         common_env['CYLC_TASK_NAME'],
+                                         'temp_jnr_hist',
+                                         common_env['CALENDAR'],
+                                         CNTL_NAMELIST_FILE_JNR)
+
     jnr_envar.add('HISTORY_TEMP_JNR', 'thist_jnr')
 
     # Calculate total number of processes
@@ -146,9 +166,9 @@ def _sent_coupling_fields(run_info):
     # Determine the atmosphere resolution
     run_info = um_driver.get_atmos_resol('JNR', 'SIZES_JNR', run_info)
 
-    # Determine the soil levels
-    run_info['JNR_soil_levels'], run_info['JNR_veg_tiles'], \
-        run_info['JNR_non_veg_tiles'] = um_driver.get_jules_levels('SHARED_JNR')
+    # Determine the number of tile types
+    run_info['JNR_veg_tiles'], run_info['JNR_non_veg_tiles'] \
+        = um_driver.get_jules_levels('SHARED_JNR')
 
     # Read the OASIS sending namelist
     oasis_nml = f90nml.read('OASIS_JNR_SEND')
@@ -235,8 +255,10 @@ def run_driver(common_env, mode, run_info):
     '''
     if mode == 'run_driver':
         exe_envar = _setup_executable(common_env)
-        if exe_envar['OCN_RES']:
-            run_info['OCN_grid'] = exe_envar['OCN_RES']
+        if exe_envar['OCN_RES_ATM'] and 'OCN_grid' not in run_info:
+            # If coupling two atmospheres without an ocean, they will
+            # still need to aware of the ocean grid used in their ancils.
+            run_info['OCN_grid'] = exe_envar['OCN_RES_ATM']
         launch_cmd = _set_launcher_command(common_env['ROSE_LAUNCHER'],
                                            exe_envar)
         if run_info['l_namcouple']:

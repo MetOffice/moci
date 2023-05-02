@@ -53,6 +53,13 @@ import si3_controller
 # Define errors for the NEMO driver only
 SERIAL_MODE_ERROR = 99
 
+# Ocean resolutions
+OCEAN_RESOLS = {'orca2': [182, 149],
+                'orca1': [362, 332],
+                'orca025': [1442, 1021],
+                'orca12': [4322, 3059],
+                'orca36': [12960, 10850]}
+
 def _check_nemonl(envar_container):
     '''
     As the environment variable NEMO_NL is required by both the setup
@@ -797,37 +804,59 @@ def get_ocean_resol(nemo_nl_file, run_info):
     This function is only used when creating the namcouple at run time.
     '''
 
-    # Read in the resolution of ocean (existent of namelist_cfg has
-    # already been checked)
+    # See if resolution is contained within namelists (existent of
+    # namelist_cfg has already been checked)
     ocean_nml = f90nml.read(nemo_nl_file)
 
     # Check the required entries exist
     if 'namcfg' not in ocean_nml:
         sys.stderr.write('[FAIL] namcfg not found in namelist_cfg\n')
         sys.exit(error.MISSING_OCN_RESOL_NML)
-    if 'jpiglo' not in ocean_nml['namcfg'] or \
-       'jpjglo' not in ocean_nml['namcfg'] or \
-       'cp_cfg' not in ocean_nml['namcfg'] or \
-       'jp_cfg' not in ocean_nml['namcfg']:
-        sys.stderr.write('[FAIL] cp_cfg, jp_cfg, jpiglo or jpjglo are '
-                         'missing from namelist namcf in namelist_cfg\n')
-        sys.exit(error.MISSING_OCN_RESOL)
 
-    # Check it is on orca grid
-    if ocean_nml['namcfg']['cp_cfg'] != 'orca':
-        sys.stderr.write('[FAIL] we can currently only handle the '
-                         'ORCA grid\n')
-        sys.exit(error.NOT_ORCA_GRID)
+    if 'jpiglo' in ocean_nml['namcfg']:
+        # Resolution is contained within namelists
 
-    # Check this is a grid we recognise
-    if ocean_nml['namcfg']['jp_cfg'] == 25:
-        run_info['OCN_grid'] = 'orca025'
+        if 'jpiglo' not in ocean_nml['namcfg'] or \
+           'jpjglo' not in ocean_nml['namcfg'] or \
+           'cp_cfg' not in ocean_nml['namcfg'] or \
+           'jp_cfg' not in ocean_nml['namcfg']:
+            sys.stderr.write('[FAIL] cp_cfg, jp_cfg, jpiglo or jpjglo are '
+                             'missing from namelist namcf in namelist_cfg\n')
+            sys.exit(error.MISSING_OCN_RESOL)
+
+        # Check it is on orca grid
+        if ocean_nml['namcfg']['cp_cfg'] != 'orca':
+            sys.stderr.write('[FAIL] we can currently only handle the '
+                             'ORCA grid\n')
+            sys.exit(error.NOT_ORCA_GRID)
+
+        # Check this is a grid we recognise
+        if ocean_nml['namcfg']['jp_cfg'] == 25:
+            run_info['OCN_grid'] = 'orca025'
+        else:
+            run_info['OCN_grid'] = 'orca' + str(ocean_nml['namcfg']['jp_cfg'])
+
+        # Store the ocean resolution
+        run_info['OCN_resol'] = [ocean_nml['namcfg']['jpiglo'],
+                                 ocean_nml['namcfg']['jpjglo']]
+
     else:
-        run_info['OCN_grid'] = 'orca' + str(ocean_nml['namcfg']['jp_cfg'])
-
-    # Store the ocean resolution
-    run_info['OCN_resol'] = [ocean_nml['namcfg']['jpiglo'],
-                             ocean_nml['namcfg']['jpjglo']]
+        # Resolution should be contained within a domain_cfg netCDF file.
+        # Rather than read this file, assume resolution is declared.
+        if 'OCN_grid' not in run_info:
+            sys.stderr.write('[FAIL] it is necessary to declare the ocean '
+                             'resolution by setting the OCN_RES environment '
+                             'variable.')
+            sys.exit(error.NOT_DECLARE_OCN_RES)
+        else:
+            # Determine the ocean resolution
+            if run_info['OCN_grid'] not in OCEAN_RESOLS:
+                sys.stderr.write('[FAIL] the ocean resolution for %s is '
+                                 'unknown' % run_info['OCN_grid'])
+                sys.exit(error.UNKNOWN_OCN_RESOL)
+            else:
+                run_info['OCN_resol'] = [OCEAN_RESOLS[run_info['OCN_grid']][0],
+                                         OCEAN_RESOLS[run_info['OCN_grid']][1]]
 
     return run_info
 
@@ -846,6 +875,14 @@ def _sent_coupling_fields(nemo_envar, run_info):
     if not 'exec_list' in run_info:
         run_info['exec_list'] = []
     run_info['exec_list'].append('toyoce')
+
+    # Store ocean resolution if it is provided
+    if nemo_envar['OCN_RES']:
+        run_info['OCN_grid'] = nemo_envar['OCN_RES']
+
+    # Store the nemo version
+    if nemo_envar['NEMO_VERSION']:
+        run_info['NEMO_VERSION'] = nemo_envar['NEMO_VERSION']
 
     # Determine the ocean resolution
     run_info = get_ocean_resol(nemo_envar['NEMO_NL'], run_info)
@@ -961,8 +998,8 @@ def run_driver(common_env, mode, run_info):
     '''
     if mode == 'run_driver':
         exe_envar = _setup_executable(common_env)
-        launch_cmd = \
-              _set_launcher_command(common_env['ROSE_LAUNCHER'], exe_envar)
+        launch_cmd = _set_launcher_command(common_env['ROSE_LAUNCHER'],
+                                           exe_envar)
         if run_info['l_namcouple']:
             model_snd_list = None
         else:

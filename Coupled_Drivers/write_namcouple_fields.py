@@ -18,8 +18,8 @@ DESCRIPTION
 '''
 import os
 import sys
-import error
 from mule.stashmaster import STASHmaster
+import error
 import write_cf_name_table
 
 # The part of name used in namcouple to identify the component
@@ -202,38 +202,60 @@ def _snr2jnr_field_info(nam_entry, model_levels, soil_levels, n_veg_tiles,
         dest_ident = 'j'
     else:
         dest_ident = 's'
-    name_in = nam_entry.name_out[0:5] + dest_ident + \
-        nam_entry.name_out[6:9] + 'r'
 
-    # Determine if stash code is in stashmaster_info
-    stash_code = int(nam_entry.name_out[0:5])
-    if stash_code in stashmaster_info:
-        # Determine which grid we're on
-        grid = _determine_grid(stashmaster_info[stash_code].grid, stash_code)
-        if not grid:
-            # There has been error
-            sys.stderr.write('[FAIL] failure for stash code %d.\n' %
-                             stash_code)
-            sys.exit(error.UNRECOGNISED_GRID)
-        # Determine the number of vertical levels and if field is
-        # found in the atmosphere or the land/soil.
-        nlev, l_soil = _determine_levels(model_levels, soil_levels,
-                                         n_veg_tiles, n_non_veg_tiles,
-                                         stashmaster_info[stash_code].grid,
-                                         stashmaster_info[stash_code].level_f,
-                                         stashmaster_info[stash_code].level_l,
-                                         stashmaster_info[stash_code].pseudo_l)
-        if nlev < 0:
-            # There has been error
-            sys.stderr.write('[FAIL] failure for stash code %d.\n' %
-                             stash_code)
-            sys.exit(error.UNRECOGNISED_LEVEL)
+    # Determine if scalar (currently the only scalars are 0D)
+    if nam_entry.mapping == 'OneVal':
+        # Scalar field
+        name_in = nam_entry.name_out[0:5] + dest_ident
+        if nam_entry.field_id == 99999:
+            longname = "Total energy"
+        else:
+            sys.stdout.write('[WARN] unrecognised scalar, field_id is %d\n' %
+                             nam_entry.field_id)
+            longname = 'Unknown scalar'
+
+        # No grid and one level
+        grid = '0'
+        nlev = 1
+        l_soil = False
     else:
-        sys.stderr.write('[FAIL] not found stash code %d in '
-                         'STASHmaster information.\n' % stash_code)
-        sys.exit(error.NOT_FOUND_STASH_CODE)
+        # Normal array
+        name_in = nam_entry.name_out[0:5] + dest_ident + \
+                  nam_entry.name_out[6:9] + 'r'
 
-    return name_in, stashmaster_info[stash_code].longname, grid, nlev, l_soil
+        # Determine if stash code is in stashmaster_info
+        stash_code = int(nam_entry.name_out[0:5])
+        if stash_code in stashmaster_info:
+            # Determine which grid we're on
+            grid = _determine_grid(stashmaster_info[stash_code].grid,
+                                   stash_code)
+            if not grid:
+                # There has been error
+                sys.stderr.write('[FAIL] failure for stash code %d.\n' %
+                                 stash_code)
+                sys.exit(error.UNRECOGNISED_GRID)
+            # Determine the number of vertical levels and if field is
+            # found in the atmosphere or the land/soil.
+            nlev, l_soil \
+                = _determine_levels(model_levels, soil_levels,
+                                    n_veg_tiles, n_non_veg_tiles,
+                                    stashmaster_info[stash_code].grid,
+                                    stashmaster_info[stash_code].level_f,
+                                    stashmaster_info[stash_code].level_l,
+                                    stashmaster_info[stash_code].pseudo_l)
+            if nlev < 0:
+                # There has been error
+                sys.stderr.write('[FAIL] failure for stash code %d.\n' %
+                                 stash_code)
+                sys.exit(error.UNRECOGNISED_LEVEL)
+        else:
+            sys.stderr.write('[FAIL] not found stash code %d in '
+                             'STASHmaster information.\n' % stash_code)
+            sys.exit(error.NOT_FOUND_STASH_CODE)
+        # Long name
+        longname = stashmaster_info[stash_code].longname
+
+    return name_in, longname, grid, nlev, l_soil
 
 def _atm2ocn_field_info(nam_entry, cf_names, cf_table_num, n_cf_table):
     '''
@@ -290,8 +312,11 @@ def _write_transdef(nam_file, nam_entry, cpl_freq, n_field, longname):
     nam_file.write('#---------------------------------------------------\n')
     nam_file.write('# %s' % longname)
     if nam_entry.l_hybrid:
-        nam_file.write(' (stash %s,%s)' % (nam_entry.name_out[0:2],
-                                           nam_entry.name_out[2:5]))
+        if nam_entry.mapping == 'OneVal':
+            nam_file.write(' (0D scalar %s)' % nam_entry.name_out[2:5])
+        else:
+            nam_file.write(' (stash %s,%s)' % (nam_entry.name_out[0:2],
+                                               nam_entry.name_out[2:5]))
     nam_file.write(' (weighting %d)\n' % nam_entry.weight)
     nam_file.write('# %s --> %s every %d%s (%ds)' %
                    (nam_entry.origin, nam_entry.dest, display_freq,
@@ -303,7 +328,7 @@ def _write_transdef(nam_file, nam_entry, cpl_freq, n_field, longname):
     nam_file.write('#---------------------------------------------------\n')
 
     # For scalar field the grid is not specified
-    if nam_entry.mapping == 'Scalar':
+    if nam_entry.mapping == 'OneVal':
         grid = '0'
     elif nam_entry.mapping == 'OneD':
         grid = '1'
@@ -314,7 +339,9 @@ def _write_transdef(nam_file, nam_entry, cpl_freq, n_field, longname):
     nam_file.write('# TRANSDEF: %s%s %s%s %d %d ' %
                    (nam_entry.origin, grid, nam_entry.dest, grid,
                     n_field, nam_entry.field_id))
-    if nam_entry.mapping_type > 0:
+    if nam_entry.mapping_type > 0 and nam_entry.origin in ('ATM', 'JNR'):
+        # The TRANSDEF line is only read by UM, so the mapping employed
+        # the ocean is not given here.
         nam_file.write('%d ' % nam_entry.mapping_type)
     nam_file.write('###\n')
 
@@ -391,8 +418,8 @@ def _write_grid_info(nam_file, ocn_abrev, nam_entry, seq,
         origin_grid = origin_start + mid_name + nam_entry.grid
         dest_grid = dest_start + mid_name + nam_entry.grid
 
-    # Scalar passing has very different arguments
-    if nam_entry.mapping == 'Scalar':
+    # 0D scalar passing has very different arguments
+    if nam_entry.mapping == 'OneVal':
         # Write the resolutions and grids
         nam_file.write(' 1 1 1 1 %s %s SEQ=+%d\n' % \
                            (origin_grid, dest_grid, seq))
@@ -404,9 +431,9 @@ def _write_grid_info(nam_file, ocn_abrev, nam_entry, seq,
         if origin_grid in run_info:
             data_len = run_info[origin_grid]
         else:
-            sys.stderr.write('[FAIL] size of 1d grid %s is unknown.\n' %
-                             origin_grid)
-            sys.exit(error.UNKNOWN_1D_GRID_SIZE)
+            # Otherwise, assume size is 1
+            data_len = 1
+
         # Write the resolutions and grids
         nam_file.write(' %d 1 %d 1 %s %s SEQ=+%d\n' % \
                        (data_len, data_len, origin_grid, dest_grid, seq))
@@ -418,13 +445,11 @@ def _write_grid_info(nam_file, ocn_abrev, nam_entry, seq,
         origin_resol_name = nam_entry.origin + '_resol'
         dest_resol_name = nam_entry.dest + '_resol'
         ny_origin = run_info[origin_resol_name][1]
-        if nam_entry.grid == 'v' and (nam_entry.origin == 'ATM' or
-                                      nam_entry.origin == 'JNR'):
+        if nam_entry.grid == 'v' and nam_entry.origin in ('ATM', 'JNR'):
             # An extra grid point is needed for atmosphere on v-grid.
             ny_origin += 1
         ny_dest = run_info[dest_resol_name][1]
-        if nam_entry.grid == 'v' and (nam_entry.dest == 'ATM' or
-                                      nam_entry.dest == 'JNR'):
+        if nam_entry.grid == 'v' and nam_entry.dest in ('ATM', 'JNR'):
             # An extra grid point is needed for atmosphere on v-grid.
             ny_dest += 1
 
@@ -453,8 +478,7 @@ def _write_grid_info(nam_file, ocn_abrev, nam_entry, seq,
                     nam_file.write('SECOND\n')
                 else:
                     nam_file.write('FIRST\n')
-            elif nam_entry.mapping == 'BILINEA' or \
-                    nam_entry.mapping == 'BILINEAR':
+            elif nam_entry.mapping in ('BILINEA', 'BILINEAR'):
                 nam_file.write(' BILINEAR LR SCALAR LATLON 1\n')
             elif nam_entry.mapping == 'BICUBIC':
                 nam_file.write(' BICUBIC LR SCALAR LATLON 1\n')
@@ -479,10 +503,12 @@ def _write_grid_info(nam_file, ocn_abrev, nam_entry, seq,
             nam_file.write(' rmp_%s_to_%s_%s' % \
                                (origin_grid, dest_grid, mapping))
             if nam_entry.mapping.count('CONSERV') >= 1:
-                if nam_entry.mapping_type == 2:
+                if nam_entry.mapping_type == 1:
+                    nam_file.write('_1st.nc\n')
+                elif nam_entry.mapping_type == 2:
                     nam_file.write('_2nd.nc\n')
                 else:
-                    nam_file.write('_1st.nc\n')
+                    nam_file.write('.nc\n')
             else:
                 nam_file.write('.nc\n')
 
@@ -508,7 +534,7 @@ def write_namcouple_fields(nam_file, run_info, coupling_list):
         # which is used in all the ancillaries etc needed to be
         # explicitly defined in the um app.
         sys.stderr.write('[FAIL] ocean resolution will need to be set. '
-                         'Try setting the environment variable OCN_RES '
+                         'Try setting the environment variable OCN_RES_ATM '
                          'in the um app.\n')
         sys.exit(error.NO_OCN_RESOL)
 
@@ -525,78 +551,79 @@ def write_namcouple_fields(nam_file, run_info, coupling_list):
     # Loop across all the coupling
     for nam_entry in coupling_list:
 
-        # Determine if field should be removed
-        if nam_entry.mapping != 'remove':
+        # Determine if seq should be updated
+        if nam_entry.origin != origin_old:
+            seq += 1
+            origin_old = nam_entry.origin
 
-            # Determine if seq should be updated
-            if nam_entry.origin != origin_old:
-                seq += 1
-                origin_old = nam_entry.origin
-
-            # Determine the coupling frequency
+        # Determine the coupling frequency
+        if nam_entry.override_cpl_freq:
+            # Needs to be in seconds
+            cpl_freq = 60 * nam_entry.override_cpl_freq
+        else:
             cpl_freq = _coupling_freq(nam_entry, run_info)
 
-            # Determine if this is a hybrid field
+        # Determine if this is a hybrid field
+        if nam_entry.l_hybrid:
+            # Determine if STASHmaster_A file should be read
+            if not stashmaster_info:
+                stashmaster_info \
+                    = _read_stashmaster(run_info['STASHMASTER'])
+
+            # Determine the base name_in, long name, grid and number
+            # of vertical levels
+            name_in, longname, nam_entry.grid, \
+                nam_entry.nlev, nam_entry.l_soil \
+                = _snr2jnr_field_info(nam_entry,
+                                      run_info['ATM_model_levels'],
+                                      run_info['ATM_soil_levels'],
+                                      run_info['ATM_veg_tiles'],
+                                      run_info['ATM_non_veg_tiles'],
+                                      stashmaster_info)
+
+            # Determine the cf_name_table.txt attributes
+            cf_names.append(
+                write_cf_name_table.CfNameTableEntry(longname, 'unknown'))
+            n_cf_table += 1
+            cf_table_number = n_cf_table
+
+        else:
+            # Determine further field information
+            name_in, cf_names, cf_table_number, cf_table_num, n_cf_table \
+                = _atm2ocn_field_info(nam_entry, cf_names, cf_table_num,
+                                      n_cf_table)
+            longname = cf_names[cf_table_number - 1].longname
+
+        # See if remapping file needs creating
+        l_rmp_create = False
+        n_trans = 1
+        if 'rmp_create' in run_info:
             if nam_entry.l_hybrid:
-                # Determine if STASHmaster_A file should be read
-                if not stashmaster_info:
-                    stashmaster_info = \
-                        _read_stashmaster(run_info['STASHMASTER'])
-
-                # Determine the base name_in, long name, grid and number
-                # of vertical levels
-                name_in, longname, nam_entry.grid, \
-                    nam_entry.nlev, nam_entry.l_soil = \
-                    _snr2jnr_field_info(nam_entry,
-                                        run_info['ATM_model_levels'],
-                                        run_info['ATM_soil_levels'],
-                                        run_info['ATM_veg_tiles'],
-                                        run_info['ATM_non_veg_tiles'],
-                                        stashmaster_info)
-
-                # Determine the cf_name_table.txt attributes
-                cf_names.append(
-                    write_cf_name_table.CfNameTableEntry(longname, 'unknown'))
-                n_cf_table += 1
-                cf_table_number = n_cf_table
-
+                name_match_str = nam_entry.name_out[0:6]
             else:
-                # Determine further field information
-                name_in, cf_names, cf_table_number, cf_table_num, n_cf_table = \
-                    _atm2ocn_field_info(nam_entry, cf_names, cf_table_num,
-                                        n_cf_table)
-                longname = cf_names[cf_table_number - 1].longname
+                name_match_str = nam_entry.name_out
+            for create_entry in run_info['rmp_create']:
+                if create_entry == name_match_str:
+                    l_rmp_create = True
+                    n_trans += 1
 
-            # See if remapping file needs creating
-            l_rmp_create = False
-            n_trans = 1
-            if 'rmp_create' in run_info:
-                if nam_entry.l_hybrid:
-                    name_match_str = nam_entry.name_out[0:6]
-                else:
-                    name_match_str = nam_entry.name_out
-                for create_entry in run_info['rmp_create']:
-                    if create_entry == name_match_str:
-                        l_rmp_create = True
-                        n_trans += 1
+        # Transformation are also increased by postproc conservation
+        if nam_entry.mapping.find('-') > 0 and n_trans == 1:
+            n_trans = 2
 
-            # Transformation are also increased by postproc conservation
-            if nam_entry.mapping.find('-') > 0 and n_trans == 1:
-                n_trans = 2
+        # Write the TRANSDEF information to namcouple
+        _write_transdef(nam_file, nam_entry, cpl_freq, n_field, longname)
 
-            # Write the TRANSDEF information to namcouple
-            _write_transdef(nam_file, nam_entry, cpl_freq, n_field, longname)
+        # Write the line with field names and coupling frequency
+        _write_main_line(nam_file, nam_entry, cpl_freq, name_in,
+                         cf_table_number, n_trans, cpl_restart_file,
+                         run_info)
 
-            # Write the line with field names and coupling frequency
-            _write_main_line(nam_file, nam_entry, cpl_freq, name_in,
-                             cf_table_number, n_trans, cpl_restart_file,
-                             run_info)
+        # Write the grid information
+        _write_grid_info(nam_file, ocn_abrev, nam_entry, seq,
+                         run_info, l_rmp_create)
 
-            # Write the grid information
-            _write_grid_info(nam_file, ocn_abrev, nam_entry, seq,
-                             run_info, l_rmp_create)
-
-            # Move to next field
-            n_field += 1
+        # Move to next field
+        n_field += 1
 
     return cf_names

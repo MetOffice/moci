@@ -25,88 +25,106 @@ try:
 except ImportError:
     pass
 
-# This indicates which flags are assumed to turn on which
-# fields
-ATM2OCN_FLAGS = {'sn_rcv_tau':['atm_OTaux1', 'atm_OTauy1'],
-                 'sn_rcv_qsr':['atm_QsrOce'],
-                 'sn_rcv_qns':['atm_QnsOce'],
-                 'sn_rcv_emp':['atmTotRain', 'atmTotSnow',
-                               'atmTotEvap', 'atmIceEvp'],
-                 'sn_rcv_w10m':['atm_Wind10'],
-                 'sn_rcv_rnf':['atm_Runoff'],
-                 'sn_rcv_iceflx':['atmTopMlt', 'atmBotMlt'],
-                 'sn_rcv_ts_ice':['atmTsfIce'],
-                 'sn_rcv_grnm':['atmGrnmass'],
-                 'sn_rcv_antm':['atmAntmass'],
-                 'sn_rcv_atm_pco2':['atmATMPCO2'],
-                 'sn_rcv_atm_dust':['atmATMDUST']}
+# This indicates which flags are assumed to turn on which fields,
+# along with an argument, such as 'none' which rules them out from
+# being included. The arguments are defined for the sn_rcv_* and
+# sn_snd_* variables in NEMO's [namelist:namsbc_cpl] and can be any
+# string, but typical values are 'none' or 'oce only'. 
 
-ATM2OCN_FLAG_ORDER = ['sn_rcv_tau', 'sn_rcv_qsr', 'sn_rcv_qns',
-                      'sn_rcv_emp', 'sn_rcv_w10m', 'sn_rcv_rnf',
-                      'sn_rcv_iceflx', 'sn_rcv_ts_ice', 'sn_rcv_grnm',
-                      'sn_rcv_antm', 'sn_rcv_atm_pco2', 'sn_rcv_atm_dust']
+ATM2OCN_FLAGS = {'sn_rcv_antm':{'atmAntmass':'none'},
+                 'sn_rcv_atm_dust':{'atmATMDUST':'none'},
+                 'sn_rcv_atm_pco2':{'atmATMPCO2':'none'},
+                 'sn_rcv_grnm':{'atmGrnmass':'none'},
+                 'sn_rcv_iceflx':{'atmTopMlt':'none',
+                                  'atmBotMlt':'none'},
+                 'sn_rcv_mslp':{'atm_MSLP':'none'},
+                 'sn_rcv_qns':{'atm_QnsOce':'none'},
+                 'sn_rcv_qsr':{'atm_QsrOce':'none'},
+                 'sn_rcv_qtr':{'atmQtr':'none'},
+                 'sn_rcv_rnf':{'atm_Runoff':'none'},
+                 'sn_rcv_tau':{'atm_OTaux1':'none',
+                               'atm_OTauy1':'none'},
+                 'sn_rcv_ts_ice':{'atmTsfIce':'none'},
+                 'sn_rcv_w10m':{'atm_Wind10':'none'}}
 
-OCN2ATM_FLAGS = {'sn_snd_temp':['model01_O_SSTSST', 'model01_OTepIce'],
-                 'sn_snd_thick':['model01_OIceFrc', 'model01_OIceTck',
-                                 'model01_OSnwTck'],
-                 'sn_snd_thick1':['model01_OIceFrd'],
-                 'sn_snd_crt':['model01_O_OCurx1', 'model01_O_OCury1'],
-                 'sn_snd_mpnd':['model01_OPndFrc', 'model01_OPndTck'],
-                 'sn_snd_cond':['model01_OIceKn'],
-                 'sn_snd_bio_dms':['model01_OBioDMS'],
-                 'sn_snd_bio_co2':['model01_OBioCO2'],
-                 'sn_snd_bio_chloro':['model01_OBioChlo']}
+ATM2OCN_FLAGS_NEMO306 = {'sn_rcv_emp':{'atmTotRain':'none',
+                                       'atmTotSnow':'none',
+                                       'atmTotEvap':'none',
+                                       'atmIceEvp':'none'}}
 
-OCN2ATM_FLAG_ORDER = ['sn_snd_temp', 'sn_snd_thick', 'sn_snd_thick1',
-                      'sn_snd_crt', 'sn_snd_mpnd', 'sn_snd_cond',
-                      'sn_snd_bio_dms', 'sn_snd_bio_co2', 'sn_snd_bio_chloro']
+ATM2OCN_FLAGS_NEMO4 = {'sn_rcv_emp':{'atmTotRain':'none',
+                                     'atmTotSnow':'none',
+                                     'atmTotEvap':'none',
+                                     'atmIceEvap':'none'}}
 
-NAME_FOR_1DFIELD = {'sn_rcv_rnf':['atmRunff1D']}
+OCN2ATM_FLAGS = {'sn_snd_bio_chloro':{'model01_OBioChlo':'none'},
+                 'sn_snd_bio_co2':{'model01_OBioCO2':'none'},
+                 'sn_snd_bio_dms':{'model01_OBioDMS':'none'},
+                 'sn_snd_cond':{'model01_OIceKn':'none'},
+                 'sn_snd_crt':{'model01_O_OCurx1':'none',
+                               'model01_O_OCury1':'none'},
+                 'sn_snd_mpnd':{'model01_OPndFrc':'none',
+                                'model01_OPndTck':'none'},
+                 'sn_snd_temp':{'model01_O_SSTSST':'none',
+                                'model01_OTepIce':'oce only'},
+                 'sn_snd_thick':{'model01_OIceFrc':'none',
+                                 'model01_OIceTck':'none',
+                                 'model01_OSnwTck':'none'},
+                 'sn_snd_thick1':{'model01_OIceFrd':'none'},
+                 'sn_snd_ttilyr':{'model01_O_TtiLyr':'none'}}
 
-# Each coupling entry can have 5 options
+NAME_FOR_1DFIELD = {'sn_rcv_rnf':{'atmRunff1D':'none'}}
+
+# Each coupling entry can have 6 options
 #  - The number of categories
 #  - The grid
-#  - The type of mapping
+#  - The type of mapping, e.g. 0D scaler (0D), 1D scaler (1D), bi-cubic (Bc),
+#    bi-linear (Bi), conservative destarea (CD), conservative fracarea (CF)
+#    and no-mask bi-linear (NB).
 #  - The order of mapping (if this is not wanted it is set to -99)
 #  - The first field ID
-# Note that a coupling entry would typically have a 'weighting' for the
-# coupling, but this is not specified in ATM2OCN_COUPLINGS or
-# OCN2ATM_COUPLINGS. Instead the 'weighting' is set in
-# _determine_default_couplings.
-ATM2OCN_COUPLINGS = {'atmAntmass':[1, 't', 'NB', 1, 73],
-                     'atmATMDUST':[1, 't', 'CD', 1, 93],
-                     'atmATMPCO2':[1, 't', 'CD', 1, 92],
-                     'atmBotMlt':[5, 't', 'CD', 1, 13],
-                     'atmGrnmass':[1, 't', 'NB', 1, 72],
-                     'atmIceEvp':[5, 't', 'CD', 2, 18],
-                     'atm_QsrOce':[1, 't', 'CD', 1, 54],
-                     'atm_QnsOce':[1, 't', 'CD', 2, 1],
-                     'atm_Runoff':[1, 't', 'CD', 1, 3],
-                     'atmRunff1D':[1, 'r', '1D', 1, 74],
-                     'atm_OTaux1':[1, 'u', 'Bi', -99, 23],
-                     'atm_OTauy1':[1, 'v', 'Bi', -99, 24],
-                     'atmTopMlt':[5, 't', 'CD', 1, 8],
-                     'atmTotRain':[1, 't', 'CD', 1, 5],
-                     'atmTotSnow':[1, 't', 'CD', 1, 6],
-                     'atmTotEvap':[1, 't', 'CD', 2, 7],
-                     'atmTsfIce':[5, 't', 'CD', -99, 66],
-                     'atm_Wind10':[1, 't', 'CD', 1, 4]}
+#  - A weighting compared to the other fields in list
+ATM2OCN_COUPLINGS = {'atmATMDUST':[1, 't', 'CD', 1, 93, 175],
+                     'atmATMPCO2':[1, 't', 'CD', 1, 92, 170],
+                     'atmBotMlt':[5, 't', 'CD', 1, 13, 120],
+                     'atm_QnsOce':[1, 't', 'CD', 2, 1, 35],
+                     'atm_QsrOce':[1, 't', 'CD', 1, 54, 30],
+                     'atm_OTaux1':[1, 'u', 'Bi', -99, 23, 0],
+                     'atm_OTauy1':[1, 'v', 'Bi', -99, 24, 5],
+                     'atmTopMlt':[5, 't', 'CD', 1, 8, 100],
+                     'atmTotEvap':[1, 't', 'CD', 2, 7, 50],
+                     'atmTotRain':[1, 't', 'CD', 1, 5, 40],
+                     'atmTotSnow':[1, 't', 'CD', 1, 6, 45],
+                     'atmTsfIce':[5, 't', 'CD', 1, 66, 110],
+                     'atm_Wind10':[1, 't', 'CD', 1, 4, 75]}
 
-OCN2ATM_COUPLINGS = {'model01_O_OCurx1':[1, 'u', 'Bi', -99, 51],
-                     'model01_O_OCury1':[1, 'v', 'Bi', -99, 52],
-                     'model01_O_SSTSST':[1, 't', 'CF', -99, 25],
-                     'model01_OBioChlo':[1, 't', 'CF', -99, 94],
-                     'model01_OBioCO2':[1, 't', 'CF', -99, 91],
-                     'model01_OBioDMS':[1, 't', 'CF', -99, 90],
-                     'model01_OIceFrc':[5, 't', 'CF', -99, 26],
-                     'model01_OIceFrd':[5, 't', 'CF', -99, 81],
-                     'model01_OIceKn':[5, 't', 'CF', -99, 46],
-                     'model01_OIceTck':[5, 't', 'CF', -99, 36],
-                     'model01_OPndFrc':[5, 't', 'CF', -99, 56],
-                     'model01_OPndTck':[5, 't', 'CF', -99, 61],
-                     'model01_OSnwTck':[5, 't', 'CF', -99, 31],
-                     'model01_OTepIce':[5, 't', 'CF', -99, 41]}
+ATM2OCN_COUPLINGS_NEMO306 = {'atmAntmass':[1, 't', 'NB', 1, 73, 145],
+                             'atmGrnmass':[1, 't', 'NB', 1, 72, 140],
+                             'atmIceEvp':[5, 't', 'CD', 1, 18, 55],
+                             'atm_Runoff':[1, 't', 'CD', 1, 3, 80]}
 
+ATM2OCN_COUPLINGS_NEMO4 = {'atmAntmass':[1, 't', '0D', 1, 73, 145],
+                           'atmGrnmass':[1, 't', '0D', 1, 72, 140],
+                           'atmIceEvap':[5, 't', 'CD', 1, 18, 55],
+                           'atm_MSLP':[1, 't', 'CD', 1, 55, 130],
+                           'atmQtr':[5, 't', 'CD', 1, 131, 155],
+                           'atmRunff1D':[1, 'r', '1D', 1, 74, 150]}
+
+OCN2ATM_COUPLINGS = {'model01_OBioChlo':[1, 't', 'CF', 1, 94, 130],
+                     'model01_OBioCO2':[1, 't', 'CF', 1, 91, 125],
+                     'model01_OBioDMS':[1, 't', 'CF', 1, 90, 120],
+                     'model01_O_OCurx1':[1, 'u', 'Bi', -99, 51, 70],
+                     'model01_O_OCury1':[1, 'v', 'Bi', -99, 52, 75],
+                     'model01_OIceFrc':[5, 't', 'CF', 1, 26, 30],
+                     'model01_OIceFrd':[5, 't', 'CF', 1, 81, 35],
+                     'model01_OIceKn':[5, 't', 'CF', 1, 46, 100],
+                     'model01_OIceTck':[5, 't', 'CF', 1, 36, 40],
+                     'model01_OPndFrc':[5, 't', 'CF', 1, 56, 80],
+                     'model01_OPndTck':[5, 't', 'CF', 1, 61, 85],
+                     'model01_OSnwTck':[5, 't', 'CF', 1, 31, 60],
+                     'model01_O_SSTSST':[1, 't', 'CF', 1, 25, 0],
+                     'model01_OTepIce':[5, 't', 'CF', 1, 41, 10],
+                     'model01_O_TtiLyr':[5, 't', 'CF', 1, 41, 5]}
 
 def _determine_default_couplings(origin, ocean_nml, run_info):
     '''
@@ -115,27 +133,31 @@ def _determine_default_couplings(origin, ocean_nml, run_info):
     default_cpl = []
     n_cpl_freq = 0
     if origin == "ATM":
-        exchange_flag_order = ATM2OCN_FLAG_ORDER
-        exchange_flags = ATM2OCN_FLAGS
-        exchange_couplings = ATM2OCN_COUPLINGS
+        if run_info['NEMO_VERSION'] == '306':
+            exchange_flags = {**ATM2OCN_FLAGS, **ATM2OCN_FLAGS_NEMO306}
+            exchange_couplings = {**ATM2OCN_COUPLINGS,
+                                  **ATM2OCN_COUPLINGS_NEMO306}
+        else:
+            exchange_flags = {**ATM2OCN_FLAGS, **ATM2OCN_FLAGS_NEMO4}
+            exchange_couplings = {**ATM2OCN_COUPLINGS,
+                                  **ATM2OCN_COUPLINGS_NEMO4}
         destinations = ["OCN"]
-        weighting = 300
+        weight_ref = 300
     elif origin == "OCN":
-        exchange_flag_order = OCN2ATM_FLAG_ORDER
         exchange_flags = OCN2ATM_FLAGS
         exchange_couplings = OCN2ATM_COUPLINGS
         if 'junior' in run_info['exec_list']:
             destinations = ["ATM", "JNR"]
         else:
             destinations = ["ATM"]
-        weighting = 100
+        weight_ref = 100
     else:
         # There is currently no default coupling from JNR or any
         # component which isn't ATM or OCN
-        exchange_flag_order = []
+        exchange_flags = []
 
     # Need to determine the coupling list
-    for flag in exchange_flag_order:
+    for flag in exchange_flags:
         # Check NEMO namelist to see if this field should be
         # coupled
         if flag in ocean_nml['namsbc_cpl']:
@@ -145,35 +167,43 @@ def _determine_default_couplings(origin, ocean_nml, run_info):
                 coupling_fields = NAME_FOR_1DFIELD[flag]
             else:
                 coupling_fields = exchange_flags[flag]
-            if ocean_nml['namsbc_cpl'][flag][0] != 'none':
-                # Loop across the fields which this flag activates
-                for cpl_field in coupling_fields:
+            # Loop across the fields associated with this flag
+            for cpl_field in coupling_fields:
+                # See if field should not be used
+                if ocean_nml['namsbc_cpl'][flag][0] != \
+                   coupling_fields[cpl_field]:
                     # Loop over the categories for this field
                     vind = exchange_couplings[cpl_field][4]
                     for i in range(1, exchange_couplings[cpl_field][0]+1):
+
+                        # Determine the weighting for this field
+                        weighting = weight_ref + \
+                                    exchange_couplings[cpl_field][5] + i - 1
+                        # Determine the outgoing name
                         if exchange_couplings[cpl_field][0] > 1:
-                            name_out = ('%s_cat%02d' % (cpl_field, i))
+                            name_out = '{0}_cat{1:02d}'.format(cpl_field, i)
                         else:
                             name_out = cpl_field
+
                         # Loop across the destinations
                         for dest in destinations:
+                            grid = exchange_couplings[cpl_field][1]
                             # Determine the type of mapping
                             if ocean_nml['namsbc_cpl'][flag][0] == 'coupled0d':
-                                # This is passing a scalar field
-                                grid = 's'
-                                mapping = 'Scalar'
+                                # This is passing a OD scalar field
+                                mapping = 'OneVal'
                             else:
-                                grid = exchange_couplings[cpl_field][1]
                                 mapping = write_namcouple.RMP_MAPPING[
                                     exchange_couplings[cpl_field][2]]
+
                             # Add field to list
                             default_cpl.append(
                                 write_namcouple.NamcoupleEntry(
                                     name_out, vind, grid,
                                     origin, dest, 1, False, mapping,
                                     exchange_couplings[cpl_field][3],
-                                    weighting, False, n_cpl_freq))
-                            weighting += 2
+                                    weighting, False, n_cpl_freq, None))
+
                         # Move to next field
                         vind += 1
 

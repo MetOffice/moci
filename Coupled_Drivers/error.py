@@ -139,9 +139,6 @@ NOT_FOUND_STASH_CODE = 815
 # Unable to create remapping file for mapping type
 MISSING_RMP_MAPPING = 816
 
-# Size of 1D grid is unknown
-UNKNOWN_1D_GRID_SIZE = 817
-
 # Ocean resolution for Snr<->Jnr coupling is not specified
 NO_OCN_RESOL = 818
 
@@ -184,11 +181,17 @@ MISSING_OCN_RESOL = 832
 # Not on ORCA grid
 NOT_ORCA_GRID = 833
 
+# Not declared ocean resolution when creating namcouple on fly after NEMO3.6
+NOT_DECLARE_OCN_RES = 834
+
+# Unknown ocean resolution
+UNKNOWN_OCN_RESOL = 835
+
 # Missing namelist oasis_ocn_send_nml from OASIS_OCN_SEND
-MISSING_OASIS_OCN_SEND_NML = 834
+MISSING_OASIS_OCN_SEND_NML = 836
 
 # Missing entry oasis_ocn_send from namelist oasis_ocn_send_nml
-MISSING_OASIS_OCN_SEND = 835
+MISSING_OASIS_OCN_SEND = 837
 
 # Missing OASIS send file for UM
 MISSING_OASIS_ATM_SEND = 840
