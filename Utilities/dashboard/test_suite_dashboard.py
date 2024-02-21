@@ -222,6 +222,13 @@ class CylcDB(SqlDatabase):
         self.rose_bush_url = rose_bush_url
         path_db = os.path.join(self.suite_run_dir,
                                CylcDB.CYLC_DB_FNAME)
+
+        if not os.path.exists(path_db):
+            # If database does not exist, try a cylc 8 path instead
+            path_db = os.path.join(self.suite_run_dir,
+                                   "runN", "log", "db")
+            self.rose_bush_url += "%2FrunN"
+
         self.test_categories = test_categories
         self.family_list = family_list
         try:
