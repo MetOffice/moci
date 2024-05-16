@@ -173,6 +173,22 @@ def _setup_si3_controller(common_env,
                     proc_number = fname.split('.')[-2][-4:]
                     common.remove_file('restart_ice_%s.nc' % proc_number)
                     os.symlink(fname, 'restart_ice_%s.nc' % proc_number)
+            elif os.path.isfile('%s_0000.nc' %
+                                si3_envar['SI3_START'][:-3]):
+                for fname in glob.glob('%s_????.nc' %
+                                       si3_envar['SI3_START'][:-3]):
+                    proc_number = fname.split('.')[-2][-4:]
+
+                    # We need to make sure there isn't already
+                    # a restart file link set up, and if there is, get
+                    # rid of it because symlink wont work otherwise!
+                    common.remove_file('restart_ice_%s.nc' % proc_number)
+
+                    os.symlink(fname, 'restart_ice_%s.nc' % proc_number)
+            else:
+                sys.stderr.write('[FAIL] file %s not found\n' %
+                                 si3_envar['SI3_START'])
+                sys.exit(error.MISSING_MODEL_FILE_ERROR)
         else:
             # If there's no SI3 restart we must be starting from climatology.
             sys.stdout.write('[INFO] si3_controller: SI3 is starting from'
