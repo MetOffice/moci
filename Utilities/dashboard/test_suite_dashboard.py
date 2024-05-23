@@ -31,7 +31,8 @@ import sqlite3
 import configparser
 from functools import reduce
 import logging
-import argparse
+import cgi
+import cgitb
 import datetime
 import time
 import socket
@@ -654,17 +655,19 @@ def suite_sections_from_yaml(yaml_file):
     return parsed_suites
 
 
-def read_config(conf_path, yaml_path):
+def read_config(conf_path, mode):
     """
     Read in the config info for the dashboard page.
     :param conf_path: The path to the config file.
-    :param yaml_path: Optional path to a yaml_config file with nightly testing
+    :param mode: Choice of "conf" or "yaml" configuration mode.
     :return: A dictionary with the details of all the suites to report on.
     """
     dash_parser = configparser.ConfigParser()
     dash_parser.read(conf_path)
 
-    if yaml_path:
+    if mode == "yaml":
+        yaml_path = dash_parser.get('base', 'yaml_path')
+        # Redfine dash_parser to read from external yaml file
         dash_parser = suite_sections_from_yaml(yaml_path)
         cylc_run_path = dash_parser["base"].get("cylc_run_path", "")
         rose_bush_base_url = dash_parser["base"].get("rose_bush_base_url", "")
@@ -682,7 +685,7 @@ def read_config(conf_path, yaml_path):
     for suite1 in suite_sections:
         if suite1.startswith("!"):
             continue
-        if yaml_path:
+        if mode == "yaml":
             test_dict1 = dash_parser[suite1]
         else:
             test_dict1 = dict(dash_parser.items(suite1))
@@ -715,29 +718,11 @@ def main():
     logging.info("started")
     tstart = datetime.datetime.now()
 
-    parser = argparse.ArgumentParser(
-        description="Generate html file for Nightly Testing Dashboard"
-    )
-    parser.add_argument(
-        "-c",
-        "--conf_path",
-        default="",
-        help="Path to config file. Required for [base] settings"
-    )
-    parser.add_argument(
-        "-y",
-        "--yaml_conf",
-        default="",
-        help="Path to nightly yaml config file for auto-gen of expected "
-             "test-suites"
-    )
-    args = parser.parse_args()
-
-    # Set default as conf_path = dashboard.conf
-    if not args.conf_path and not args.yaml_conf:
-        args.conf_path = "dashboard.conf"
-
-    dash_dict, logo_file, wiki_url = read_config(args.conf_path, args.yaml_conf)
+    cgitb.enable()
+    args = cgi.FieldStorage()
+    mode = args.getvalue("mode", "conf").lower()
+    conf_path = "dashboard.conf"
+    dash_dict, logo_file, wiki_url = read_config(conf_path, mode)
 
     print_html_header(logo_file, wiki_url)
 
