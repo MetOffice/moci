@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016-2021 Met Office. All rights reserved.
+ (C) Crown copyright 2016-2024 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -63,6 +63,9 @@ class FilenamesTests(unittest.TestCase):
                               ('o', None))
         self.assertTupleEqual(filenames.model_components('nemo',
                                                          'nemo_icebergs_rst'),
+                              ('o', None))
+        self.assertTupleEqual(filenames.model_components('nemo',
+                                                         'nemo_icb_rst'),
                               ('o', None))
         self.assertTupleEqual(filenames.model_components('nemo',
                                                          'nemo_ptracer_rst'),

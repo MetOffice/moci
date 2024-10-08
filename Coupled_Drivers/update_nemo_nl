@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #*****************************COPYRIGHT******************************
-# (C) Crown copyright 2016 Met Office. All rights reserved.
+# (C) Crown copyright 2016-2024 Met Office. All rights reserved.
 #
 # Use, duplication or disclosure of this code is subject to the restrictions
 # as set forth in the licence. If no licence has been raised with this copy
@@ -41,6 +41,7 @@ my $iproc;             # NEMO iproc
 my $jproc;             # NEMO jproc 
 my $ijproc;            # NEMO ijproc (= NEMO_NPROC)
 my $cpl_river_count;   # Number of rivers to couple
+my $nn_test_icebergs;  # Test icebergs (-1 indicates read from dump)
 my $help;
 
 # Process arguments:
@@ -69,6 +70,14 @@ if (@ARGV > 0) {
 
 pod2usage(1) if $help;
 
+# For a restart cycle, if the initial cycle was run using 
+# nn_test_icebergs > 0 then we ensure that the iceberg dumps
+# created by that cycle are employed in this cycle. This is triggered 
+# by reverting to nn_test_icebergs=-1 (all NEMO versions from 3.6 on) 
+if ($l_restart eq '.true.') {
+  $nn_test_icebergs='-1';
+}
+
 if ($verbose) {
   print "NEMO namelist update settings:\n";
   print "  file = $file\n" if ($file);
@@ -84,6 +93,7 @@ if ($verbose) {
   print "  jproc = $jproc\n" if ($jproc);
   print "  ijproc = $ijproc\n" if ($ijproc);
   print "  cpl_river_count = $cpl_river_count\n" if ($cpl_river_count);
+  print "  nn_test_icebergs = $nn_test_icebergs\n"
 }
 
 $file = "$dir/$file" if ($dir);
@@ -99,6 +109,9 @@ foreach my $line (@lines) {
   $line =~ s/^(nn_itend)=.*/$1=$final_ts,/ if ($final_ts);
 
   $line =~ s/^(nn_it000)=.*/$1=$next_ts,/ if ($next_ts);
+  
+  # Only update nn_test_icebergs if this is a restart
+  $line =~ s/^(nn_test_icebergs)=.*/$1=$nn_test_icebergs,/ if ($l_restart eq '.true.');
 
   # Vn3.3.1 uses dynamic allocation so we must ensure
   # I and J procs are correct in the (nammpp) namelist

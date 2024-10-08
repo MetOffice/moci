@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016-2022 Met Office. All rights reserved.
+ (C) Crown copyright 2016-2024 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -73,7 +73,10 @@ class NemoVerify(object):
     buffer_mean = 0
     base_mean = '10d'
     nemo_ice_rst = False
+    # Pre NEMO 4.2 iceberg format
     nemo_icebergs_rst = False
+    # Post NEMO 4.2 iceberg format
+    nemo_icb_rst = False
     nemo_ptracer_rst = False
     meanfields = ['grid-U', 'grid-T', 'grid-W', 'grid-V']
     mean_reference_date = '10001201'

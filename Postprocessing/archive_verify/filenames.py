@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016-2022 Met Office. All rights reserved.
+ (C) Crown copyright 2016-2024 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -36,6 +36,8 @@ MODEL_COMPONENTS = {
     }
 
 FNAMES = {
+    # Please note: Restart file keys MUST end with "_rst",
+    # and match the associated namelist logical name
     'atmos_rst': r'{P}a.da{Y1:04d}{M1:02d}{D1:02d}_00',
     'atmos_pp': r'{P}a.{CF}{Y1}{M1}{D1}{H1}.pp',
     'atmos_ff': r'{P}a.{CF}{Y1}{M1}{D1}{H1}',
@@ -47,6 +49,7 @@ FNAMES = {
     'nemo_rst': r'{P}o_{Y1:04d}{M1:02d}{D1:02d}_restart.nc',
     'nemo_ice_rst': r'{P}o_{Y1:04d}{M1:02d}{D1:02d}_restart_ice.nc',
     'nemo_icebergs_rst': r'{P}o_icebergs_{Y1:04d}{M1:02d}{D1:02d}_restart.nc',
+    'nemo_icb_rst': r'{P}o_{Y1:04d}{M1:02d}{D1:02d}_restart_icb.nc',
     'nemo_ptracer_rst': r'{P}o_{Y1:04d}{M1:02d}{D1:02d}_restart_trc.nc',
     'nemo_ibergs_traj': r'{P}o_trajectory_icebergs_{TS}.nc',
 

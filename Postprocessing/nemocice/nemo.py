@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2020 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2024 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -86,8 +86,10 @@ class NemoPostProc(mt.ModelTemplate):
         Restart file types.
         Tuple( Filetype tag immediately following "RUNIDo_" in filename,
                Filetype tag immediately following "restart" in filename )
+	       "icebergs" covers iceberg restarts pre NEMO 4.2
+	       "icb" covers iceberg restarts post NEMO 4.2
         '''
-        return (('', ''), ('', '_ice'), ('icebergs', ''), ('', '_trc'))
+        return (('', ''), ('', '_ice'), ('icebergs', ''), ('', '_icb'), ('', '_trc'))
 
     @property
     def model_components(self):
@@ -111,7 +113,7 @@ class NemoPostProc(mt.ModelTemplate):
     @property
     def rebuild_suffix(self):
         '''
-        Returns dictionary with two keys, profiding the suffix for components
+        Returns dictionary with two keys, providing the suffix for components
         to rebuild:
             REGEX - REGular EXpression representing all PEs
             ZERO  - String representing PE0
@@ -270,6 +272,7 @@ class NemoPostProc(mt.ModelTemplate):
                 datadir,
                 r'^{}{}$'.format(corename, self.rebuild_suffix['REGEX'])
                 )
+
             if 'diaptr' in filetype:
                 self.global_attr_to_zonal(datadir, bldset)
 
@@ -439,9 +442,11 @@ class NemoPostProc(mt.ModelTemplate):
             rebuiltfile = os.path.join(rebuild_dir, filebase + '.nc')
             if icode != 0 or not os.path.isfile(rebuiltfile):
                 icode = icode if icode != 0 else 900
-            elif 'icebergs' in filebase:
+            elif ('icebergs' in filebase) or ('icb' in filebase):
                 # Additional processing required for iceberg restart files
+                # pre NEMO 4.2: "icebergs" and post NEMO 4.2 "icb"
                 icode = self.rebuild_icebergs(rebuild_dir, filebase, ndom)
+
             if tempdir:
                 utils.move_files(bldset, datadir, originpath=rebuild_dir)
 
@@ -475,7 +480,7 @@ class NemoPostProc(mt.ModelTemplate):
     @timer.run_timer
     def rebuild_icebergs(self, datadir, filebase, ndom):
         '''
-        Additional postp-processing is required to complete the rebuilding of
+        Additional post-processing is required to complete the rebuilding of
         iceberg restart files following use of the standard rebuild_nemo
         utility to rebuild the 2D fields.
 

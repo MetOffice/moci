@@ -1,6 +1,6 @@
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2022 Met Office. All rights reserved.
+ (C) Crown copyright 2024 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -122,10 +122,14 @@ class TestVerifyFixRestart(unittest.TestCase):
         # step end date do not match.
         self.restarts = [
             f'cplhco_{restart_type}{date}_restart_0050.nc'
-            for restart_type in ['icebergs_', '']
+            for restart_type in ['icebergs_', '' ]
             for date in ['19931116', '19931201', '19931216']
             ]
-
+        self.restarts += [
+            f'cplhco_{date}_restart_icb_0050.nc'
+            for date in ['19931116', '19931201', '19931216']
+            ]
+        
         for restart in self.restarts:
             if not os.path.isdir(self.nemo_rst):
                 os.mkdir(self.nemo_rst)
@@ -165,7 +169,8 @@ class TestVerifyFixRestart(unittest.TestCase):
 
         expected_files = [
             'cplhco_19931116_restart_0050.nc',
-            'cplhco_icebergs_19931116_restart_0050.nc'
+            'cplhco_icebergs_19931116_restart_0050.nc',
+            'cplhco_19931116_restart_icb_0050.nc'
             ]
 
         with mock.patch('sys.stdout', new=io.StringIO()) as output:

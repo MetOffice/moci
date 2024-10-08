@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2023 Met Office. All rights reserved.
+ (C) Crown copyright 2023-2024 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -105,7 +105,7 @@ def _get_ln_icebergs(nemo_nl_file):
         return False
 
 
-def _verify_nemo_rst(cyclepointstr, nemo_rst, nemo_nl, nemo_nproc):
+def _verify_nemo_rst(cyclepointstr, nemo_rst, nemo_nl, nemo_nproc, nemo_version):
     '''
     Verify that the full set of nemo restart files match. Currently this
     is limited to the icebergs restart file. We require either a single
@@ -114,10 +114,20 @@ def _verify_nemo_rst(cyclepointstr, nemo_rst, nemo_nl, nemo_nproc):
     '''
     restart_files = [f for f in os.listdir(nemo_rst) if
                      'restart' in f]
+
+
     if _get_ln_icebergs(nemo_nl):
-        nemo_icb_regex = r'_icebergs_%s_restart(_\d+)?\.nc' % cyclepointstr
+
+        if nemo_version < 402:
+           # Pre nemo 4.2 compatibility
+           nemo_icb_regex = r'_icebergs_%s_restart(_\d+)?\.nc' % cyclepointstr
+        else:
+           # Post nemo 4.2 compatibility
+           nemo_icb_regex = r'_%s_restart_icb(_\d+)?\.nc' % cyclepointstr
+  
         icb_restart_files = [f for f in restart_files if
                              re.findall(nemo_icb_regex, f)]
+
         # we can have a single rebuilt file, number of files equal to
         # number of nemo processors, or rebuilt file and processor files.
         if len(icb_restart_files) not in (1, nemo_nproc, nemo_nproc+1):
@@ -207,7 +217,7 @@ def _verify_fix_rst(restartdate, nemo_rst, model_basis_time, time_step,
         #Make our generic restart regular expression, to cover normal NEMO
         #restart, and potential iceberg, SI3 or passive tracer restart files,
         #for both the rebuilt and non rebuilt cases
-        generic_rst_regex = r'(icebergs)?.*restart(_trc)?(_ice)?(_\d+)?\.nc'
+        generic_rst_regex = r'(icebergs)?.*restart(_trc)?(_ice)?(_icb)?(_\d+)?\.nc'
         all_restart_files = [f for f in os.listdir(nemo_rst) if
                              re.findall(generic_rst_regex, f)]
         for restart_file in all_restart_files:
@@ -330,13 +340,15 @@ def _setup_executable(common_env):
                              direc)
             os.makedirs(direc)
 
-    # Compile a list of the NEMO restart files, if any exist.
+    # Compile a list of NEMO, seaice and iceberg restart files, if any exist.
     # We look for files conforming to the naming convention:
-    # <arbitrary suite name>_yyyymmdd_restart_<PE rank>.nc where
+    # <arbitrary suite name>_yyyymmdd_restart_<PE rank>.nc OR
+    # <arbitrary suite name>_yyyymmdd_restart_icb_<PE rank>.nc where
     # <arbitrary suite name> may itself contain underscores, hence we
     # do not parse details based on counting the number of underscores.
     nemo_restart_files = [f for f in os.listdir(nemo_rst) if
-                          re.findall(r'.+_\d{8}_restart(_\d+)?\.nc', f)]
+                          re.findall(r'.+_\d{8}_restart(_\d+)?\.nc', f) or
+                          re.findall(r'.+_\d{8}_restart_icb(_\d+)?\.nc', f)]
     nemo_restart_files.sort()
     if nemo_restart_files:
         latest_nemo_dump = nemo_rst + '/' + nemo_restart_files[-1]
@@ -397,7 +409,14 @@ def _setup_executable(common_env):
     #any variables containing things that can be globbed will start with gl_
     gl_first_step_match = 'nn_it000='
     gl_last_step_match = 'nn_itend='
-    gl_step_int_match = 'rn_rdt='
+    
+    if int(nemo_envar['NEMO_VERSION']) < 402:
+       # Pre NEMO 4.2 compatibility
+       gl_step_int_match = 'rn_rdt='
+    else:
+       # Post NEMO 4.2 compatibility
+       gl_step_int_match = 'rn_dt='
+       
     gl_nemo_restart_date_match = 'ln_rstdate'
     gl_model_basis_time = 'nn_date0='
 
@@ -469,7 +488,8 @@ def _setup_executable(common_env):
                 common_env['CALENDAR'])
 
             _verify_nemo_rst(nemo_dump_time, nemo_rst, nemo_envar['NEMO_NL'],
-                             int(nemo_envar['NEMO_NPROC']))
+                             int(nemo_envar['NEMO_NPROC']),
+                             int(nemo_envar['NEMO_VERSION']))
         # link restart files no that the last output one becomes next input one
         common.remove_file('restart.nc')
 
@@ -508,11 +528,17 @@ def _setup_executable(common_env):
                     os.symlink(ice_rst_source, ice_rst_link)
                     ice_restart_count += 1
 
-                iceberg_rst_source = '%s/%so_icebergs_%s_restart_%s.nc' % \
-                    (nemo_init_dir, common_env['RUNID'], \
-                         nemo_dump_time, tag)
+                if int(nemo_envar['NEMO_VERSION']) < 402:
+                   iceberg_rst_source = '%s/%so_icebergs_%s_restart_%s.nc' % \
+                    (nemo_init_dir, common_env['RUNID'], nemo_dump_time, tag)
+                   iceberg_link_name='restart_icebergs'
+                else:
+                   iceberg_rst_source = '%s/%so_%s_restart_icb_%s.nc' % \
+                    (nemo_init_dir, common_env['RUNID'], nemo_dump_time, tag)
+                   iceberg_link_name='restart_icb'
+
                 if os.path.isfile(iceberg_rst_source):
-                    iceberg_rst_link = 'restart_icebergs_%s.nc' % tag
+                    iceberg_rst_link = '%s_%s.nc' % (iceberg_link_name, tag)
                     common.remove_file(iceberg_rst_link)
                     os.symlink(iceberg_rst_source, iceberg_rst_link)
                     iceberg_restart_count += 1
@@ -550,13 +576,23 @@ def _setup_executable(common_env):
                 sys.stdout.write('[INFO] No iceberg sub-PE restarts found\n')
                 # We found no iceberg restart sub-domain files let's
                 # look for a global file.
-                iceberg_rst_source = '%s/%so_icebergs_%s_restart.nc' % \
-                    (nemo_init_dir, common_env['RUNID'], \
+                if int(nemo_envar['NEMO_VERSION']) < 402:
+                   iceberg_rst_source = '%s/%so_icebergs_%s_restart.nc' % \
+                      (nemo_init_dir, common_env['RUNID'], \
                          nemo_dump_time)
+                else:
+                   iceberg_rst_source = '%s/%so_%s_restart_icb.nc' % \
+                      (nemo_init_dir, common_env['RUNID'], \
+                         nemo_dump_time)
+              
                 if os.path.isfile(iceberg_rst_source):
                     sys.stdout.write('[INFO] Using rebuilt iceberg restart'\
                         'file: %s\n' % iceberg_rst_source)
-                    iceberg_rst_link = 'restart_icebergs.nc'
+                    if int(nemo_envar['NEMO_VERSION']) < 402:
+                       iceberg_rst_link = 'restart_icebergs.nc' 
+                    else:
+                       iceberg_rst_link = 'restart_icb.nc' 
+
                     common.remove_file(iceberg_rst_link)
                     os.symlink(iceberg_rst_source, iceberg_rst_link)
 

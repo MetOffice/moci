@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2020 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2024 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -38,6 +38,7 @@ class StencilTests(unittest.TestCase):
         self.files = [
             'RUNIDo_19951130_restart.nc',
             'RUNIDo_icebergs_19951130_restart.nc',
+            'RUNIDo_19951130_restart_icb.nc',
             'RUNIDo_19951130_restart_trc.nc',
             'RUNIDo_19951130_restart_ice.nc',
             'RUNIDo_6h_1995090101_1995090106_FIELD.nc',
@@ -64,7 +65,9 @@ class StencilTests(unittest.TestCase):
         nemo_rst = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(nemo_rst,
                          [fname for fname in self.files if 'restart' in fname
-                          and '_ice' not in fname and '_trc' not in fname])
+                          and '_ice' not in fname and '_trc' not in fname
+                          and '_icb' not in fname]
+                        )
 
     def test_rst_set_stencil_si3(self):
         '''Test the regex of the rst_set_stencil method - si3 restarts'''
@@ -83,10 +86,18 @@ class StencilTests(unittest.TestCase):
         self.assertEqual(ice_rst,
                          [fname for fname in self.files if 'iceberg' in fname])
 
+    def test_rst_set_stencil_icb_nemo402(self):
+        '''Test the regex of the rst_set_stencil method - icb restarts'''
+        func.logtest('Assert iceberg pattern matching of rst_set_stencil:')
+        patt = re.compile(self.nemo.rst_set_stencil(self.nemo.rsttypes[3]))
+        icb_rst = [fname for fname in self.files if patt.search(fname)]
+        self.assertEqual(icb_rst,
+                         [fname for fname in self.files if '_icb' in fname])
+
     def test_rst_set_stencil_tracer(self):
         '''Test the regex of the rst_set_stencil method - tracer restarts'''
         func.logtest('Assert tracer pattern matching of rst_set_stencil:')
-        patt = re.compile(self.nemo.rst_set_stencil(self.nemo.rsttypes[3]))
+        patt = re.compile(self.nemo.rst_set_stencil(self.nemo.rsttypes[4]))
         trc_rst = [fname for fname in self.files if patt.search(fname)]
         self.assertEqual(trc_rst,
                          [fname for fname in self.files if '_trc' in fname])
@@ -233,11 +244,11 @@ class RebuildTests(unittest.TestCase):
     def test_call_rebuild_tracer_rsts(self):
         '''Test call to rebuild_restarts method with tracer restart files'''
         func.logtest('Assert call to rebuild_fileset from rebuild_restarts:')
-        self.assertIn('_trc', self.nemo.rsttypes[3])
+        self.assertIn('_trc', self.nemo.rsttypes[4])
         with mock.patch('nemo.NemoPostProc.rebuild_fileset') as mock_fs:
             with mock.patch('nemo.NemoPostProc.rsttypes',
                             new_callable=mock.PropertyMock,
-                            return_value=(self.nemo.rsttypes[3],)):
+                            return_value=(self.nemo.rsttypes[4],)):
                 self.nemo.rebuild_restarts()
             mock_fs.assert_called_once_with(
                 'ShareDir',

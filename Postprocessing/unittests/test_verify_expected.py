@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016-2022 Met Office. All rights reserved.
+ (C) Crown copyright 2016-2024 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -200,7 +200,11 @@ class ArchivedFilesTests(unittest.TestCase):
         self.files.naml = verify_namelist.NemoVerify()
         self.assertTupleEqual(self.files.get_fn_components('nemo_rst'),
                               ('rst', 'o', None))
+        # Pre NEMO 4.2 iceberg format
         self.assertTupleEqual(self.files.get_fn_components('nemo_icebergs_rst'),
+                              ('rst', 'o', None))
+        # Post NEMO 4.2 iceberg format
+        self.assertTupleEqual(self.files.get_fn_components('nemo_icb_rst'),
                               ('rst', 'o', None))
         self.assertTupleEqual(self.files.get_fn_components('nemo_ptracer_rst'),
                               ('rst', 'o', None))
@@ -417,6 +421,36 @@ class RestartFilesTests(unittest.TestCase):
         actual = self.files.expected_files()
         self.assertListEqual(actual['oda.file'], expect)
         self.assertListEqual(list(actual.keys()), ['oda.file'])
+
+    def test_expected_nemo_iceberg_dumps(self):
+        ''' Test calculation of expected nemo iceberg restart files '''
+        func.logtest('Assert list of archived nemo iceberg dumps:')
+        # Default setting is bi-annual archive
+        self.files.rst_types = ['nemo_icebergs_rst']
+        expect = sorted(['PREFIXo_icebergs_19951201_restart.nc',
+                         'PREFIXo_icebergs_19960601_restart.nc',
+                         'PREFIXo_icebergs_19961201_restart.nc',
+                         'PREFIXo_icebergs_19970601_restart.nc',
+                         'PREFIXo_icebergs_19971201_restart.nc',
+                         'PREFIXo_icebergs_19980601_restart.nc'])
+        actual = self.files.expected_files()
+        self.assertListEqual(sorted(actual['oda.file']), expect)
+        self.assertListEqual(sorted(actual.keys()), ['oda.file'])
+
+    def test_expected_nemo_icb_dumps(self):
+        ''' Test calculation of expected nemo ICB restart files '''
+        func.logtest('Assert list of archived nemo icb dumps:')
+        # Default setting is bi-annual archive
+        self.files.rst_types = ['nemo_icb_rst']
+        expect = sorted(['PREFIXo_19951201_restart_icb.nc',
+                         'PREFIXo_19960601_restart_icb.nc',
+                         'PREFIXo_19961201_restart_icb.nc',
+                         'PREFIXo_19970601_restart_icb.nc',
+                         'PREFIXo_19971201_restart_icb.nc',
+                         'PREFIXo_19980601_restart_icb.nc'])
+        actual = self.files.expected_files()
+        self.assertListEqual(sorted(actual['oda.file']), expect)
+        self.assertListEqual(sorted(actual.keys()), ['oda.file'])
 
     def test_expected_nemo_ice_dumps(self):
         ''' Test calculation of expected nemo ICE restart files '''
