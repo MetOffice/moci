@@ -1367,7 +1367,8 @@ class UtilityMethodTests(unittest.TestCase):
         self.nemo.suite.prefix = 'RUNID'
 
         self.ncid = nemo.utils.Variables()
-        self.ncid.variables = {'dummy1': None}
+        self.ncid.variables = {'dummy1': mock.Mock()}
+        self.ncid.variables['dummy1'].standard_name = "cell_thickness"
         self.ncid.close = lambda: None
 
     def tearDown(self):
@@ -1511,6 +1512,23 @@ class UtilityMethodTests(unittest.TestCase):
                          nemo.VOL_WEIGHT_CELL_METHODS)
         mock_cp.assert_called_once_with(['file1'], tmp_ext='.tmp')
         mock_mv.assert_called_once_with('file1.tmp', 'file1')
+
+    @mock.patch('nemo.utils.copy_files', return_value=['file1.tmp'])
+    @mock.patch('nemo.os.rename')
+    @mock.patch('nemo.netcdf_utils.get_dataset')
+    def test_nofix_nemo_cell_methods(self, mock_ncid, mock_mv, mock_cp):
+        '''Test fix_nemo_cell_methods - no thickness available'''
+        func.logtest('Assert changes reported by fix_nemo_cell_methods:')
+        self.ncid.variables['vomecrty'] = nemo.utils.Variables()
+        del self.ncid.variables['dummy1']
+
+        mock_ncid.return_value = self.ncid
+        msgs = nemo.fix_nemo_cell_methods(['file1'])
+
+        self.assertEqual(len(msgs), 0)
+        warn = 'No cell thickness available.  Cannot update cell_methods ' + \
+               'for variable "vomecrty"'
+        self.assertIn(warn, func.capture('err'))
 
     @mock.patch('nemo.fix_nemo_cell_methods')
     def test_preprocess_meanset(self, mock_fix):

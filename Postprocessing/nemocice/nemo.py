@@ -651,13 +651,29 @@ def fix_nemo_cell_methods(filenames):
     tmp_files = utils.copy_files(filenames, tmp_ext=tmpext)
     for filename in tmp_files:
         ncid = netcdf_utils.get_dataset(filename, action='r+')
+
+        thickness_avail = False
+        for var in ncid.variables:
+            try:
+                if ncid.variables[var].standard_name == "cell_thickness":
+                    thickness_avail = True
+                    break
+            except AttributeError:
+                pass
+
         for var in ncid.variables:
             msg = None
             if var in THICKNESS_WEIGHTED_VARIABLES:
-                ncid.variables[var].cell_methods = THICK_WEIGHT_CELL_METHODS
-                msg = ('Overwriting cell_methods for variable {} in file '
-                       '{} with "time: mean (thickness weighted)"'
-                       '').format(var, filename)
+                if thickness_avail:
+                    ncid.variables[var].cell_methods = THICK_WEIGHT_CELL_METHODS
+                    msg = ('Overwriting cell_methods for variable {} in file '
+                           '{} with "time: mean (thickness weighted)"'
+                           '').format(var, filename)
+                else:
+                    warn = ('No cell thickness available.  Cannot update '
+                            'cell_methods for variable "{}" in {}.'.
+                            format(var, filename))
+                    utils.log_msg(warn, level='WARN')
             elif var in VOLUME_WEIGHTED_VARIABLES:
                 ncid.variables[var].cell_methods = VOL_WEIGHT_CELL_METHODS
                 msg = ('Overwriting cell_methods for variable {} in file '
