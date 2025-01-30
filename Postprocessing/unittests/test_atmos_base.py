@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2022 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2025 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -123,7 +123,8 @@ class ArchiveDeleteTests(unittest.TestCase):
         mock_pp.assert_called_once_with(False, log_file=mock.ANY)
 
     @mock.patch('atmos.AtmosPostProc.diags_to_process',
-                return_value=['path/Ra.pa20000101', 'path/Ra.pb20000101.pp'])
+                return_value=['path/Ra.pa20000101', 'path/Ra.pb20000101.pp',
+                              'path/Ra.po2000.pp'])
     @mock.patch('atmos.AtmosPostProc.dumps_to_archive',
                 return_value=['DumpFile'])
     @mock.patch('atmos.utils.remove_files')
@@ -131,18 +132,19 @@ class ArchiveDeleteTests(unittest.TestCase):
         '''Test do_archive functionality - final cycle'''
         func.logtest('Assert call to archive_file - final cycle')
         self.atmos.naml.archiving.archive_pp = True
+        self.atmos.naml.atmospp.ozone_output_stream = 'o'
         self.atmos.suite.archive_file.return_value = 0
         self.atmos.do_archive(finalcycle=True)
         arch_calls = [mock.call('path/Ra.pa20000101', preproc=True),
-                      mock.call('path/Ra.pb20000101.pp', preproc=True)]
+                      mock.call('path/Ra.pb20000101.pp', preproc=True),
+                      mock.call('path/Ra.po2000.pp', preproc=True)]
         self.assertListEqual(sorted(self.atmos.suite.archive_file.mock_calls),
                              sorted(arch_calls))
         self.assertListEqual(mock_dump.mock_calls, [])
         mock_rm.assert_called_once_with('path/Ra.pb20000101.pp')
         self.assertListEqual(
             sorted(self.atmos.suite.archive_file.mock_calls),
-            sorted([mock.call('path/Ra.pa20000101', preproc=True),
-                    mock.call('path/Ra.pb20000101.pp', preproc=True)])
+            sorted(arch_calls)
             )
         self.assertListEqual(mock_dump.mock_calls, [])
         mock_pp.assert_called_once_with(True, log_file=mock.ANY)

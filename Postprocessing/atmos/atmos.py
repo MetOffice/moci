@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2022 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2025 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -730,7 +730,14 @@ class AtmosPostProc(control.RunPostProc):
                     if utils.get_debugmode():
                         os.rename(fname, fname + '_ARCHIVED')
                     else:
-                        utils.remove_files(fname)
+                        # Delete pp/NetCDF files for which fieldsfiles remain.
+                        # Ozone output from PostProc app does NOT have an 
+                        # associated fieldsfile
+                        ozone_stream = self._stream_expr(
+                            self.naml.atmospp.ozone_output_stream
+                        )
+                        if not self.ff_match(ozone_stream, filename=fname_only):
+                            utils.remove_files(fname)
 
         else:
             utils.log_msg(' -> Nothing to archive')
