@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 """
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2023-2024 Met Office. All rights reserved.
+ (C) Crown copyright 2023-2025 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -228,7 +228,14 @@ class CylcDB(SqlDatabase):
             # If database does not exist, try a cylc 8 path instead
             path_db = os.path.join(self.suite_run_dir,
                                    "runN", "log", "db")
-            self.rose_bush_url += "%2FrunN"
+
+            # Dereference the runN link and create the URL using the
+            # real directory to work around a cylc-review bug
+            run_dir = os.path.join(self.suite_run_dir, "runN")
+            if os.path.islink(run_dir):
+                self.rose_bush_url += f"%2F{os.readlink(run_dir)}"
+            else:
+                self.rose_bush_url += "%2FrunN"
 
         self.test_categories = test_categories
         self.family_list = family_list
