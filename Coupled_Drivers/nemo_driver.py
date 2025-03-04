@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2023-2024 Met Office. All rights reserved.
+ (C) Crown copyright 2025 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -362,6 +362,7 @@ def _setup_executable(common_env):
     # picked up if we're starting from climatology on this occasion.
     common.remove_file('restart.nc')
     common.remove_file('restart_icebergs.nc')
+    common.remove_file('restart_icb.nc')
 
     if common_env['CONTINUE'] == 'false':
         # This is a new run
@@ -406,17 +407,22 @@ def _setup_executable(common_env):
                          'directory:\n  %s\n' % nemo_rst)
         sys.exit(error.MISSING_MODEL_FILE_ERROR)
 
-    #any variables containing things that can be globbed will start with gl_
+    # Strings which are different pre-NEMO4.2 and at NEMO4.2
+    if int(nemo_envar['NEMO_VERSION']) < 402:
+       gl_step_int_match = 'rn_rdt='
+       iceberg_rst_part1 = '_icebergs_'
+       iceberg_rst_part2 = '_restart'
+       iceberg_link_name = 'restart_icebergs'
+    else:
+       gl_step_int_match = 'rn_dt='
+       iceberg_rst_part1 = '_'
+       iceberg_rst_part2 = '_restart_icb'
+       iceberg_link_name = 'restart_icb'
+
+    # Any variables containing things that can be globbed will start with gl_
     gl_first_step_match = 'nn_it000='
     gl_last_step_match = 'nn_itend='
     
-    if int(nemo_envar['NEMO_VERSION']) < 402:
-       # Pre NEMO 4.2 compatibility
-       gl_step_int_match = 'rn_rdt='
-    else:
-       # Post NEMO 4.2 compatibility
-       gl_step_int_match = 'rn_dt='
-       
     gl_nemo_restart_date_match = 'ln_rstdate'
     gl_model_basis_time = 'nn_date0='
 
@@ -528,15 +534,9 @@ def _setup_executable(common_env):
                     os.symlink(ice_rst_source, ice_rst_link)
                     ice_restart_count += 1
 
-                if int(nemo_envar['NEMO_VERSION']) < 402:
-                   iceberg_rst_source = '%s/%so_icebergs_%s_restart_%s.nc' % \
-                    (nemo_init_dir, common_env['RUNID'], nemo_dump_time, tag)
-                   iceberg_link_name='restart_icebergs'
-                else:
-                   iceberg_rst_source = '%s/%so_%s_restart_icb_%s.nc' % \
-                    (nemo_init_dir, common_env['RUNID'], nemo_dump_time, tag)
-                   iceberg_link_name='restart_icb'
-
+                iceberg_rst_source = '%s/%so%s%s%s_%s.nc' % \
+                    (nemo_init_dir, common_env['RUNID'], iceberg_rst_part1,
+                     nemo_dump_time, iceberg_rst_part2, tag)
                 if os.path.isfile(iceberg_rst_source):
                     iceberg_rst_link = '%s_%s.nc' % (iceberg_link_name, tag)
                     common.remove_file(iceberg_rst_link)
@@ -576,24 +576,14 @@ def _setup_executable(common_env):
                 sys.stdout.write('[INFO] No iceberg sub-PE restarts found\n')
                 # We found no iceberg restart sub-domain files let's
                 # look for a global file.
-                if int(nemo_envar['NEMO_VERSION']) < 402:
-                   iceberg_rst_source = '%s/%so_icebergs_%s_restart.nc' % \
-                      (nemo_init_dir, common_env['RUNID'], \
-                         nemo_dump_time)
-                else:
-                   iceberg_rst_source = '%s/%so_%s_restart_icb.nc' % \
-                      (nemo_init_dir, common_env['RUNID'], \
-                         nemo_dump_time)
-              
+                iceberg_rst_source = '%s/%so%s%s%s.nc' % \
+                      (nemo_init_dir, common_env['RUNID'], iceberg_rst_part1,
+                         nemo_dump_time, iceberg_rst_part2)
                 if os.path.isfile(iceberg_rst_source):
                     sys.stdout.write('[INFO] Using rebuilt iceberg restart'\
                         'file: %s\n' % iceberg_rst_source)
-                    if int(nemo_envar['NEMO_VERSION']) < 402:
-                       iceberg_rst_link = 'restart_icebergs.nc' 
-                    else:
-                       iceberg_rst_link = 'restart_icb.nc' 
-
-                    common.remove_file(iceberg_rst_link)
+                    iceberg_rst_nc = iceberg_link_name + '.nc'
+                    common.remove_file(iceberg_rst_nc)
                     os.symlink(iceberg_rst_source, iceberg_rst_link)
 
         #endif (nemo_envar(NEMO_NPROC) == 1)
@@ -660,14 +650,16 @@ def _setup_executable(common_env):
             ln_restart = ".false."
 
         if nemo_envar['NEMO_ICEBERGS_START'] != '':
+
             if os.path.isfile(nemo_envar['NEMO_ICEBERGS_START']):
 
                 # We need to make sure there isn't already
                 # an iceberg restart file link set up, and if there is, get
                 # rid of it because symlink wont work otherwise!
-                common.remove_file('restart_icebergs.nc')
+                iceberg_rst_file = iceberg_link_name + '.nc'
+                common.remove_file(iceberg_rst_file)
                 os.symlink(nemo_envar['NEMO_ICEBERGS_START'],
-                           'restart_icebergs.nc')
+                           iceberg_rst_file)
             elif os.path.isfile('%s_0000.nc' %
                                 nemo_envar['NEMO_ICEBERGS_START']):
                 for fname in glob.glob('%s_????.nc' %
@@ -677,9 +669,11 @@ def _setup_executable(common_env):
                     # We need to make sure there isn't already
                     # an iceberg restart file link set up, and if there is, get
                     # rid of it because symlink wont work otherwise!
-                    common.remove_file('restart_icebergs_%s.nc' % proc_number)
+                    common.remove_file('%s_%s.nc' %
+                                       (iceberg_rst_link, proc_number))
 
-                    os.symlink(fname, 'restart_icebergs_%s.nc' % proc_number)
+                    os.symlink(fname, '%s_%s.nc' %
+                               (iceberg_rst_file, proc_number))
             elif os.path.isfile('%s_0000.nc' %
                                 nemo_envar['NEMO_ICEBERGS_START'][:-3]):
                 for fname in glob.glob('%s_????.nc' %
@@ -689,9 +683,11 @@ def _setup_executable(common_env):
                     # We need to make sure there isn't already
                     # an iceberg restart file link set up, and if there is, get
                     # rid of it because symlink wont work otherwise!
-                    common.remove_file('restart_icebergs_%s.nc' % proc_number)
+                    common.remove_file('%s_%s.nc' %
+                                       (iceberg_rst_link, proc_number))
 
-                    os.symlink(fname, 'restart_icebergs_%s.nc' % proc_number)
+                    os.symlink(fname, '%s_%s.nc' %
+                               (iceberg_rst_link, proc_number))
             else:
                 sys.stderr.write('[FAIL] file %s not found\n' %
                                  nemo_envar['NEMO_ICEBERGS_START'])
