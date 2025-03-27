@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016-2022 Met Office. All rights reserved.
+ (C) Crown copyright 2016-2025 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -130,8 +130,9 @@ def atmos_stream_items(naml):
     Arguments:
        naml - <type utils.Variables> Namelist object
     '''
-    stream_namelists = [a for a in dir(naml) if
-                        a.startswith('streams_') or re.match(r'^.*_streams?$', a)]
+    stream_namelists = [a for a in dir(naml)
+                        if a.startswith('streams_')
+                        or re.match(r'^.*_streams?$', a)]
 
     for namelist in stream_namelists:
         val = getattr(naml, namelist)
@@ -657,9 +658,9 @@ class DiagnosticFiles(ArchivedFiles):
 
                     for stream in streams:
                         stream = str(stream)
-                        if not self.finalcycle and descript == 'instantaneous' and \
-                           base_cm and stream in base_cm.component_stream and \
-                           date >= cm_edate:
+                        if not self.finalcycle and descript == 'instantaneous' \
+                           and base_cm and stream in base_cm.component_stream \
+                           and date >= cm_edate:
                             # Base component stream - awaiting higher mean
                             continue
 
@@ -925,6 +926,9 @@ class DiagnosticFiles(ArchivedFiles):
                 m_streams += [str(s) for s in self.naml.streams_30d]
             if self.naml.streams_1m:
                 m_streams += [str(s) for s in self.naml.streams_1m]
+            # Gregorian calendar 3m streams use the first month in filename
+            if utils.calendar().lower() == 'gregorian' and self.naml.streams_3m:
+                m_streams += [str(s) for s in self.naml.streams_3m]
 
             if stream in m_streams:
                 start[2] = ''

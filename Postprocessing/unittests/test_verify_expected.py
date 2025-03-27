@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016-2024 Met Office. All rights reserved.
+ (C) Crown copyright 2016-2025 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -1012,6 +1012,26 @@ class DiagnosticFilesTests(unittest.TestCase):
             self.assertListEqual(expected[key][:2], outfiles[key][:2])
             self.assertListEqual(expected[key][-2:], outfiles[key][-2:])
         self.assertListEqual(sorted(expected.keys()), sorted(outfiles.keys()))
+
+    def test_expected_atmos_3m_greg(self):
+        ''' Assert correct list of expected files - Gregorian 3m files'''
+        func.logtest('Assert correct return of atmos files - Gregorian 3m:')
+        # startdate: 19950811, enddate: 19981101, meanref: ???01201
+        self.files.naml.meanstreams = []
+        self.files.naml.streams_3m = ['p1']
+
+        with mock.patch('expected_content.utils.calendar',
+                        return_value='gregorian'):
+            expected = self.files.expected_diags()
+
+        outfiles = {
+            'first2': ['PREFIXa.p11995sep.pp', 'PREFIXa.p11995dec.pp'],
+            'last2': ['PREFIXa.p11998mar.pp', 'PREFIXa.p11998jun.pp'],
+            }
+
+        self.assertListEqual(expected['ap1.pp'][:2], outfiles['first2'])
+        self.assertListEqual(expected['ap1.pp'][-2:], outfiles['last2'])
+        self.assertListEqual(sorted(expected.keys()), ['ap1.pp'])
 
     def test_expected_atmos_periodic(self):
         ''' Assert correct list of periodically intermittent atmos files '''
