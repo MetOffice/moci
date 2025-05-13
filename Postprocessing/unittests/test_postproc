@@ -61,6 +61,7 @@ def main():
         'moo':       'test_platforms_moo.py',
         'platforms': 'test_platforms_*.py',
         'transfer':  'test_platforms_transfer.py',
+        'jdma':      'test_platforms_jdma.py',
         }
 
     subgroups = [

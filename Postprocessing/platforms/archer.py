@@ -25,7 +25,6 @@ ENVIRONMENT VARIABLES
 
 '''
 import os
-import shutil
 
 import utils
 import timer
@@ -53,9 +52,19 @@ class _Archer(object):
         self._rqst_name = comms['CURRENT_RQST_NAME']
         self._suite_id = comms['RUNID']
         self._sourcedir = comms['DATAM']
-        self._archivedir = os.path.join(comms['ARCHIVE_ROOT'],
-                                        self._suite_id,
-                                        os.environ['CYLC_TASK_CYCLE_POINT'])
+
+        if comms['ARCHIVE_ROOT']  == os.environ['ROSE_DATAC']:
+            # Data staged to ROSE_DATAC so no need to append
+            # suite_name & cycle point
+            self._archivedir = comms['ARCHIVE_ROOT']
+        else:
+            # Data staged elsewhere - add suite name and cycle point
+            # to achive dir
+            self._archivedir = os.path.join(
+                comms['ARCHIVE_ROOT'],
+                self._suite_id,
+                os.environ['CYLC_TASK_CYCLE_POINT']
+            )
 
         # Create archive directory for this cycle
         if not os.path.exists(self._archivedir):
@@ -74,13 +83,15 @@ class _Archer(object):
         if os.path.exists(crn):
             msg = 'Archiving {} to {}'.format(crn, archivedir)
             utils.log_msg(msg, level='INFO')
-            try:
-                shutil.copy(crn, archivedir)
-                ret_code = 0
-            except (IOError, shutil.Error) as err:
-                msg = 'Failed to copy file: ' + str(err)
-                utils.log_msg(msg, level='ERROR')
+
+            mv_cmd = 'mv {} {}'.format(crn, archivedir)
+            utils.log_msg('RSH Running command: {}'.format(mv_cmd))
+            ret_code, output = utils.exec_subproc(mv_cmd)
+            if ret_code != 0:
+                msg='Failed to move file: {}\nError={}\n{}'.\
+                    format(crn, ret_code, output)
                 ret_code = 13
+
         else:
             msg = 'archer.py: No archiving done. ' \
                 'Path/file does not exist:' + str(crn)
@@ -90,19 +101,19 @@ class _Archer(object):
 
         put_rtncode = {
             0:  'Archer: Archiving OK. (ReturnCode=0)',
-            13: 'Archive Error: Failed to copy file to /nerc disk '
+            13: 'Archive Error: Failed to copy file to staging area '
                 '(ReturnCode=13)',
-            99: 'System Error: The archiving file does not exist '
+            99: 'System Error: File does not exist '
                 '(ReturnCode=99)',
         }
 
         if ret_code == 0:
             utils.log_msg(put_rtncode[0])
-            msg = '{} archived to {}'.format(crn, archivedir)
+            msg = '{} copied to staging area {}'.format(crn, archivedir)
             level = 'INFO'
         elif ret_code == 13:
             utils.log_msg(put_rtncode[13])
-            msg = '{} was NOT archived - Copy failed'.format(crn)
+            msg = '{} was NOT staged - Move failed'.format(crn)
             level = 'WARN'
         else:
             msg = 'archer.py: Unknown Error - Return Code =' + str(ret_code)

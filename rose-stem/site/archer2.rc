@@ -1,0 +1,78 @@
+ 
+    [[ARCHER2]]
+        [[[job]]]
+            batch system = slurm
+        [[[remote]]]
+            host = $(rose host-select {{ COMPUTE_HOST }})
+        [[[directives]]]
+            --account=n02-cms
+            --chdir=/work/n02/n02/ros
+             
+    [[ARCHER2_serial]]
+        inherit = ARCHER2
+        [[[job]]]
+            execution time limit = PT30M
+        [[[environment]]]
+            ROSE_TASK_N_JOBS=1
+        [[[directives]]]
+            --partition=serial
+            --qos=serial
+            --ntasks=1
+
+    [[PPBUILD_RESOURCE]]
+        inherit = ARCHER2_serial
+
+    [[PYTHON_ENV]]
+        [[[environment]]]
+            PYTHON_ENVIRONMENT = """
+module load cray-python ;
+#export PATH=/work/n02/n02/valeriu/miniconda3/bin:$PATH ;
+#export PATH=/work/n02/n02/valeriu/miniconda3/envs/os44/lib/python3.8/site-packages:$PATH ;
+#export PATH=/work/n02/n02/valeriu/miniconda3/envs/os44/bin:$PATH ;
+#export PYTHONPATH=/work/n02/n02/valeriu/miniconda3/envs/os44:$PATH ;
+echo "RSH" ;
+echo $PATH ;
+module list ;
+echo ;
+"""
+
+    [[POSTPROC_RESOURCE]]
+        inherit = ARCHER2_serial
+        pre-script = "module load postproc ; module list"
+
+    [[PPTRANSFER]]
+        inherit = ARCHER2_serial
+
+    [[pptransfer_19811101]]
+        inherit = PPTRANSFER
+        script = "{{TASK_RUN}} --command-key=pptransfer"
+        [[[environment]]]
+            ROSE_TASK_APP=postproc
+            ROSE_APP_COMMAND_KEY = pptransfer
+            PLATFORM = linux
+            RUNID      = hg3es
+            DATAM      = $CYLC_SUITE_SHARE_DIR/data/postproc/ATMOSdata
+            NEMO_DATA  = $CYLC_SUITE_SHARE_DIR/data/postproc/NEMOdata
+            CICE_DATA  = $CYLC_SUITE_SHARE_DIR/data/postproc/CICEdata
+            ARCHIVE_SET = 'dummy'
+            DATE1 = 19811001
+            DATE2 = 19812001
+            CYCLEPOINT_OVERRIDE = 19811101T0000Z
+
+    [[VERIFY_RESOURCE]]
+        inherit = ARCHER2_serial
+
+    [[UNITTESTS_RESOURCE]]
+        inherit = ARCHER2_serial
+        pre-script = "module load postproc;  module list"
+
+    [[HOUSEKEEP_RESOURCE]]
+        inherit = ARCHER2_serial
+
+# Families not used on ARCHER but need to be defined as referenced in suite.rc file
+    [[LINUX_SERVER]]
+
+    [[LINUX_DESKTOP]]
+
+    [[PYTHON3_ENV]]
+        inherit = PYTHON_ENV

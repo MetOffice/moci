@@ -4,7 +4,7 @@
 {% set PP_CYCLES = range(110,113)|list + range(201,213)|list + [301,]|list %}
 
 {# Test to determine when to use single fcm_make tasks #}
-{% set MULTISTEP_FCM = ['archer'] %}
+{% set MULTISTEP_FCM = ['archer2'] %}
 {% if SITE in MULTISTEP_FCM %}
     {% set FCMPP_GRAPH = 'fcm_make_pp => fcm_make2_pp' %}
     {% set FCMPP_GRAPH2 = 'fcm_make2_pp' %}
@@ -14,8 +14,8 @@
 {% endif %}
 
 {# Test to determine if need to run pptransfer tasks #}
-{% if SITE in ['archer'] %}
-    {% set PPTRANSFER_GRAPH = 'fcm_make_pptransfer => fcm_make2_pptransfer => pptransfer_19811101\n postproc_19811001' + (":succeed-all" if SPLIT_PP else "") + ' => pptransfer_19811101' %}
+{% if SITE in ['archer2'] %}
+    {% set PPTRANSFER_GRAPH = 'postproc_19811001' + (":succeed-all" if SPLIT_PP else "") + ' => pptransfer_19811101' %}
 {% else %}
     {% set PPTRANSFER_GRAPH = '' %}
 {% endif %}

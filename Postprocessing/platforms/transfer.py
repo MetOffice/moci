@@ -44,23 +44,45 @@ class Transfer(object):
 
         self._suite_name = nl_arch.archive_name
         self._verify_chksums = nl_transfer.verify_chksums
-        self._gridftp = nl_transfer.gridftp
+        self._globus_cli = nl_transfer.globus_cli
+
+        if self._globus_cli:
+            self._globus_notify = nl_transfer.globus_notify
+            self._globus_default_colls = nl_transfer.globus_default_colls
+
+            if self._globus_default_colls:
+                # ARCHER2
+                self._globus_src_coll = '3e90d018-0d05-461a-bbaf-aab605283d21'
+                # JASMIN
+                self._globus_dst_coll = 'a2f53b7f-1b4e-4dce-9b7c-349ae760fee0'
+            else:
+                self._globus_src_coll = nl_transfer.globus_src_coll 
+                self._globus_dst_coll = nl_transfer.globus_dst_coll 
+        else:
+            self._remote_host = nl_transfer.remote_host
+
         self._transfer_type = nl_transfer.transfer_type.lower()
-        self._remote_host = nl_transfer.remote_host
         self._checksums = 'checksums'
 
-        self._archive_dir = os.path.join(nl_arch.archive_root_path,
-                                         self._suite_name,
-                                         os.environ['CYLC_TASK_CYCLE_POINT'])
+        utils.log_msg('archive_root_path:  {}'.\
+                      format(nl_arch.archive_root_path))
+
+        if nl_arch.archive_root_path == os.environ['ROSE_DATAC']:
+            # Data staged to ROSE_DATAC so no need to append
+            # suite_name & cycle point
+            self._archive_dir = nl_arch.archive_root_path
+        else:
+            # Data staged elsewhere - add suite name and cycle point to
+            # achive dir
+            self._archive_dir = os.path.join(
+                nl_arch.archive_root_path,
+                self._suite_name,
+                os.environ['CYLC_TASK_CYCLE_POINT']
+            )
 
         self._transfer_dir = os.path.join(nl_transfer.transfer_dir,
                                           self._suite_name,
                                           os.environ['CYLC_TASK_CYCLE_POINT'])
-
-        if self._transfer_type == "push":
-            utils.log_msg('Pushing files to {}'.format(self._remote_host))
-        else:
-            utils.log_msg('Pulling files from {}'.format(self._remote_host))
 
         if self._verify_chksums:
             self.tidy_up()
@@ -89,6 +111,7 @@ class Transfer(object):
                     format(self._archive_dir)
                 utils.log_msg(msg, level='ERROR')
 
+
     def _clean_up_push(self):
         '''Clean up any previous run of the transfer app for this cycle'''
         checksum_file = os.path.join(self._archive_dir, self._checksums)
@@ -100,9 +123,9 @@ class Transfer(object):
             msg = 'Deleting old checksum file: {}'.format(checksum_file)
             utils.log_msg(msg, level='INFO')
 
+
     def _clean_up_pull(self):
         '''Clean up any previous run of the transfer app for this cycle'''
-        # Clean up after any previous run of transfer app for this cycle
         checksum_file = os.path.join(self._archive_dir, self._checksums)
         cmd = 'ssh ' + self._remote_host + ' -n ls ' + checksum_file
         ret_code, _ = utils.exec_subproc(cmd, verbose=False)
@@ -119,6 +142,7 @@ class Transfer(object):
             msg = 'Problem checking existence of checksum files on ' \
                 'remote host'
             utils.log_msg(msg, level='WARN')
+
 
     @timer.run_timer
     def _generate_checksums(self):
@@ -151,6 +175,7 @@ class Transfer(object):
 
         return ret_code == 0
 
+
     @timer.run_timer
     def _do_verify_checksums(self):
         '''Verify the checksums of transferred files. Checksum file was copied
@@ -179,11 +204,27 @@ class Transfer(object):
         return ret_code == 0
 
     @timer.run_timer
+    def _get_data_size(self):
+        '''Get total size of data to transfer'''
+        utils.log_msg('Calculating size of data...', level='INFO')
+
+        total_size = 0
+        for filename in os.listdir(self._archive_dir):
+            total_size = total_size + os.path.getsize(
+                os.path.join(self._archive_dir, filename)
+            )
+
+        return total_size
+
+
+    @timer.run_timer
     def do_transfer(self):
-        '''Transfer all files present in the archive directory for this cycle.
+        '''
+        Transfer all files present in the archive directory for this cycle.
         If requested verify the checksums of all files transferred.
         '''
-        remote_host = self._remote_host
+        if not self._globus_cli:
+            remote_host = self._remote_host
         archive_dir = self._archive_dir
         transfer_dir = self._transfer_dir
 
@@ -192,9 +233,15 @@ class Transfer(object):
             find_cmd = 'ls -A ' + archive_dir
             ret_code, files = utils.exec_subproc(find_cmd, verbose=False)
         else:
-            find_cmd = 'ssh -oBatchMode=yes ' + remote_host + ' -n ls -A ' + \
-                archive_dir + ' | wc -l'
-            ret_code, files = utils.exec_subproc(find_cmd, verbose=False)
+            if self._globus_cli:
+                msg = 'Using Globus CLI to pull files to JASMIN is not ' + \
+                'currently implemented, but could be.'
+                utils.log_msg(msg, level='ERROR')
+                ret_code = 5
+            else:
+                find_cmd = 'ssh -oBatchMode=yes ' + remote_host + \
+                    ' -n ls -A ' + archive_dir + ' | wc -l'
+                ret_code, files = utils.exec_subproc(find_cmd, verbose=False)
 
         files_found = len(files.split())
 
@@ -223,22 +270,49 @@ class Transfer(object):
                 utils.log_msg(msg, level='ERROR')
                 ret_code = 3
 
+        # Get total size of data to transfer
+        bytes = self._get_data_size()
+        gigabytes = bytes/1024.0/1024/1024
+        utils.log_msg('Total {0:.1f} Gb of data to transfer'.format(gigabytes),
+                      level='INFO')
+
         # Do the transfer.
         # Transfer commands must create the destination directory
-        # E.g. use -cd option for gridftp
-        if self._gridftp:
-            # Use gridftp (ssh authentication) for the file transfer
-            utils.log_msg('Transferring files using gridFTP', level='INFO')
+        if self._globus_cli:
+            # Use globus command-line interface for the file transfer
+            utils.log_msg('Transferring files using Globus CLI...',
+                          level='INFO')
 
-            globus_cmd = 'globus-url-copy -vb -cd -cc 4 -sync'
-            if self._transfer_type == 'push':
-                transfer_cmd = '{} file://{}/ sshftp://{}{}/'.format(
-                    globus_cmd, archive_dir, remote_host, transfer_dir
-                    )
+            verify = '--verify-checksum'
+            if self._globus_notify == '':
+                notify = ''
             else:
-                transfer_cmd = '{} sshftp://{}{}/ file://{}/'.format(
-                    globus_cmd, remote_host, archive_dir, transfer_dir
+                notify = '--notify {}'.format(self._globus_notify)
+            utils.log_msg('notify: {}'.format(notify))
+        
+            src_coll = self._globus_src_coll
+            dst_coll = self._globus_dst_coll
+            label =  os.path.join(self._suite_name,
+                                  os.environ['CYLC_TASK_CYCLE_POINT'])
+
+            globus_cli_cmd = 'globus transfer --format unix --jmespath ' + \
+                '\'task_id\' --recursive --fail-on-quota-errors ' + \
+                '--sync-level checksum --label {} {} {}'.\
+                format(label, verify, notify)
+
+            if self._transfer_type == 'push':
+                transfer_cmd = '{} {}:{} {}:{}'.format(
+                    globus_cli_cmd, src_coll, archive_dir,
+                    dst_coll, transfer_dir
                     )
+                # log the Globus task ID in case we need to inspect it.
+                utils.log_msg('Globus CLI command:\n{}'.format(transfer_cmd),
+                              level='INFO')
+            else:
+                msg = 'Using Globus CLI to pull files to JASMIN is not ' + \
+                    'currently implemented, but could be.'
+                utils.log_msg(msg, level='ERROR')
+                ret_code = 5
         else:
             # Use rsync for the file transfer.
             utils.log_msg('Transferring files using rsync', level='INFO')
@@ -259,20 +333,42 @@ class Transfer(object):
                 transfer_cmd = 'rsync -av --stats {}:{}/ {}'.format(
                     remote_host, archive_dir, transfer_dir)
 
-        ret_code, _ = utils.exec_subproc(transfer_cmd)
+        ret_code, output = utils.exec_subproc(transfer_cmd)
+
+        if self._globus_cli:
+            # Wait for globus transfer to finish
+            utils.log_msg('retcode: {}'.format(ret_code))
+
+            if ret_code == 0:
+                globus_task_wait = 'globus task wait -H $task_id'
+                task_id = str(output)
+
+                utils.log_msg('Globus task id: {}'.format(task_id), level='OK')
+                globus_wait_cmd = 'globus task wait -H {}'.format(task_id)
+                ret_code, output = utils.exec_subproc(globus_wait_cmd)
+
+            ret_code = process_globus_retcode(ret_code)
 
         if ret_code == 0:
             msg = 'Transfer command succeeded: ' + transfer_cmd
             utils.log_msg(msg, level='OK')
 
-            # Perform checksum validation on transferred files
+            # Perform checksum validation on transferred files - ONLY FOR RSYNC
             if self._verify_chksums:
-                if self._do_verify_checksums():
-                    utils.log_msg('Transfer OK: Checksums verified', level='OK')
+                if self._globus_cli:
+                    msg = 'Cannot use separate verify checksums option ' + \
+                        'when using Globus. ' + \
+                        'Globus has integral checksumming. ' + \
+                        'Set verify_chksums=false to remove this warning.'
+                    utils.log_msg(msg, level='WARN')
                 else:
-                    msg = 'Transfer Failed: Problem with checksum verification'
-                    utils.log_msg(msg, level='ERROR')
-                    ret_code = 4
+                    if self._do_verify_checksums():
+                        utils.log_msg('Transfer OK: Checksums verified',
+                                      level='OK')
+                    else:
+                        msg = 'Transfer Failed: Problem with checksum verification'
+                        utils.log_msg(msg, level='ERROR')
+                        ret_code = 4
         else:
             msg = 'Transfer command failed: ' + transfer_cmd
             utils.log_msg(msg, level='WARN')
@@ -283,6 +379,10 @@ class Transfer(object):
                 '(ReturnCode=2)',
             3:  'Transfer Error: Checksum generation failed (ReturnCode=3)',
             4:  'Transfer Error: Checksum validation failed (ReturnCode=4)',
+            6:  'Globus Error: Network or server error occurred (Globus ReturnCode=1)',
+            7:  'Globus Error: Incorrect Command (Globus ReturnCode=2)',
+            8:  'Globus Error: Command used on wrong type of object (Globus ReturnCode=3)',
+            9:  'Globus Error: Failed authentication or authorization (Globus ReturnCode=4)',
             12: 'System Error: Failed to make transfer directory ' \
                 '(ReturnCode=12)',
             }
@@ -301,6 +401,25 @@ class Transfer(object):
         return ret_code
 
 
+def process_globus_retcode(rcode):
+    '''Translate Globus command return code into one for use by this script'''
+    rc_dict = {
+            0: 0,
+            1: 6,
+            2: 7,
+            3: 8,
+            4: 9,
+            }
+
+    if rcode in rc_dict:
+        ret_code = rc_dict[rcode]
+    else:
+        msg = 'transfer.py: Unknown Globus Error - Return Code'.format(rcode)
+        utils.log_msg(msg, level='ERROR')
+
+    return ret_code
+
+
 def main():
     '''Main function'''
     timer.initialise_timer()
@@ -312,15 +431,20 @@ def main():
 
     return ret_code
 
+
 class PPTransfer(object):
     '''Default namelist for PP Transfer'''
-    gridftp = False
+    globus_cli = 'True'
+    globus_notify = 'off'
+    globus_default_colls = 'True'
     remote_host = ''
     transfer_dir = ''
     transfer_type = 'Push'
-    verify_chksums = True
+    verify_chksums = False
+
 
 NAMELISTS = {'pptransfer': PPTransfer}
+
 
 if __name__ == '__main__':
     main()

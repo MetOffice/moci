@@ -1,21 +1,15 @@
 #!/usr/bin/env python
 '''
-*****************************COPYRIGHT******************************
- (C) Crown copyright 2017-2018 Met Office. All rights reserved.
+**********************************************************************
+Contribution by NCAS-CMS
 
- Use, duplication or disclosure of this code is subject to the restrictions
- as set forth in the licence. If no licence has been raised with this copy
- of the code, the use, duplication or disclosure of it is strictly
- prohibited. Permission to do so must first be obtained in writing from the
- Met Office Information Asset Owner at the following address:
+**********************************************************************
 
- Met Office, FitzRoy Road, Exeter, Devon, EX1 3PB, United Kingdom
-*****************************COPYRIGHT******************************
 NAME
     test_platforms_transfer.py
 
 DESCRIPTION
-    Transfer archived data to remote machine (e.g. JASMIN)
+    Unit tests for transfer archived data to remote machine (e.g. JASMIN)
 
 '''
 
@@ -39,10 +33,12 @@ class TransferTest(unittest.TestCase):
         self.inputnl = OrderedDict([
             ('&pptransfer', None),
             ('verify_chksums=false', None),
-            ('gridftp="False"', None),
             ('transfer_type="Push"', None),
             ('remote_host=RHOST', None),
             ('transfer_dir="/XDIR"', None),
+            ('globus_cli=false', None),
+            ('globus_default_colls=true', None),
+            ('globus_notify="off"', None),
             ('/', None),
             ('&archer_arch', None),
             ('archive_root_path=/ArchiveDir', None),
@@ -51,8 +47,13 @@ class TransferTest(unittest.TestCase):
 
         self.myfile = 'input.nl'
         open(self.myfile, 'w').write('\n'.join(self.inputnl.keys()))
-        with mock.patch('transfer.Transfer.tidy_up'):
-            self.inst = transfer.Transfer(self.myfile)
+        with mock.patch.dict('transfer.os.environ',
+                             {'ROSE_DATAC': ''}):
+            with mock.patch('transfer.Transfer.tidy_up'):
+                self.inst = transfer.Transfer(input_nl=self.myfile)
+
+        self.inst._globus_src_coll = '3e90d018-0d05-461a-bbaf-aab605283d21' # ARCHER2 
+        self.inst._globus_dst_coll = 'a2f53b7f-1b4e-4dce-9b7c-349ae760fee0' # JASMIN
 
     def tearDown(self):
         for fname in [self.myfile, 'checksums']:
@@ -270,7 +271,8 @@ class TransferTest(unittest.TestCase):
         func.logtest('test do_transfer')
         mock_exec.side_effect = [[0, 'file'], [0, '']]
         self.inst._verify_chksums = True
-        rtn = self.inst.do_transfer()
+        with mock.patch('transfer.Transfer._get_data_size', return_value=100):
+           rtn = self.inst.do_transfer()
         self.assertIn('Checksums generated successfully', func.capture())
         self.assertIn('using rsync', func.capture())
         transfer_cmd = 'rsync -av --stats --rsync-path="mkdir -p ' \
@@ -292,8 +294,9 @@ class TransferTest(unittest.TestCase):
         func.logtest('test do_transfer')
         mock_exec.side_effect = [[0, 'file'], [0, '']]
         self.inst._transfer_type = 'pull'
-        with mock.patch('transfer.os.path.exists', return_value=False):
-            rtn = self.inst.do_transfer()
+        with mock.patch('transfer.Transfer._get_data_size', return_value=100):
+            with mock.patch('transfer.os.path.exists', return_value=False):
+                rtn = self.inst.do_transfer()
         self.assertIn('using rsync', func.capture())
         self.assertIn('Creating transfer directory', func.capture())
         mock_cdir.assert_called_once_with('/XDIR/NAME/20000121T0000Z')
@@ -305,46 +308,64 @@ class TransferTest(unittest.TestCase):
         self.assertIn('Transfer OK', func.capture())
         self.assertEqual(rtn, 0)
 
-    @mock.patch('transfer.Transfer._do_verify_checksums', return_value=True)
-    @mock.patch('transfer.Transfer._generate_checksums', return_value=True)
     @mock.patch('transfer.utils.exec_subproc')
-    def test_xfer_push_gftp_verify_ok(self, mock_exec,
-                                      mock_gen, mock_verify):
-        '''Test do_transfer using gridftp and checksum verification - push'''
+    def test_do_transfer_push_globus_ok(self, mock_exec):
+        '''Test do_transfer using globus - push'''
         func.logtest('test do_transfer')
-        mock_exec.side_effect = [[0, 'file'], [0, '']]
-        self.inst._verify_chksums = True
-        self.inst._gridftp = True
-        rtn = self.inst.do_transfer()
-        self.assertIn('Checksums generated successfully', func.capture())
-        self.assertIn('using gridFTP', func.capture())
-        transfer_cmd = 'globus-url-copy -vb -cd -cc 4 -sync ' \
-            'file:///ArchiveDir/NAME/20000121T0000Z/ '\
-            'sshftp://RHOST/XDIR/NAME/20000121T0000Z/'
-        mock_exec.assert_any_call(transfer_cmd)
-        mock_verify.assert_called_once_with()
-        mock_gen.assert_called_once_with()
+        mock_exec.side_effect = [[0, 'file'], [0, 'TASKID'], [0,'']]
+        self.inst._globus_cli = True
+        self.inst._globus_notify = 'off'
+        self.inst._globus_default_colls = True
+        with mock.patch('transfer.Transfer._get_data_size', return_value=100):
+            with mock.patch('transfer.os.path.exists', return_value=False):
+                rtn = self.inst.do_transfer()
+        self.assertIn('using Globus CLI', func.capture())
+        globus_cmd = 'globus transfer --format unix --jmespath \'task_id\' --recursive' \
+                '--fail-on-quota-errors --sync-level checksum --label NAME/20000121T0000Z' \
+                '--verify-checksum --notify=\'off\'' 
+        globus_cmd = 'globus transfer --format unix --jmespath \'task_id\' --recursive ' \
+                '--fail-on-quota-errors --sync-level checksum --label NAME/20000121T0000Z ' \
+                '--verify-checksum --notify off ' \
+                '3e90d018-0d05-461a-bbaf-aab605283d21:/ArchiveDir/NAME/20000121T0000Z ' \
+                'a2f53b7f-1b4e-4dce-9b7c-349ae760fee0:/XDIR/NAME/20000121T0000Z'
+        mock_exec.assert_any_call(globus_cmd)
+        globus_wait_cmd = 'globus task wait -H TASKID'
+        mock_exec.assert_any_call(globus_wait_cmd)
         self.assertIn('Transfer command succeeded', func.capture())
-        self.assertIn('Checksums verified', func.capture())
-        self.assertIn('Transfer OK', func.capture())
         self.assertEqual(rtn, 0)
 
     @mock.patch('transfer.utils.exec_subproc')
-    def test_transfer_pull_gridftp_ok(self, mock_exec):
-        '''Test do_transfer using gridftp - pull'''
-        func.logtest('test do_transfer')
-        mock_exec.side_effect = [[0, 'file'], [0, '']]
-        self.inst._gridftp = True
+    def test_do_transfer_push_globus_fail(self, mock_exec):
+        '''Test do_transfer using globus - Fail'''
+        func.logtest('test do_transfer with globus fail')
+        mock_exec.side_effect = [[0, 'file'], [1, '']]
+        self.inst._globus_cli = True
+        self.inst._globus_notify = 'off'
+        self.inst._globus_default_colls = True
+        with mock.patch('transfer.Transfer._get_data_size', return_value=100):
+            with mock.patch('transfer.os.path.exists', return_value=False):
+                with self.assertRaises(SystemExit):
+                    rtn = self.inst.do_transfer()
+                    self.assertEqual(rtn, 1)
+        self.assertIn('using Globus CLI', func.capture())
+        self.assertIn('Transfer command failed:', func.capture('err'))
+        self.assertIn('transfer.py: Globus Error: Network', func.capture('err'))
+
+    @mock.patch('transfer.utils.exec_subproc')
+    def test_do_transfer_pull_globus_fail(self, mock_exec):
+        '''Test do_transfer using globus pull - Fail'''
+        func.logtest('test do_transfer with globus pull')
+        mock_exec.side_effect = [[0, 'file']]
+        self.inst._globus_cli = True
+        self.inst._globus_notify = 'off'
+        self.inst._globus_default_colls = True
         self.inst._transfer_type = 'pull'
-        rtn = self.inst.do_transfer()
-        self.assertIn('using gridFTP', func.capture())
-        transfer_cmd = 'globus-url-copy -vb -cd -cc 4 -sync ' \
-            'sshftp://RHOST/ArchiveDir/NAME/20000121T0000Z/ ' \
-            'file:///XDIR/NAME/20000121T0000Z/'
-        mock_exec.assert_any_call(transfer_cmd)
-        self.assertIn('Transfer command succeeded', func.capture())
-        self.assertIn('Transfer OK', func.capture())
-        self.assertEqual(rtn, 0)
+        with mock.patch('transfer.Transfer._get_data_size', return_value=100):
+            with mock.patch('transfer.os.path.exists', return_value=False):
+                with self.assertRaises(SystemExit):
+                    rtn = self.inst.do_transfer()
+                    self.assertEqual(rtn, 5)
+        self.assertIn('Using Globus CLI to pull files to JASMIN', func.capture('err'))
 
     @mock.patch('transfer.utils.exec_subproc', return_value=[0, 'file'])
     def test_transfer_checksum_gen_fail(self, mock_exec):
@@ -367,12 +388,13 @@ class TransferTest(unittest.TestCase):
         func.logtest('test do_transfer checksum verify fail')
         self.inst._verify_chksums = True
         mock_exec.side_effect = [[0, 'file'], [0, '']]
-        with mock.patch('transfer.Transfer._do_verify_checksums',
-                        return_value=False):
-            with mock.patch('transfer.Transfer._generate_checksums'):
-                with self.assertRaises(SystemExit):
-                    rtn = self.inst.do_transfer()
-                    self.assertEqual(rtn, 4)
+        with mock.patch('transfer.Transfer._get_data_size', return_value=100):
+            with mock.patch('transfer.Transfer._do_verify_checksums',
+                            return_value=False):
+                with mock.patch('transfer.Transfer._generate_checksums'):
+                    with self.assertRaises(SystemExit):
+                        rtn = self.inst.do_transfer()
+                        self.assertEqual(rtn, 4)
         self.assertIn('Problem with checksum verification', func.capture('err'))
 
     @mock.patch('transfer.utils.exec_subproc')
@@ -380,7 +402,9 @@ class TransferTest(unittest.TestCase):
         '''Test do_transfer with failure'''
         func.logtest('test do_transfer checksum verify fail')
         mock_exec.side_effect = [[0, 'file'], [5, '']]
-        with self.assertRaises(SystemExit):
-            _ = self.inst.do_transfer()
+        with mock.patch('transfer.Transfer._get_data_size',
+                        return_value=100):
+            with self.assertRaises(SystemExit):
+                _ = self.inst.do_transfer()
         self.assertIn('Transfer command failed:', func.capture('err'))
         self.assertIn('transfer.py: Unknown', func.capture('err'))

@@ -41,8 +41,10 @@ class ArcherTests(unittest.TestCase):
             'RUNID':               'RUNID',
             'ARCHIVE_ROOT':        'ArchiveDir',
         }
-        self.nlist = archer.ArcherArch()
-        self.inst = archer._Archer(cmd)
+        with mock.patch.dict('archer.os.environ',
+                             {'ROSE_DATAC': ''}):
+            self.nlist = archer.ArcherArch()
+            self.inst = archer._Archer(cmd)
 
     def tearDown(self):
         for dirname in ['ArchiveDir', 'suiteID']:
@@ -51,33 +53,42 @@ class ArcherTests(unittest.TestCase):
             except OSError:
                 pass
 
+    @mock.patch('archer.os.path')
     @mock.patch('archer._Archer.put_data')
-    def test_archive(self, mock_putdata):
+    def test_archive(self, mock_putdata, mock_ospath):
         ''' Test archive_to_rdf '''
         func.logtest('Assert call to put_data:')
-        _ = archer.archive_to_rdf('RUNIDa.pa1234jan', 'SourceDir',
-                                  self.nlist)
+        mock_ospath.exists.return_value = True
+        with mock.patch.dict('archer.os.environ',
+                             {'ROSE_DATAC': ''}):
+            _ = archer.archive_to_rdf('RUNIDa.pa1234jan', 'SourceDir',
+                                      self.nlist)
         mock_putdata.assert_called_once_with()
 
+    @mock.patch('archer.utils.exec_subproc')
     @mock.patch('archer.os.path')
-    def test_putdata(self, mock_ospath):
+    def test_putdata(self, mock_ospath, mock_exec):
         '''Test creation of Archer archiving object'''
         func.logtest('Check creation of Archer object instance')
         mock_ospath.exists.return_value = True
-        with mock.patch('archer.shutil.copy'):
-            rtn = self.inst.put_data()
+        mock_exec.return_value = [0, '']
+        rtn = self.inst.put_data()
         self.assertEqual(rtn, 0)
-        self.assertIn('archived to ArchiveDir/RUNID', func.capture())
+        self.assertIn('copied to staging area ArchiveDir/RUNID', func.capture())
+        exec_cmd = mock_exec.mock_calls[0]
+        self.assertTrue(exec_cmd.startswith('mv '))
+        self.assertTrue(exec_cmd.endswith('ArchiveDir/RUNID/20000121T0000Z.'))
 
+    @mock.patch('archer.utils.exec_subproc')
     @mock.patch('archer.os.path')
-    def test_putdata_copy_error(self, mock_ospath):
+    def test_putdata_copy_error(self, mock_ospath, mock_exec):
         '''Test creation of Archer archiving object'''
         func.logtest('Check creation of Archer object instance')
         mock_ospath.exists.return_value = True
-        with self.assertRaises(SystemExit):
-            rtn = self.inst.put_data()
-            self.assertEqual(rtn, 13)
-        self.assertIn('Failed to copy', func.capture('err'))
+        mock_exec.return_value = [1, 'Error']
+        rtn = self.inst.put_data()
+        self.assertEqual(rtn, 13)
+        self.assertIn('Move failed', func.capture('err'))
 
     @mock.patch('archer.os.path')
     def test_putdata_no_such_path(self, mock_ospath):
