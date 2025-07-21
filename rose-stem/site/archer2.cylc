@@ -1,17 +1,12 @@
- 
     [[ARCHER2]]
-        [[[job]]]
-            batch system = slurm
-        [[[remote]]]
-            host = $(rose host-select {{ COMPUTE_HOST }})
+	platform = {{ COMPUTE_HOST }})
         [[[directives]]]
             --account=n02-cms
             --chdir=/work/n02/n02/ros
              
     [[ARCHER2_serial]]
         inherit = ARCHER2
-        [[[job]]]
-            execution time limit = PT30M
+        execution time limit = PT30M
         [[[environment]]]
             ROSE_TASK_N_JOBS=1
         [[[directives]]]
@@ -36,6 +31,23 @@ module list ;
 echo ;
 """
 
+{# Required resources for drivers tasks #}
+    [[HPC_RESOURCE]]
+        inherit = ARCHER2
+
+    [[EXTRACT_RESOURCE]]
+    
+    [[BUILD_RESOURCE]]
+        inherit = ARCHER_serial
+
+    [[DRIVERS_SCRIPTING_RESOURCE]]
+        inherit = ARCHER2_serial, PYTHON_ENV
+	pre-script = "module load postproc;  module list"
+
+    [[DRIVERS_TESTS_RESOURCE]]
+        inherit = EXTRACT_RESOURCE, PYTHON_ENV
+
+{# Required resources for postproc tasks #}
     [[POSTPROC_RESOURCE]]
         inherit = ARCHER2_serial
         pre-script = "module load postproc ; module list"
@@ -59,20 +71,11 @@ echo ;
             DATE2 = 19812001
             CYCLEPOINT_OVERRIDE = 19811101T0000Z
 
-    [[VERIFY_RESOURCE]]
-        inherit = ARCHER2_serial
-
-    [[UNITTESTS_RESOURCE]]
-        inherit = ARCHER2_serial
-        pre-script = "module load postproc;  module list"
+    [[POSTPROC_SCRIPTING_RESOURCE]]
+        inherit = ARCHER2_serial, PYTHON_ENV
+	pre-script = "module load postproc;  module list"
 
     [[HOUSEKEEP_RESOURCE]]
         inherit = ARCHER2_serial
 
-# Families not used on ARCHER but need to be defined as referenced in suite.rc file
-    [[LINUX_SERVER]]
 
-    [[LINUX_DESKTOP]]
-
-    [[PYTHON3_ENV]]
-        inherit = PYTHON_ENV

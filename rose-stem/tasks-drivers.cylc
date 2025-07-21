@@ -1,0 +1,146 @@
+{# The following is to test the drivers unit tests #}
+    [[DRIVERS_BUILD_TASKS]]
+
+    [[DRIVERS_RUN_TASKS]]
+
+    [[DRIVERS_TESTS]]
+
+    [[fcm_make_drivers]]
+        inherit = DRIVERS_BUILD_TASKS, EXTRACT_RESOURCE
+
+    [[fcm_make2_drivers]]
+        inherit = DRIVERS_BUILD_TASKS, BUILD_RESOURCE
+
+    [[drivers_unittests]]
+        inherit = DRIVERS_TESTS, DRIVERS_TESTS_RESOURCE
+	env-script = "eval $(rose task-env)"
+	script = run_python_env.sh $CYLC_WORKFLOW_SHARE_DIR/fcm_make_drivers/extract/drivers/Coupled_Drivers/unittests/test.py
+
+    [[drivers_check_python_tabs]]
+        inherit = DRIVERS_TESTS, DRIVERS_TESTS_RESOURCE
+        script = test_tab.sh $CYLC_WORKFLOW_SHARE_DIR/fcm_make_drivers/extract/drivers/Coupled_Drivers
+
+    [[mct_validate_unittests]]
+        inherit = DRIVERS_TESTS, DRIVERS_TESTS_RESOURCE
+        env-script = "eval $(rose task-env)"
+        script = run_python_env.sh $CYLC_WORKFLOW_SHARE_DIR/fcm_make_drivers/extract/drivers/Coupled_Drivers/driver_utilities/mct_validate/unittests/test.py
+
+    [[test_verify_metrics]]
+        inherit = DRIVERS_TESTS, DRIVERS_TESTS_RESOURCE
+	env-script = "eval $(rose task-env)"
+        script = 'rose task-run --verbose'
+
+    [[test_plot_cpmip_summary]]
+        inherit = DRIVERS_TESTS, DRIVERS_TESTS_RESOURCE
+        env-script = "eval $(rose task-env)"
+        script = 'rose task-run --verbose'
+        post-script = "if [ ! -s plot_out.png ]; then echo 'Expected output file plot_out.png not found' 1>&2; exit 1; fi"
+
+    [[drivers_local_housekeeping]]
+        inherit=HOUSEKEEPING, HOUSEKEEP_RESOURCE
+        [[[environment]]]
+            RUNDIR="$CYLC_WORKFLOW_WORK_DIR/1/fcm_make_drivers $CYLC_WORKFLOW_WORK_DIR/1/fcm_make_ocean $CYLC_WORKFLOW_WORK_DIR/1/test_plot_cpmip_summary $CYLC_WORKFLOW_WORK_DIR/1/test_verify_metrics $CYLC_WORKFLOW_SHARE_DIR/fcm_make_drivers $CYLC_WORKFLOW_SHARE_DIR/fcm_make_ocean $CYLC_WORKFLOW_WORK_DIR/1/drivers_local_housekeeping"
+
+{% if "test_drivers_run" in groups["drivers"] %}
+  {# The following is to test the drivers in a model run #}
+
+  {% set NON_RIGOROUS_PATH='--path= --path=$CYLC_WORKFLOW_SHARE_DIR/fcm_make_ocean/build-ocean/bin/ --path=$CYLC_WORKFLOW_SHARE_DIR/fcm_make_um/build-*/bin/ --path=$CYLC_WORKFLOW_SHARE_DIR/fcm_make_drivers/extract/drivers/Coupled_Drivers/' %}
+
+    [[fcm_make_um]]
+        inherit = DRIVERS_BUILD_TASKS, BUILD_RESOURCE
+        script = """
+             rose task-run --verbose --define=fast-dest-root-orig=$TMPDIR --define=fast-dest-root-cont=$TMPDIR --define='args=--archive'
+        """
+        [[[environment]]]
+            FCM_MAKE_FILE = main
+	    
+    [[fcm_make_ocean]]
+        inherit = DRIVERS_BUILD_TASKS, EXTRACT_RESOURCE
+	[[[environment]]]
+	    CICE_ROW = {{CICE_ROW}}
+            CICE_COL = {{CICE_COL}}
+
+    [[fcm_make2_ocean]]
+        inherit = DRIVERS_BUILD_TASKS, OCEAN_ENV, BUILD_RESOURCE
+        script = """
+              rose task-run --verbose --define=fast-dest-root-orig=$TMPDIR --define=fast-dest-root-cont=$TMPDIR --define='args=--archive'
+        """
+	execution time limit = PT1H50M
+        [[[environment]]]
+            FCM_MAKE_FILE = main
+
+    [[install_ancil]]
+        inherit = DRIVERS_BUILD_TASKS, SCRIPTS_INSTALL_HPC_RESOURCE
+
+     [[ATMOS_ENV]]
+        [[[environment]]]
+            ATMOS_EXEC = $CYLC_WORKFLOW_SHARE_DIR/fcm_make_um/build-atmos/bin/um-atmos.exe
+            UM_ATM_NPROCX      = {{ATM_PROCX}}
+            UM_ATM_NPROCY      = {{ATM_PROCY}}
+            FLUME_IOS_NPROC    = {{IOS_NPROC}}
+            ATMOS_TIMESTEPS_PER_DAY = 72
+            ATMOS_SECONDS_PER_TIMESTEP = 1200
+            NSTEP_RIVERS = 3
+            COUPLING_HOURS = 1
+            UMVN = 13.1
+
+    [[OCEAN_ENV]]
+        [[[environment]]]
+            OCEAN_EXEC = $CYLC_WORKFLOW_SHARE_DIR/fcm_make_ocean/build-ocean/bin/nemo-cice.exe
+            NEMO_IPROC = {{NEMO_IPROC}}
+            NEMO_JPROC = {{NEMO_JPROC}}
+	    NEMO_NPROC = {{NEMO_IPROC*NEMO_JPROC}}
+            NEMO_VERSION = 306
+            NEMO_RST = $CYLC_WORKFLOW_SHARE_DIR/data/drivers/History_Data/NEMOhist
+            OCEAN_SEAICE_TIMESTEPS_PER_DAY = 72
+            OCEAN_SEAICE_SECONDS_PER_TIMESTEP = 1200
+            XIOS_NPROC = {{XIOS_NPROC}}
+            CICE_NPROC = {{NEMO_IPROC*NEMO_JPROC}}
+	    CICE_ROW = {{CICE_ROW}}
+            CICE_COL = {{CICE_COL}}
+            CICE_RST = $CYLC_WORKFLOW_SHARE_DIR/data/drivers/History_Data/CICEhist
+
+    [[COUPLED_ENV]]
+        inherit = ATMOS_ENV, OCEAN_ENV
+        [[[environment]]]
+{% set CYCLE_INIT = '%04d%02d%02dT%02d%02d' % (BASIS[0],BASIS[1],BASIS[2],BASIS[3],BASIS[4]) %}
+            RUNID = drive
+            DATAM = $CYLC_WORKFLOW_SHARE_DIR/data/drivers/History_Data
+            CONTINUE = ""
+	    CYCLE = 'D'
+            RESUB = 1
+	    CALENDAR = 360day
+            MODELBASIS = '{{ BASIS | join(',') }}'
+	    BASIS_YR = $( isodatetime --print-format='%Y' {{CYCLE_INIT}})
+            TASKSTART = $( isodatetime {{CYCLE_INIT}} --print-format %Y,%m,%d,%H,%M )  
+            TASKLENGTH = $( isodatetime {{CYCLE_INIT}} {{CYCLE_INIT}} --calendar 360day --offset2 P1D --print-format y,m,d,h,M,s )
+            TASKEND = $( isodatetime {{CYCLE_INIT}} {{CYCLE_INIT}} --calendar 360day --offset2 P1D --print-format y,m,d,h,M,s )
+
+    [[recon]]
+        inherit = DRIVERS_RUN_TASKS, COUPLED_ENV, RECON_RESOURCE
+        script = ". $ROSE_DATA/etc/um_ancils_gl; . $ROSE_DATA/etc/nemo_ancils_gl; rose task-run --verbose {{NON_RIGOROUS_PATH}}"
+        execution time limit = PT50M
+        [[[environment]]]
+            TASKEND          = '{{ BASIS | join(',') }}'
+            ROSE_TASK_APP    = coupled
+            RCF_NPROCX       = {{RCF_PROCX}}
+            RCF_NPROCY       = {{RCF_PROCY}}
+	    NEMO_NPROC = 0
+
+    [[coupled]]
+        inherit = DRIVERS_RUN_TASKS, COUPLED_ENV, COUPLED_RESOURCE
+	script = ". $ROSE_DATA/etc/um_ancils_gl; . $ROSE_DATA/etc/nemo_ancils_gl; rose task-run --verbose {{NON_RIGOROUS_PATH}}"
+	execution time limit = PT{{'%02d' % (CLOCK[0])}}H{{'%02d' % (CLOCK[1])}}M{{'%02d' % (CLOCK[2])}}S
+
+    [[check_coupled]]
+        inherit = DRIVERS_TESTS, COUPLED_ENV, DRIVERS_SCRIPTING_RESOURCE
+        script = 'rose task-run --verbose'
+        [[[environment]]]
+            COUPLED_MODEL_WORK_DIR = coupled
+
+    [[drivers_hpc_housekeeping]]
+        inherit=HOUSEKEEPING, DRIVERS_SCRIPTING_RESOURCE
+        [[[environment]]]
+            RUNDIR="$CYLC_WORKFLOW_SHARE_DIR/fcm_make_drivers $CYLC_WORKFLOW_SHARE_DIR/fcm_make_ocean $CYLC_WORKFLOW_SHARE_DIR/fcm_make_um $CYLC_WORKFLOW_SHARE_DIR/data/drivers $CYLC_WORKFLOW_WORK_DIR/1/coupled $CYLC_WORKFLOW_WORK_DIR/1/fcm_make2_drivers $CYLC_WORKFLOW_WORK_DIR/1/fcm_make2_ocean $CYLC_WORKFLOW_WORK_DIR/1/fcm_make_um $CYLC_WORKFLOW_WORK_DIR/1/install_ancil $CYLC_WORKFLOW_WORK_DIR/1/recon $CYLC_WORKFLOW_WORK_DIR/1/check_coupled $CYLC_WORKFLOW_WORK_DIR/1/drivers_hpc_housekeeping"
+
+{% endif %}

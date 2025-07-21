@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2018-2022 Met Office. All rights reserved.
+ (C) Crown copyright 2018-2025 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -16,7 +16,6 @@ import os
 import copy
 import numpy
 import unittest
-import cf_units
 try:
     # mock is integrated into unittest as of Python 3.3
     import unittest.mock as mock
@@ -30,6 +29,7 @@ import runtime_environment
 try:
     import iris_transform
     IRIS_AVAIL = True
+    import cf_units
 except ImportError:
     IRIS_AVAIL = False
     func.logtest('\n*** Iris is not available.  '

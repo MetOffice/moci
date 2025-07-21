@@ -12,9 +12,9 @@
 #            relevant arguments.
 ###############################################################################
 
-eval "$PYTHON_ENVIRONMENT"
+eval "$PYTHON_ENVIRONMENT" 
 
-echo >&2 [WARN] Running $1 application with Python version:
+echo >&2 [INFO] Running $1 application with Python version:
 python --version >&2
 echo >&2
 $@

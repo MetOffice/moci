@@ -1,0 +1,49 @@
+    [[LINUX]]
+{% if EXTRACT_HOST is defined %}
+    {# Run "local" tasks on Linux desktop #}
+        pre-script = "module load scitools/community/esmvaltool"
+        platform = {{EXTRACT_HOST}}
+{% else %}
+    {# Run "local" tasks on azSpice #}
+         pre-script = "module load scitools/default-current"
+        execution time limit = PT15M
+	platform = spice
+        [[[directives]]]
+            --ntasks=1
+            --mem=1G
+            --qos=normal
+{% endif %}
+
+    [[LINUX_PYTHON_ENV]]
+        [[[environment]]]
+            PYTHON_ENVIRONMENT = """
+echo *** Linux Python Environment Begin ***
+module load scitools scitools/default-current
+module load um_tools
+echo $(module list)
+echo *** Linux Python Environment End ***
+"""
+    [[EXTRACT_RESOURCE]]
+        inherit = LINUX
+
+    [[POSTPROC_SCRIPTING_RESOURCE]]
+        inherit = LINUX, LINUX_PYTHON_ENV
+	execution time limit = PT10M
+
+    [[POSTPROC_RESOURCE]]
+        inherit = POSTPROC_SCRIPTING_RESOURCE
+	[[[environment]]]
+	    STASHMASTER = /data/users/moci/KGO/pp_test_execs/STASHmaster_vn10.2
+{% if USE_LINUX_SERVER %}
+        [[[directives]]]
+            --mem=10G
+{% endif %}    
+
+    [[DRIVERS_TESTS_RESOURCE]]
+        inherit = LINUX, LINUX_PYTHON_ENV
+        execution time limit = PT10M
+
+    [[HOUSEKEEP_RESOURCE]]
+        inherit = LINUX
+
+{% include "site/meto_ex1a.cylc" %}

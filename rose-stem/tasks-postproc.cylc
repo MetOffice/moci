@@ -1,35 +1,31 @@
+    [[PP_BUILD_TASKS]]
+    
+    [[PP_TESTS]]
+
     [[fcm_make_pp]]
-        inherit = LINUX
+        inherit = PP_BUILD_TASKS, EXTRACT_RESOURCE
 
 {% if SITE in MULTISTEP_FCM %}
     [[fcm_make2_pp]]
-        inherit = PPBUILD_RESOURCE
+        inherit = PP_BUILD_TASKS, BUILD_RESOURCE
 {% endif %}
 
     [[POSTPROC]]
-        inherit=None, POSTPROC_RESOURCE, PYTHON_ENV
+        inherit = POSTPROC_RESOURCE
         [[[environment]]]
             ROSE_TASK_APP = postproc
             RUNID      = hg3es
-            DATAM      = $CYLC_SUITE_SHARE_DIR/data/postproc/ATMOSdata
-            NEMO_DATA  = $CYLC_SUITE_SHARE_DIR/data/postproc/NEMOdata
-            CICE_DATA  = $CYLC_SUITE_SHARE_DIR/data/postproc/CICEdata
+            DATAM      = $CYLC_WORKFLOW_SHARE_DIR/data/postproc/ATMOSdata
+            NEMO_DATA  = $CYLC_WORKFLOW_SHARE_DIR/data/postproc/NEMOdata
+            CICE_DATA  = $CYLC_WORKFLOW_SHARE_DIR/data/postproc/CICEdata
             INITCYCLE_OVERRIDE = '19811001T0000Z'
             FINALCYCLE_OVERRIDE = '19830101T0000Z'
             ARCHIVE_SET = 'dummy'
             DATE1 = 19811001
-            DATE2 = $(rose date $(echo $CYLC_TASK_NAME | tr '_' '\n' | tail -n1) --calendar 360day -s P1M -f '%Y%m%d')
-            
-
-{% if USE_LINUX_SERVER %}
-        [[[directives]]]
-            --mem=10G
-            --ntasks=1
-{% endif %}
-
+            DATE2 = $(isodatetime $(echo $CYLC_TASK_NAME | tr '_' '\n' | tail -n1) --calendar 360day -s P1M -f '%Y%m%d')
 
     [[PP_COUPLED_DUMMY]]
-        inherit = None, POSTPROC
+        inherit = POSTPROC
         [[[environment]]]
             ROSE_TASK_APP = pp_coupled_dummy
             DATE2 = ''
@@ -37,12 +33,11 @@
     [[PP_TASKS]]
         inherit = None, POSTPROC
 
-
 {%- for cycle in PP_CYCLES %}
 {%- set CYCLEPOINT = '198%s01T0000Z' % (cycle) %}
 {%- set cyclestring = '%s' % (cycle) %}
     [[{{'postproc_198%s01' % (cycle)}}]]
-        inherit=None, PP_TASKS
+        inherit=PP_TASKS
         [[[environment]]]
             CYCLEPOINT_OVERRIDE = {{ CYCLEPOINT }}
     {%- if SITE == 'meto' and cyclestring[1:3] in ['03', '06', '09', '12'] %}
@@ -69,7 +64,7 @@
 
         {%- if cyclestring[1:3] in ['03', '06', '09', '12'] %}
     [[{{'pp_verifynemo_198%s01' % (cycle)}}]]
-        inherit = None, {{'postproc_198%s01' % (cycle)}}
+        inherit = {{'postproc_198%s01' % (cycle)}}
         script = """{{TASK_RUN}} --command-key=verify \
 --define='[namelist:atmosverify]verify_model=false' \
 --define='[namelist:ciceverify]verify_model=false' """
@@ -96,13 +91,13 @@
     {%- endif %}     
 
     [[{{'coupled_dummy_198%s01' % (cycle)}}]]
-        inherit=None, PP_COUPLED_DUMMY
+        inherit = PP_COUPLED_DUMMY
 	[[[environment]]]
             CYCLEPOINT = {{ CYCLEPOINT }}
 {%- endfor %}
 
     [[verify_final]]
-       inherit=None, PP_TASKS
+       inherit = PP_TESTS, PP_TASKS
        script = """{{TASK_RUN}} --command-key=verify """
        [[[environment]]]
            ROSE_APP_COMMAND_KEY = verify
@@ -110,29 +105,31 @@
            DATE2 = 19830201
 
     [[pp_verify]]
-        inherit = None, VERIFY_RESOURCE
+        inherit = PP_TESTS, POSTPROC_SCRIPTING_RESOURCE
 
     [[pp_unittests]]
-        inherit = None, UNITTESTS_RESOURCE, PYTHON_ENV
+        inherit = PP_TESTS, POSTPROC_SCRIPTING_RESOURCE
         env-script = "eval $(rose task-env)"
 	# Run each of the main groups (common, atmos, nemocice) first - helps to spot any leaking tests.
         # Finally run 'all' - sweeps up any tests not covered in the main groups
         script = run_python_env.sh test_postproc -g common -g atmos -g nemocice -g platforms -g all
+	[[[environment]]]
+	    STASHMASTER = 
 
     [[test_mule]]
-        inherit = None, LINUX, PYTHON_ENV
+        inherit = PP_TESTS, POSTPROC_SCRIPTING_RESOURCE
         script = run_python_env.sh test_mulepath.py
 
     [[remove_mule_from_postproc]]
-       inherit = None, LINUX
-       script = cylc broadcast $CYLC_SUITE_NAME -n PP_TASKS -s [environment]"ROSE_APP_OPT_CONF_KEYS=disable_mule"
+       inherit = PP_TESTS, POSTPROC_SCRIPTING_RESOURCE
+       script = cylc broadcast $CYLC_WORKFLOW_ID -n PP_TASKS -s [environment]"ROSE_APP_OPT_CONF_KEYS=disable_mule"
 
     
     [[pp_clearlog]]
-        inherit = None, LINUX
-        script = if [ -f  "$CYLC_SUITE_SHARE_DIR/cylclog" ] ; then rm $CYLC_SUITE_SHARE_DIR/cylclog ; fi
+        inherit = PP_TESTS, POSTPROC_SCRIPTING_RESOURCE
+        script = if [ -f  "$CYLC_WORKFLOW_SHARE_DIR/cylclog" ] ; then rm $CYLC_WORKFLOW_SHARE_DIR/cylclog ; fi
 
     [[housekeeping_pp]]
-        inherit=None, HOUSEKEEP_RESOURCE, HOUSEKEEPING 
+        inherit = HOUSEKEEP_RESOURCE, HOUSEKEEPING 
         [[[environment]]]
-            RUNDIR="$CYLC_SUITE_SHARE_DIR/data/postproc $CYLC_SUITE_WORK_DIR/1/fcm_mak*_pp $CYLC_SUITE_WORK_DIR/1/p*_* $CYLC_SUITE_WORK_DIR/1/housekeeping_pp $CYLC_SUITE_WORK_DIR/1/coupled_dummy_*"
+            RUNDIR="$CYLC_WORKFLOW_SHARE_DIR/data/postproc $CYLC_WORKFLOW_WORK_DIR/1/fcm_mak*_pp $CYLC_WORKFLOW_WORK_DIR/1/p*_* $CYLC_WORKFLOW_WORK_DIR/1/housekeeping_pp $CYLC_WORKFLOW_WORK_DIR/1/coupled_dummy_*"

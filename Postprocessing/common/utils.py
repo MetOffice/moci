@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2022 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2025 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -23,6 +23,7 @@ import re
 import os
 import errno
 import shutil
+import subprocess
 import timer
 
 
@@ -151,7 +152,6 @@ def exec_subproc(cmd, verbose=True, cwd=os.getcwd()):
                 True: reproduce std.out regardless of outcome
       cwd     = Directory in which to execute the command
     '''
-    import subprocess
     import shlex
 
     cmd_array = [cmd]
@@ -185,6 +185,17 @@ def exec_subproc(cmd, verbose=True, cwd=os.getcwd()):
             break
 
     return rcode, output
+
+
+def get_utility_avail(utility):
+    '''Return True/False if shell command is available'''
+    try:
+        status = shutil.which(utility)
+    except AttributeError:
+        # subprocess.getstatusoutput does not exist at Python2.7
+         status, _ = utils.exec_subproc(utility + ' --help', verbose=False)
+
+    return bool(status)
 
 
 def get_subset(datadir, pattern):
@@ -422,8 +433,11 @@ def add_period_to_date(indate, delta):
     '''
     Add a delta (list of integers) to a given date (list of integers).
         For 360day calendar, add period with simple arithmetic for speed
-        For other calendars, call `rose date` with calendar argument -
-      taken from environment variable CYLC_CYCLING_MODE.
+        For other calendars, call one of
+         *`isodatetime` (Cylc 8)
+         * `rose date` (Cylc7 and Rose 2019)
+        with calendar argument - taken from environment
+        variable CYLC_CYCLING_MODE.
         If no indate is provided ([0,0,0,0,0]) then delta is returned.
     '''
     if isinstance(delta, str):
@@ -443,13 +457,15 @@ def add_period_to_date(indate, delta):
 
 @timer.run_timer
 def _mod_all_calendars_date(indate, delta, cal):
-    ''' Call `rose date` to return a date '''
+    ''' Call `isodatetime` or `rose date` to return a date '''
     outdate = [int(d) for d in indate]
     while len(outdate) < 5:
+        # ISOdatetime format string requires outdate list of length=5
         val = 1 if len(outdate) in [1, 2] else 0
         outdate.append(val)
-        msg = '`rose date` requires length=5 input date array - adding {}: '
-        log_msg(msg.format(val) + str(outdate), level='WARN')
+
+    # Check whether `isodatetime` command exists, or default to `rose date`
+    datecmd = 'isodatetime' if get_utility_avail('isodatetime') else 'rose date'
 
     for elem in delta:
         if elem != 0:
@@ -463,8 +479,8 @@ def _mod_all_calendars_date(indate, delta, cal):
 
             dateinput = '{0:0>4}{1:0>2}{2:0>2}T{3:0>2}{4:0>2}'.format(*outdate)
             if re.match(r'^\d{8}T\d{4}$', dateinput):
-                cmd = 'rose date {} --calendar {} --offset {} --print-format ' \
-                    '%Y,%m,%d,%H,%M'.format(dateinput, cal, offset)
+                cmd = '{} {} --calendar {} --offset {} --print-format ' \
+                    '%Y,%m,%d,%H,%M'.format(datecmd, dateinput, cal, offset)
 
                 rcode, output = exec_subproc(cmd, verbose=False)
             else:
@@ -475,16 +491,7 @@ def _mod_all_calendars_date(indate, delta, cal):
             if rcode == 0:
                 outdate = [int(x) for x in output.split(',')]
             else:
-                if 'SyntaxError: invalid syntax' in output:
-                    # Rose not currently compatible with Python3
-                    # due to "print" statements
-                    log_msg('add_period_to_date: `rose date` command is '
-                            'incompatible with Python 3 libraries. '
-                            'Use of `rose date` is required for Gregorian '
-                            'calendar.\n Please resolve before continuing.',
-                            level='ERROR')
-                else:
-                    log_msg('`rose date` command failed:\n' + output,
+                log_msg('`{}` command failed:\n{}'.format(datecmd, output),
                             level='ERROR')
                 outdate = None
                 break
@@ -496,7 +503,7 @@ def _mod_all_calendars_date(indate, delta, cal):
 def _mod_360day_calendar_date(indate, delta):
     '''
     Simple arithmetic calculation of new date for 360 day calendar.
-    Use of `rose date`, while possible is inefficient.
+    Use of `isodatetime`, while possible is inefficient.
     '''
     try:
         outdate = [int(x) for x in indate]

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2018-2022 Met Office. All rights reserved.
+ (C) Crown copyright 2018-2025 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -50,6 +50,12 @@ except ImportError:
 if MULE_AVAIL:
     import mule
     from mule.pp import fields_from_pp_file, fields_to_pp_file
+
+    # Get STASHmaster if not centrally installed
+    stashm = utils.load_env('STASHMASTER')
+    if stashm:
+        mule.stashmaster.STASHMASTER_PATH_PATTERN = \
+            os.path.join(stashm, 'STASHmaster_A')
 
     class WeightedMeanOperator(mule.DataOperator):
         '''
@@ -108,8 +114,15 @@ def get_mule_util(mule_path, utility):
         exec_present = os.path.exists(exec_path)
     else:
         # Assume path the mule utilities is on the system $PATH
-        ret_val, _ = utils.exec_subproc(utility + ' --help', verbose=False)
-        exec_present = ret_val == 0
+        exec_present = utils.get_utility_avail(utility)
+
+    # Add STASHmaster option in the event it is not centrally installed
+    stashm = utils.load_env('STASHMASTER')
+    if stashm:
+        exec_path = "{} --stashmaster {}".format(
+            exec_path,
+            os.path.join(stashm, "STASHmaster_A")
+        )
 
     return exec_path if exec_present else None
 
@@ -214,7 +227,7 @@ def extract_to_netcdf(fieldsfile, fields, ncftype, complevel):
 
 @timer.run_timer
 def extract_to_pp(sourcefiles, fields, outstream, data_freq=None):
-    '''
+    r'''
     Extract given fields to PP format - First choice using Mule
     Multiple instances of the same field in the same file will result
     in only the final instance being extracted.
@@ -273,7 +286,7 @@ def extract_to_pp(sourcefiles, fields, outstream, data_freq=None):
 
 @timer.run_timer
 def _extract_to_pp_mule(sourcefiles, fields, outfile, data_freq):
-    '''
+    r'''
     Extract given field(s) to PP format using Mule.
 
     Arguments:
@@ -353,7 +366,7 @@ def _extract_to_pp_mule(sourcefiles, fields, outfile, data_freq):
 
 @timer.run_timer
 def _extract_to_pp_iris(sourcefiles, fields, outfile, data_freq):
-    '''
+    r'''
     Extract given field(s) to PP format using Iris.
 
     Arguments:
@@ -551,7 +564,7 @@ def create_um_mean(meanfile):
         except Exception as exc:
             # Tidy up corrupt output file ready for next attempt
             msg += 'atmos create_um_mean: Mule failed to create mean file:\n\t'
-            msg += exc.message
+            msg += repr(exc)
             utils.remove_files(meanfile.fname['full'], ignore_non_exist=True)
         else:
             # Successfully wrote to file

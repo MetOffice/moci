@@ -1,0 +1,62 @@
+{# Setup graph required to run postproc tasks #}
+
+{% if SITE in MULTISTEP_FCM %}
+    {% set FCMPP_GRAPH = 'fcm_make_pp => fcm_make2_pp' %}
+{% else %}
+    {% set FCMPP_GRAPH = 'fcm_make_pp' %}
+{% endif %}
+
+
+{# Setup Multi-date tasks #}
+{% set SPACER = "         " %}
+{% set FAM_SUCCEED = ":succeed-all" if SPLIT_PP else "" %}
+{% set COUPLED_GRAPH = [ SPACER + "pp_clearlog => " + FCMPP_GRAPH + " => coupled_dummy_198" + PP_CYCLES[0]|string + "01" ] %}
+{% set PP_GRAPH = [] %}
+{% set VERIFY_GRAPH = []  %}
+{% for i in range(PP_CYCLES|length - 1) %}
+    {% set C1 = "_198" + PP_CYCLES[i]|string + "01" %}
+    {% set C2 = "_198" + PP_CYCLES[i+1]|string + "01" %}
+    {% do COUPLED_GRAPH.append(SPACER + "coupled_dummy" + C1 + " => postproc" + C1 + " & coupled_dummy" + C2) %}
+    {% do PP_GRAPH.append(SPACER + "postproc" + C1 + FAM_SUCCEED + " => postproc" + C2) %}
+    {% if SITE in ['meto'] and i in [2, 5, 8, 11, 14] %}
+        {% if SPLIT_PP %}
+	    {# CICE and Atmos verify are run as part of the pp_cice and pp_atmos tasks.  NEMO verify is run separately #}
+            {% do VERIFY_GRAPH.append(SPACER + "pp_nemomean" + C1 + " & pp_nemorst" + C1 + " => pp_verifynemo" + C1) %}
+	{% else %}
+            {% do VERIFY_GRAPH.append(SPACER + "postproc" + C1 + " => pp_verify" + C1) %}	
+	{% endif %}
+    {% endif %}
+{% endfor %}
+{% do VERIFY_GRAPH.append(SPACER +"postproc_198" + PP_CYCLES[-1]|string + "01" + FAM_SUCCEED +
+                          " => pp_verify" + (' & verify_final' if SITE == 'meto' else '') +
+		          " => housekeeping_pp")  %}
+
+
+{# Test to determine if need to run pptransfer tasks #}
+{% if SITE in ['archer2'] %}
+    {% set PPTRANSFER_GRAPH = [SPACER + "postproc_198" + PP_CYCLES[0]|string + "01" + FAM_SUCCEED + " => pptransfer_198" + PP_CYCLES[1]|string + "01"] %}
+{% else %}
+    {%- set PPTRANSFER_GRAPH = "" -%}
+{% endif %}
+
+{%- do name_graphs.update({
+    "postproc_tests" : "
+         test_mule:fail? => remove_mule_from_postproc
+         test_mule? | remove_mule_from_postproc => " + FCMPP_GRAPH + " => pp_unittests",
+    "coupled_run" :  COUPLED_GRAPH|join("\n"),
+    "postproc_run" : PP_GRAPH|join("\n"),
+    "postproc_transfer": PPTRANSFER_GRAPH|join("\n"),
+    "postproc_verify": VERIFY_GRAPH|join("\n"),
+                           }) %}
+
+
+{# Update groups with postproc tasks. -#}
+{# groups contains group_option-trigger_list key-value pairs. -#}
+{# If a group option is set, each group or task in the trigger list will be set. -#}
+{%- do groups.update({ "postproc" : ["postproc_tests", "coupled_run", "postproc_run",
+                                     "postproc_verify", "postproc_transfer"],
+	               "pp_unittests": ["postproc_tests"],
+		     }) %}
+
+
+{%- do groups['ALL'].append( "postproc" ) %}

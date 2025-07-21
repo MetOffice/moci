@@ -567,11 +567,15 @@ class DiagnosticFiles(ArchivedFiles):
         try:
             intermittent_streams = \
                 utils.ensure_list(self.naml.intermittent_streams)
+            print('[EFNP] intermittent streams:', intermittent_streams)
             intermittent_patterns = \
                 utils.ensure_list(self.naml.intermittent_patterns)
+            print('[EFNP] intermittent patterns:', intermittent_patterns)
         except AttributeError:
             intermittent_streams = []
+            print('[EFNP] No intermittent streams/patterns found in ', dir(self.naml))
 
+        
         try:
             ozone_stream = self.naml.ozone_stream
         except AttributeError:
@@ -711,6 +715,7 @@ class DiagnosticFiles(ArchivedFiles):
                     ]
                 for i, fname in enumerate(all_files[fileset][:]):
                     if pattern[i % len(pattern)] == 'x':
+                        print(f'[EFNP] removing {fname} from intermittent collection')
                         all_files[fileset].remove(fname)
 
         all_files.update(self.iceberg_trajectory())

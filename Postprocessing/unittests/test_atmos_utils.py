@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2022 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2025 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -48,9 +48,6 @@ class HousekeepTests(unittest.TestCase):
     """
     Unit tests relating to the atmosphere housekeeping utilities
     """
-
-    MULE_CUTOUT_CHECK_CMD = 'mule-cutout --help'
-
     def setUp(self):
         self.umutils = 'UMDIR/../utilities'
         self.atmos = atmos.AtmosPostProc()
@@ -740,12 +737,14 @@ class AtmosTransformTests(unittest.TestCase):
     def test_convert_to_pp(self):
         '''Test convert_to_pp functionality - default utility, keeping ffile'''
         func.logtest('Assert functionality of the convert_to_pp method:')
-        with mock.patch('utils.exec_subproc') as mock_exec:
-            with mock.patch('utils.remove_files') as mock_rm:
-                mock_exec.return_value = (0, '')
-                ppfile = atmos_transform.convert_to_pp('Here/Filename',
-                                                       self.umutils, None,
-                                                       True)
+        with mock.patch('atmos_transform.get_mule_util',
+                        return_value='mule-convpp'):
+            with mock.patch('utils.exec_subproc') as mock_exec:
+                with mock.patch('utils.remove_files') as mock_rm:
+                    mock_exec.return_value = (0, '')
+                    ppfile = atmos_transform.convert_to_pp(
+                        'Here/Filename', self.umutils, None, True
+                    )
         self.assertListEqual(mock_rm.mock_calls, [])
         cmd = 'mule-convpp Here/Filename Here/Filename.pp'
         mock_exec.assert_called_with(cmd, cwd='Here')
@@ -1115,7 +1114,8 @@ class AtmosTransformTests(unittest.TestCase):
     @mock.patch('atmos_transform.MULE_AVAIL', True)
     @mock.patch('atmos_transform.utils.exec_subproc',
                 return_value=(0, 'OUTPUT'))
-    def test_cutout_rename(self, mock_exec):
+    @mock.patch('atmos_transform.utils.get_utility_avail', return_value=True)
+    def test_cutout_rename(self, mock_util, mock_exec):
         '''Test call to cutout_subdomain - rename file'''
         func.logtest('Assert call to cutout_subdomain - rename file:')
         open('FNAME', 'w').close()
@@ -1127,10 +1127,8 @@ class AtmosTransformTests(unittest.TestCase):
             self.assertEqual(icode, 0)
 
         expected_cmd_str = 'mule-cutout -CTYPE FNAME FNAME.cut 1 2 3 4'
-        call_list1 = [mock.call(HousekeepTests.MULE_CUTOUT_CHECK_CMD,
-                                verbose=False),
-                      mock.call(expected_cmd_str)]
-        mock_exec.assert_has_calls(call_list1)
+        mock_exec.assert_has_calls([mock.call(expected_cmd_str)])
+        mock_util.assert_has_calls([mock.call('mule-cutout')])
 
         self.assertTrue(os.path.exists('FNAME'))
         self.assertFalse(os.path.exists('FNAME.cut'))

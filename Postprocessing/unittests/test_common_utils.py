@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2022 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2025 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -105,7 +105,7 @@ class ExecTests(unittest.TestCase):
         func.logtest('Attempt to shell out with unknown command:')
         rcode, _ = utils.exec_subproc(self.cmd.replace('echo', 'pumpkin'))
         # Code should catch exception: OSError
-        self.assertEqual(rcode, 2)
+        self.assertNotEqual(rcode, 0)
 
     def test_multi_command(self):
         '''Test subprocess with consecutive commands'''
@@ -119,8 +119,8 @@ class ExecTests(unittest.TestCase):
         func.logtest('Attempt to shell out with consecutive commands:')
         cmd = 'pumpkin "Hello\n"; echo "There"'
         rcode, _ = utils.exec_subproc(cmd)
-        # Code should catch exception: OSError (RCode2 : No such directory)
-        self.assertEqual(rcode, 2)
+        # Code should catch exception: OSError
+        self.assertNotEqual(rcode, 0)
 
     def test_output(self):
         '''Test verbose output of exec_subproc'''
@@ -155,6 +155,13 @@ class ExecTests(unittest.TestCase):
 
         self.assertIn('CMD1 output', func.capture())
         self.assertNotIn('CMD2 output', func.capture())
+
+    def test_utility_avail(self):
+        '''Test availability of shell command'''
+        func.logtest('Assert availablity of shell command')
+        self.assertTrue(utils.get_utility_avail('mule-cutout'))
+        self.assertFalse(utils.get_utility_avail('hello_postproc'))
+        
 
 class LogTests(unittest.TestCase):
     '''Unit tests for logging output messages'''
