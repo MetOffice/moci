@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #*****************************COPYRIGHT******************************
-# (C) Crown copyright 2021 Met Office. All rights reserved.
+# (C) Crown copyright 2021-2025 Met Office. All rights reserved.
 #
 # Use, duplication or disclosure of this code is subject to the restrictions
 # as set forth in the licence. If no licence has been raised with this copy
@@ -58,6 +58,14 @@ NAMCOUPLE_STATIC=${NAMCOUPLE_STATIC:=True}
 if [[ "$models" == *lfric* && "$NAMCOUPLE_STATIC" == .false. ]]; then
     cp $DRIVER_EXTRACT_DIR/extract/drivers/Utilities/NGMS_utils/ngms_namcouple_gen/*py ./
     cp $DRIVER_EXTRACT_DIR/extract/drivers/Utilities/NGMS_utils/ngms_suite_lib/*py ./
+fi
+
+EXTRA_LINK_DRIVERS_INFO=$( echo ${EXTRA_LINK_DRIVERS_INFO:-} | tr '[:upper:]' '[:lower:]')
+if [[ ${EXTRA_LINK_DRIVERS_INFO:-} == "true" ]]; then
+    stat ./
+    stat ./link_drivers
+    lfs getstripe --mdt-index ./link_drivers
+    lfs getstripe ./link_drivers
 fi
 
 # Run our drivers, this produces two command files
