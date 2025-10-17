@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2022 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2025 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -28,26 +28,30 @@ import runtime_environment
 runtime_environment.setup_env()
 import moo
 
+MOO_NLIST = moo.MooseArch()
+MOO_NLIST.archive_set='mysuite'
+MOO_NLIST.dataclass='myclass'
+MOO_CMD = {
+    'CURRENT_RQST_ACTION': 'ARCHIVE',
+    'CURRENT_RQST_NAME':   'full/path/to/TESTPa.daTestFile',
+    'FILENAME_PREFIX':     'TESTP',
+    'DATAM':               'TestDir',
+    'SETNAME':             MOO_NLIST.archive_set,
+    'NON_DUPLEXED':        MOO_NLIST.non_duplexed_set,
+    'CATEGORY':            'UNCATEGORISED',
+    'DATACLASS':           MOO_NLIST.dataclass,
+    'ENSEMBLEID':          MOO_NLIST.ensembleid,
+    'MOOPATH':             MOO_NLIST.moopath,
+    'PROJECT':             MOO_NLIST.mooproject,
+    'CONVERTPP':           True,
+    'ACT_AS':              MOO_NLIST.act_as
+    }
 
 class CommandTests(unittest.TestCase):
     '''Unit tests relating to the moo.CommandExec() method'''
 
     def setUp(self):
-        self.cmd = {
-            'CURRENT_RQST_ACTION': 'ARCHIVE',
-            'CURRENT_RQST_NAME':   'atmos_testpa.daTestFile',
-            'FILENAME_PREFIX':     'TESTP',
-            'DATAM':               'TestDir',
-            'SETNAME':             'mysuite',
-            'NON_DUPLEXED':        False,
-            'CATEGORY':            'UNCATEGORISED',
-            'DATACLASS':           'myclass',
-            'ENSEMBLEID':          '',
-            'MOOPATH':             '',
-            'PROJECT':             '',
-            'CONVERTPP':           True
-        }
-        self.inst = moo.CommandExec()
+         self.inst = moo.CommandExec()
 
     def tearDown(self):
         pass
@@ -64,18 +68,19 @@ class CommandTests(unittest.TestCase):
         func.logtest('Test archive request:')
         mock_subproc.return_value = (0, '')
         mock_putdata.return_value = 'A'
-        self.assertEqual(self.inst.execute(self.cmd),
-                         {self.cmd['CURRENT_RQST_NAME']:
+        self.assertEqual(self.inst.execute(MOO_CMD),
+                         {MOO_CMD['CURRENT_RQST_NAME']:
                           mock_putdata.return_value})
 
     @mock.patch('moo.os')
     def test_delete(self, mock_os):
         '''Test delete request'''
         func.logtest('Test delete request:')
-        self.cmd['CURRENT_RQST_ACTION'] = 'DELETE'
-        fname = self.cmd['CURRENT_RQST_NAME']
+        moocmd = MOO_CMD.copy()
+        moocmd['CURRENT_RQST_ACTION'] = 'DELETE'
+        fname = MOO_CMD['CURRENT_RQST_NAME']
         mock_os.path.exists.return_value = False
-        retcode = self.inst.execute(self.cmd)
+        retcode = self.inst.execute(moocmd)
         mock_os.path.exists.assert_called_with(fname)
         mock_os.remove.assert_called_with(fname)
         self.assertIn('Deleting', func.capture())
@@ -85,7 +90,7 @@ class CommandTests(unittest.TestCase):
     def test_delete_archived(self, mock_os):
         '''Test delete request for archived file'''
         func.logtest('Test delete request for successfully archived file:')
-        fname = self.cmd['CURRENT_RQST_NAME']
+        fname = MOO_CMD['CURRENT_RQST_NAME']
         mock_os.path.exists.return_value = False
         retcode = self.inst.delete(fname, 0)
         mock_os.path.exists.assert_called_with(fname)
@@ -97,7 +102,7 @@ class CommandTests(unittest.TestCase):
     def test_delete_not_archived(self, mock_os):
         '''Test delete request for un-archived file'''
         func.logtest('Test delete request for failed archive file:')
-        fname = self.cmd['CURRENT_RQST_NAME']
+        fname = MOO_CMD['CURRENT_RQST_NAME']
         retcode = self.inst.delete(fname, 20)
         mock_os.path.exists.assert_called_with(fname)
         self.assertFalse(mock_os.remove.called)
@@ -107,8 +112,9 @@ class CommandTests(unittest.TestCase):
     def test_execute_no_action(self):
         '''Test execute "NO ACTION" request'''
         func.logtest('Test execute "NO ACTION" request:')
-        self.cmd['CURRENT_RQST_ACTION'] = 'NA'
-        self.assertEqual(self.inst.execute(self.cmd), {'NO ACTION': 0})
+        moocmd = MOO_CMD.copy()
+        moocmd['CURRENT_RQST_ACTION'] = 'NA'
+        self.assertEqual(self.inst.execute(moocmd), {'NO ACTION': 0})
         self.assertIn('Neither', func.capture(direct='err'))
 
 
@@ -116,20 +122,7 @@ class MooseTests(unittest.TestCase):
     '''Unit tests relating to Moose archiving functionality'''
 
     def setUp(self):
-        cmd = {
-            'CURRENT_RQST_ACTION': 'ARCHIVE',
-            'CURRENT_RQST_NAME':   'full/path/to/TESTPa.daTestFile',
-            'FILENAME_PREFIX':     'TESTP',
-            'DATAM':               'TestDir',
-            'SETNAME':             'mysuite',
-            'NON_DUPLEXED':        False,
-            'CATEGORY':            'UNCATEGORISED',
-            'DATACLASS':           'myclass',
-            'ENSEMBLEID':          '',
-            'MOOPATH':             '',
-            'PROJECT':             '',
-            'CONVERTPP':           True
-        }
+        cmd = MOO_CMD.copy()
         if 'iceberg' in self.id():
             cmd['CURRENT_RQST_NAME'] = \
                 'nemo_testpo_icebergs_YYYYMMDD_restart.nc'
@@ -164,17 +157,7 @@ class MooseTests(unittest.TestCase):
     def test_model_id(self):
         '''Test model_id of a Moose archiving object'''
         func.logtest('assert correct model_id for Moose arch object:')
-        cmd = {
-            'CURRENT_RQST_ACTION': 'ARCHIVE',
-            'DATAM':               'TestDir',
-            'SETNAME':             'mysuite',
-            'CATEGORY':            'UNCATEGORISED',
-            'DATACLASS':           'myclass',
-            'ENSEMBLEID':          '',
-            'MOOPATH':             '',
-            'PROJECT':             '',
-            'CONVERTPP':           True
-        }
+        cmd = MOO_CMD.copy()
 
         func.logtest('Testing raw output filename - fileprefix="medus"...')
         cmd['CURRENT_RQST_NAME'] = 'full/path/to/medusa.daYYYYMMDD'
@@ -221,6 +204,19 @@ class MooseTests(unittest.TestCase):
         func.logtest('test creation of a Moose set:')
         self.assertFalse(self.inst.chkset())
 
+    @mock.patch('moo.utils.exec_subproc', return_value=(0, 'true'))
+    def test_chkset_act_as(self, mock_subproc):
+        '''Test chkset function with act_as'''
+        func.logtest('test chkset function, with act_as:')
+        cmd_dict = MOO_CMD.copy()
+        cmd_dict['ACT_AS'] = 'user.name'
+
+        with mock.patch('moo._Moose.chkset', return_value=True):
+            inst = moo._Moose(cmd_dict)
+        inst.chkset()
+        cmd = 'moo test -sw --act-as user.name ' + inst.dataset
+        mock_subproc.assert_called_with(cmd, verbose=False)
+
     @mock.patch('moo.utils.exec_subproc')
     def test_mkset_project(self, mock_subproc):
         '''Test mkset function with project'''
@@ -239,6 +235,17 @@ class MooseTests(unittest.TestCase):
         mock_subproc.return_value = (0, '')
         self.inst.mkset('UNCATEGORISED', '', True)
         cmd = 'moo mkset -v --single-copy ' + self.inst.dataset
+        mock_subproc.assert_called_with(cmd, verbose=False)
+        self.assertIn('created set', func.capture())
+
+    @mock.patch('moo.utils.exec_subproc')
+    def test_mkset_act_as(self, mock_subproc):
+        '''Test mkset function with act_as option'''
+        func.logtest('test mkset function, with act_as option:')
+        mock_subproc.return_value = (0, '')
+        self.inst._act_as = 'user.name'
+        self.inst.mkset('UNCATEGORISED', '', False)
+        cmd = 'moo mkset -v --act-as user.name ' + self.inst.dataset
         mock_subproc.assert_called_with(cmd, verbose=False)
         self.assertIn('created set', func.capture())
 
@@ -481,27 +488,15 @@ class PutCommandTests(unittest.TestCase):
     '''Unit tests relating to the creation of the `moo put` command'''
 
     def setUp(self):
-        cmd = {
-            'CURRENT_RQST_ACTION': 'ARCHIVE',
-            'CURRENT_RQST_NAME':   'FN-PREFIXa.daTestFile',
-            'FILENAME_PREFIX':     'FN-PREFIX',
-            'DATAM':               'TestDir',
-            'SETNAME':             'mysuite',
-            'NON_DUPLEXED':        False,
-            'CATEGORY':            'UNCATEGORISED',
-            'DATACLASS':           'classname',
-            'ENSEMBLEID':          '',
-            'MOOPATH':             '',
-            'PROJECT':             '',
-            'CONVERTPP':           True
-            }
         self.moocmd = 'moo put -f -vv '
-        self.testfile = os.path.join(cmd['DATAM'], cmd['CURRENT_RQST_NAME'])
-        self.archdest = os.path.join(cmd['DATACLASS'], cmd['SETNAME'],
+        self.testfile = os.path.join(MOO_CMD['DATAM'],
+                                     MOO_CMD['CURRENT_RQST_NAME'])
+        self.archdest = os.path.join(MOO_CMD['DATACLASS'],
+                                     MOO_CMD['SETNAME'],
                                      'ada.file')
         with mock.patch.dict('moo.os.environ', {'PREFIX': 'PATH/'}):
             with mock.patch('moo._Moose.chkset', return_value=True):
-                self.inst = moo._Moose(cmd)
+                self.inst = moo._Moose(MOO_CMD)
 
     def tearDown(self):
         pass
@@ -543,27 +538,27 @@ class PutCommandTests(unittest.TestCase):
         outcmd = '{}{} moose:{}'.format(self.moocmd, self.testfile, archdest)
         self.assertIn(outcmd, func.capture())
 
+    @mock.patch('moo.utils.exec_subproc', return_value=(0, 'true'))
+    @mock.patch('moo.os.path.exists', return_value=True)
+    def test_put_act_as_option(self, mock_exist, mock_subproc):
+        '''Test put_data with act_as option'''
+        func.logtest('test moo command with act_as option:')
+        act_as = 'user.name'
+        self.inst._act_as = act_as
+        self.inst.put_data()
+        moocmd = '{}--act-as {} '.format(self.moocmd, act_as)
+        outcmd = '{}{} moose:{}'.format(moocmd, self.testfile, self.archdest)
+        self.assertIn(outcmd, func.capture())
+
 
 class Utilitytests(unittest.TestCase):
     '''Tests relating to the moo utility methods'''
 
     def setUp(self):
-        self.nlist = moo.MooseArch()
-        self.cmd = {
-            'CURRENT_RQST_ACTION': 'ARCHIVE',
-            'CURRENT_RQST_NAME':   'FILE',
-            'FILENAME_PREFIX':     'FN-PREFIX',
-            'DATAM':               'SOURCEDIR',
-            'SETNAME':             self.nlist.archive_set,
-            'NON_DUPLEXED':        False,
-            'CATEGORY':            'UNCATEGORISED',
-            'DATACLASS':           self.nlist.dataclass,
-            'ENSEMBLEID':          self.nlist.ensembleid,
-            'MOOPATH':             self.nlist.moopath,
-            'PROJECT':             self.nlist.mooproject,
-            'CONVERTPP':           False
-        }
-
+        self.cmd = MOO_CMD.copy()
+        self.cmd['CURRENT_RQST_NAME'] = 'FILE'
+        self.cmd['FILENAME_PREFIX'] = 'FN-PREFIX'
+        self.cmd['DATAM'] = 'SOURCEDIR'
     def tearDown(self):
         pass
 
@@ -571,8 +566,9 @@ class Utilitytests(unittest.TestCase):
     def test_archive_to_moose(self, mock_exec):
         '''Test call to archive a file to the Moose system'''
         func.logtest('Assert call to archive file to Moose')
+        self.cmd['CONVERTPP'] = False
         moo.archive_to_moose('FILE', 'FN-PREFIX', 'SOURCEDIR',
-                             self.nlist, False)
+                             MOO_NLIST, False)
         mock_exec.assert_called_with(self.cmd)
 
     @mock.patch('moo.CommandExec.execute')
@@ -581,5 +577,5 @@ class Utilitytests(unittest.TestCase):
         func.logtest('Assert call to archive file to Moose')
         self.cmd['CONVERTPP'] = True
         moo.archive_to_moose('FILE', 'FN-PREFIX', 'SOURCEDIR',
-                             self.nlist, True)
+                             MOO_NLIST, True)
         mock_exec.assert_called_with(self.cmd)

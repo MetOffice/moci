@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2022 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2025 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -56,7 +56,8 @@ def archive_to_moose(filename, fnprefix, sourcedir, nlist, convertpp):
         'ENSEMBLEID':          nlist.ensembleid,
         'MOOPATH':             nlist.moopath,
         'PROJECT':             nlist.mooproject,
-        'CONVERTPP':           convertpp
+        'CONVERTPP':           convertpp,
+        'ACT_AS':              nlist.act_as
         }
 
     rcode = CommandExec().execute(cmd)[filename]
@@ -76,6 +77,7 @@ class _Moose(object):
         self._ens_id = comms['ENSEMBLEID']
         self._moopath = comms['MOOPATH']
         self.convertpp = comms['CONVERTPP']
+        self._act_as = comms['ACT_AS']
 
         # Define the collection name
         rqst = os.path.basename(self._rqst_name)
@@ -116,9 +118,10 @@ class _Moose(object):
 
     def chkset(self):
         '''Test whether Moose set exists'''
-        chkset_cmd = '{} test -sw {}'.format(
-            os.path.join(self._moopath, 'moo'), self.dataset
-            )
+        chkset_cmd = os.path.join(self._moopath, 'moo') + ' test -sw '
+        if self._act_as:
+            chkset_cmd += '--act-as {} '.format(self._act_as)
+        chkset_cmd += self.dataset
         _, output = utils.exec_subproc(chkset_cmd, verbose=False)
 
         exist = True if output.strip() == 'true' else False
@@ -135,6 +138,8 @@ class _Moose(object):
             mkset_cmd += '-p ' + project + ' '
         if non_duplexed:
             mkset_cmd += '--single-copy '
+        if self._act_as:
+            mkset_cmd += '--act-as {} '.format(self._act_as)
         mkset_cmd += self.dataset
 
         utils.log_msg('mkset command: ' + mkset_cmd)
@@ -235,6 +240,8 @@ class _Moose(object):
         crn = os.path.join(self._sourcedir, crn)
 
         moo_cmd = os.path.join(self._moopath, 'moo') + ' put -f -vv '
+        if self._act_as:
+            moo_cmd += '--act-as {} '.format(self._act_as)
         if self.fl_pp and not crn.endswith('.pp'):
             crn_pp = os.path.basename(crn) + '.pp'
             filepath = os.path.join(self.dataset, self._ens_id,
@@ -354,6 +361,7 @@ class MooseArch(object):
     ensembleid = ''
     moopath = ''
     mooproject = ''
+    act_as = ''
 
 NAMELISTS = {'moose_arch': MooseArch}
 
