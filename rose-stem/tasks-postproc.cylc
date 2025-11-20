@@ -177,7 +177,6 @@ echo Command: {{TASK_RUN}} --command-key=pp_unicicles
     [[verify_final]]
        inherit = PP_TESTS, PP_TASKS
        script = """{{TASK_RUN}} --command-key=verify """
-{# --define='[namelist:uniciclesverify]verify_model=false' #}
        [[[environment]]]
            ROSE_APP_COMMAND_KEY = verify
            CYCLEPOINT_OVERRIDE = 19830101T0000Z

@@ -126,7 +126,7 @@ def finalcycle():
     Return True/False
     '''
     arch_final = load_env('ARCHIVE_FINAL')
-    if arch_final is None:
+    if arch_final is not True:
         finalpoint = load_env('FINALCYCLE_OVERRIDE')
         if finalpoint is None:
             finalpoint = load_env('CYLC_SUITE_FINAL_CYCLE_POINT')

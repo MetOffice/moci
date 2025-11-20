@@ -350,8 +350,10 @@ class RestartFiles(ArchivedFiles):
         for rstcoll in restart_files:
             restart_files[rstcoll] = self.remove_invalid(restart_files[rstcoll])
 
-        if self.finalcycle:
-            # Additionally archive the end date dump
+        if self.finalcycle and not coll.startswith('c'):
+            # Additionally archive the end date dump.
+            # Ignore UniCiCles because it does not necessarily
+            # run on the final cycle.
             year, month, day = self.edate
             if 30 in self.timestamps[0]:
                 # Account for NEMO last-day datestamp
