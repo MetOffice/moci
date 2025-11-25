@@ -125,11 +125,18 @@ def finalcycle():
     Determine whether this cycle is the final cycle for the running suite.
     Return True/False
     '''
-    arch_final = load_env('ARCHIVE_FINAL')
-    if arch_final is not True:
+    arch_final = load_env('ARCHIVE_FINAL', 'false')
+    if ('true' in arch_final.lower()):
+        fcycle = True
+        log_msg('ARCHIVE_FINAL=true.  End-of-run data will be archived.',
+                level='INFO')
+    else:
         finalpoint = load_env('FINALCYCLE_OVERRIDE')
         if finalpoint is None:
             finalpoint = load_env('CYLC_SUITE_FINAL_CYCLE_POINT')
+            if finalpoint == 'None':
+                # Convert from string.
+                finalpoint = None
 
         # The end point of final cycle will always be beyond the "final point"
         # as defined by either $CYLC_SUITE_FINAL_CYCLE_POINT (calendar cycling
@@ -142,9 +149,6 @@ def finalcycle():
         else:
             # Cylc8 no longer requires a final cycle point to be set at all
             fcycle = False
-    else:
-        # Set final cycle according to value of ARCHIVE_FINAL
-        fcycle = ('true' in arch_final.lower())
 
     return fcycle
 

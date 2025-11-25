@@ -184,7 +184,7 @@ class UniciclesPostProc(control.RunPostProc):
             self.do_delete(filelist=arch_success)
 
         if self.suite.finalcycle and normalcycle:
-            # Archive any files remaining files at the final cycle point
+            # Archive any files remaining at the final cycle point
             utils.log_msg('Running do_archive on final cycle...')
             self.do_archive(finalcycle=True, skiptimer=True)
 
