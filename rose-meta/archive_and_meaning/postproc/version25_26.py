@@ -26,19 +26,22 @@ class pp25_t678(MacroUpgrade):
     AFTER_TAG = "pp25_t678"
 
     def upgrade(self, config, meta_config=None):
-        """Upgrade a Postproc app configuration to postproc_2.6."""
+        """Upgrade a Postproc app configuration to add missing metadata."""
         try:
             cice_age = self.get_setting_value(config, ["namelist:ciceverify", "cice_age"])
             self.remove_setting(config, ["namelist:ciceverify", "cice_age"])
         except AttributeError:
             cice_age = "false"
         
-        self.add_setting(config,["namelist:ciceverify","cice_age_rst"],cice_age)
+        self.add_setting(config,["namelist:ciceverify","cice_age_rst"], cice_age)
         base = self.get_setting_value(config, ["namelist:nemo_processing", "base_component"])
-        self.add_setting(config,["namelist:nemoverify","base_mean"],base)
-        self.add_setting(config,["namelist:nemoverify","nemo_version"],"4.2+")
-        self.add_setting(config,["namelist:nemoverify","nemo_ice_rst"],"false")
-        self.add_setting(config,["namelist:nemoverify","nemo_icb_rst"],"false")
+        self.add_setting(config,["namelist:nemoverify","base_mean"], base)
+
+        icebergs = self.get_setting_value(config, ["namelist:nemoverify", "nemo_icebergs_rst"])
+        nemo_vn = "pre-4.2" if icebergs == "true" else "4.2+"       
+        self.add_setting(config,["namelist:nemoverify","nemo_version"], nemo_vn)
+        self.add_setting(config,["namelist:nemoverify","nemo_ice_rst"], "false")
+        self.add_setting(config,["namelist:nemoverify","nemo_icb_rst"], "false")
         
         return config, self.reports
 
