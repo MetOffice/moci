@@ -1,8 +1,9 @@
 name: Check CR approved
 
 on:
-    pull_request_target:
+    pull_request_review:
        types: [submitted, edited, dismissed]
+    workflow_dispatch:
 
 jobs:
     check_cr_approved:
