@@ -156,7 +156,8 @@ PROGRAM mean_nemo
 
    iostat = nf90_open( TRIM(filenames(1)), nf90_share, ncid )
    IF( iostat /= nf90_noerr ) THEN
-      WRITE(6,*) TRIM(nf90_strerror(iostat))
+      WRITE(6,*)'E R R O R opening input file '//TRIM(filenames(1))//':'
+      WRITE(6,*) '    '//TRIM(nf90_strerror(iostat))
       STOP 11
    ENDIF
    iostat = nf90_inquire( ncid, ndims, nvars, natts )
@@ -283,8 +284,8 @@ PROGRAM mean_nemo
    DO ifile = 2, nargs-1
       iostat = nf90_open( TRIM(filenames(ifile)), nf90_share, ncid, chunksize=chunksize)
       IF( iostat /= nf90_noerr ) THEN
-         WRITE(6,*) TRIM(nf90_strerror(iostat))
-         WRITE(6,*)'E R R O R opening input file '//TRIM(filenames(ifile))
+         WRITE(6,*)'E R R O R opening input file '//TRIM(filenames(ifile))//':'
+         WRITE(6,*) '    '//TRIM(nf90_strerror(iostat))
          STOP 12
       ELSE
          inncids(ifile) = ncid
@@ -863,8 +864,8 @@ PROGRAM mean_nemo
                ENDIF  !End of if statement over number of dimensions
  
                IF( iostat /= nf90_noerr ) THEN
-                  WRITE(6,*) TRIM(nf90_strerror(iostat))
-                  WRITE(6,*) 'E R R O R reading variable '//TRIM(varname)//' from file '//TRIM(filenames(ifile))
+                  WRITE(6,*) 'E R R O R reading variable '//TRIM(varname)//' from file '//TRIM(filenames(ifile))//':'
+                  WRITE(6,*) '    '//TRIM(nf90_strerror(iostat))
                   istop = 1
                ENDIF
 
@@ -1110,8 +1111,8 @@ PROGRAM mean_nemo
          ENDIF !End of ndims if statements
 
          IF( iostat /= nf90_noerr ) THEN
-            WRITE(6,*) TRIM(nf90_strerror(iostat))
-            WRITE(6,*) 'E R R O R reading variable '//TRIM(varname)//' from file '//TRIM(filenames(ifile))
+            WRITE(6,*) 'E R R O R reading variable '//TRIM(varname)//' from file '//TRIM(filenames(ifile))//':'
+            WRITE(6,*) '    '//TRIM(nf90_strerror(iostat))
             STOP 16
          ENDIF
 
@@ -1215,8 +1216,9 @@ PROGRAM mean_nemo
 
       ENDIF
 
-      IF( iostat /= 0 ) THEN
-         WRITE(6,*) 'E R R O R writing variable '//TRIM(varname)
+      IF( iostat /= nf90_noerr ) THEN
+         WRITE(6,*) 'E R R O R writing variable '//TRIM(varname)//':'
+         WRITE(6,*) '    '//TRIM(nf90_strerror(iostat))
          STOP 17
       ENDIF
 
@@ -1230,7 +1232,8 @@ PROGRAM mean_nemo
       iostat = nf90_close( ncid )
       IF( iostat /= nf90_noerr ) THEN
          WRITE(6,*) TRIM(nf90_strerror(iostat))
-         WRITE(6,*)'E R R O R closing input file '//TRIM(filenames(ifile))
+         WRITE(6,*)'E R R O R closing input file '//TRIM(filenames(ifile))//':'
+         WRITE(6,*) '    '//TRIM(nf90_strerror(iostat))
          STOP 18
       ENDIF
    END DO
@@ -1241,7 +1244,8 @@ PROGRAM mean_nemo
    iostat = nf90_close( outid )
    IF( iostat /= nf90_noerr ) THEN
       WRITE(6,*) TRIM(nf90_strerror(iostat))
-      WRITE(6,*)'E R R O R closing output file'
+      WRITE(6,*)'E R R O R closing output file:'
+      WRITE(6,*) '    '//TRIM(nf90_strerror(iostat))
       STOP 19
    ENDIF
 
