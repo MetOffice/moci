@@ -32,23 +32,26 @@ PROGRAM mean_nemo
    CHARACTER(LEN=nf90_max_name), ALLOCATABLE :: filenames(:), indimnames(:)
    CHARACTER(LEN=256) :: standard_name,cell_methods 
 
-   LOGICAL :: l_thckwgt, l_doavg, l_ismasked
+   LOGICAL :: l_thckwgt, l_doavg, l_ismasked, l_inputdata_ismasked, l_cellthick_ismasked
 
    INTEGER :: nargs, ifile , iargc, no_fill
    INTEGER :: ncid, outid, iostat, idim, istop, itime
-   INTEGER :: natts, attid, xtype, varid, icellthick_type
+   INTEGER :: natts, attid, xtype, varid
    ! ntimes is total number of time points to average over (for unmasked data)
    ! ntimes_local is number of time points in each file
-   INTEGER :: jv_loop, jv, jv_thickness, ndims, nvars, dimlen, dimids(4), ntimes, ntimes_local
+   INTEGER :: jv, jv_thickness, ndims, nvars, dimlen, dimids(4), ntimes, ntimes_local
    INTEGER :: dimid, unlimitedDimId, unlimitedDimId_local, varunlimitedDimId
    INTEGER :: chunksize = 32000000
    INTEGER, ALLOCATABLE  :: outdimids(:), outdimlens(:), inncids(:)
    INTEGER, ALLOCATABLE  :: indimlens(:), start(:)
 
    ! Scalars
-   INTEGER(i4) :: inputdata_fill_value_i4
-   REAL(sp) :: inputdata_fill_value_sp
-   REAL(dp) :: inputdata_fill_value_dp
+   INTEGER(i4) :: inputdata_fill_value_i4, outputdata_fill_value_i4
+   REAL(sp) :: inputdata_fill_value_sp, outputdata_fill_value_sp, cellthick_fill_value_sp
+   REAL(dp) :: inputdata_fill_value_dp, outputdata_fill_value_dp, cellthick_fill_value_dp
+
+   ! Logical data masks (for 4d data only, which may be thickness-weighted and/or masked)
+   LOGICAL, ALLOCATABLE, DIMENSION(:,:,:,:) :: l_mask_4d
 
    ! Time counters (for masked data)
    INTEGER(i2), ALLOCATABLE, DIMENSION(:,:,:) :: ntimes_3d
@@ -197,6 +200,38 @@ PROGRAM mean_nemo
    iostat = nf90_put_att( outid, nf90_global, "TimeStamp", timestamp)
    IF (l_verbose) WRITE(6,*)'Writing new TimeStamp attribute'
 
+   jv_thickness = -1
+   l_cellthick_ismasked = .FALSE.
+
+   ! Find out if there is a cell thickness variable in this set of files in case we need to do thickness weighting
+   DO jv = 1, nvars
+      iostat = nf90_get_att(ncid, jv, "standard_name", standard_name)
+
+      IF( (iostat == nf90_noerr) .AND. (TRIM(standard_name) == "cell_thickness") ) THEN
+         jv_thickness = jv
+         iostat = nf90_inquire_variable( ncid, jv, xtype=xtype )
+
+         ! Save cell thickness fill value if masked
+         SELECT CASE( xtype )
+            CASE( NF90_FLOAT )
+               iostat = nf90_get_att(ncid, jv, "_FillValue", cellthick_fill_value_sp )
+               IF( iostat == nf90_noerr ) cellthick_fill_value_dp = REAL(cellthick_fill_value_sp, dp)
+            CASE( NF90_DOUBLE )
+               iostat = nf90_get_att(ncid, jv, "_FillValue", cellthick_fill_value_dp )
+               IF( iostat == nf90_noerr ) cellthick_fill_value_sp = REAL(cellthick_fill_value_dp, sp)
+            CASE DEFAULT
+               WRITE(6,*) "ERROR : Cell thickness variable must be single or double precision float"
+               STOP 13
+         END SELECT
+
+         ! Is the cell thickness data masked?
+         l_cellthick_ismasked = (iostat == nf90_noerr)
+
+         ! Exit loop if the cell thickness has been found
+         EXIT
+      ENDIF
+   END DO
+
    !2.2.3 Copy the variable definitions and attributes into the output file.
    DO jv = 1, nvars
       iostat = nf90_inquire_variable( ncid, jv, varname, xtype, ndims, dimids, natts)
@@ -204,6 +239,7 @@ PROGRAM mean_nemo
       DO idim = 1, ndims
          outdimids(idim) = dimids(idim)
       END DO
+
       iostat = nf90_def_var( outid, varname, xtype, outdimids, varid )
       DEALLOCATE(outdimids)
       IF (l_verbose) WRITE(6,*)'Defining variable '//TRIM(varname)//'...' 
@@ -212,6 +248,23 @@ PROGRAM mean_nemo
             iostat = nf90_inq_attname(ncid, varid, attid, attname)
             iostat = nf90_copy_att( ncid, varid, attname, outid, varid )   
          END DO
+      ENDIF
+
+      ! For thickness weighting, output data will use the fill value of the cell thickness if the input data is not masked
+      IF( jv /= jv_thickness ) THEN
+         iostat = nf90_get_att(ncid, jv, "cell_methods", cell_methods)
+         l_thckwgt = ( (iostat == nf90_noerr) .AND. (TRIM(cell_methods) == "time: mean (thickness weighted)") )
+         iostat = nf90_inquire_attribute(ncid, jv, "_FillValue")
+         l_inputdata_ismasked = (iostat == nf90_noerr .AND. ndims >= 3)
+
+         IF( l_thckwgt .AND. l_cellthick_ismasked .AND. (.NOT. l_inputdata_ismasked) ) THEN
+            SELECT CASE( xtype )
+               CASE( NF90_FLOAT )
+                  iostat = nf90_put_att( outid, varid, '_FillValue', cellthick_fill_value_sp )
+               CASE( NF90_DOUBLE )
+                  iostat = nf90_put_att( outid, varid, '_FillValue', cellthick_fill_value_dp )
+            END SELECT
+         ENDIF
       ENDIF
    END DO
  
@@ -239,36 +292,8 @@ PROGRAM mean_nemo
    END DO
    IF (l_verbose) WRITE(6,*)'All input files open.'
 
-   !Find out if there is a cell thickness variable in this set of files
-   !in case we need to do thickness weighting.
-   jv_thickness = -1
-   DO jv = 1, nvars
-      iostat = nf90_inquire_variable( ncid, jv, varname, xtype, ndims, dimids, natts)
-      iostat = nf90_get_att(ncid, jv, "standard_name", standard_name)
-      IF( iostat == nf90_noerr .AND. TRIM(standard_name) == "cell_thickness" ) THEN
-         jv_thickness = jv
-         EXIT
-      ENDIF
-   ENDDO
-
    !Loop over all variables in first input file
-   DO jv_loop = 0, nvars
-
-      !Need to make sure that we mean up any cell thickness variable first so we can subsequently
-      !use the time-mean cell thickness in the meaning of thickness-weighted variables.
-      IF( jv_loop == 0 ) THEN
-         IF( jv_thickness /= -1 ) THEN
-            jv = jv_thickness
-         ELSE
-            CYCLE
-         ENDIF
-      ELSE
-         IF( jv_loop == jv_thickness ) THEN
-            CYCLE
-         ELSE
-            jv = jv_loop
-         ENDIF
-      ENDIF
+   DO jv = 1, nvars
 
       !3.2 Inquire variable to find out name and how many dimensions it has
 
@@ -285,20 +310,42 @@ PROGRAM mean_nemo
 
       ! Does averaging need to account for thickness-weighting and masked data?
       l_thckwgt = .FALSE.
+      l_inputdata_ismasked = .FALSE.
       l_ismasked = .FALSE.
       IF( l_doavg ) THEN
+         ! Thickness-weighting- if an unsupported data type/shape has this attribute, raise an error below
          l_thckwgt = ( iostat == nf90_noerr .AND. TRIM(cell_methods) == "time: mean (thickness weighted)" )
-         SELECT CASE( xtype )
-            CASE( NF90_INT )
-               iostat = nf90_get_att(ncid, jv, "_FillValue", inputdata_fill_value_i4 )
-            CASE( NF90_FLOAT )
-               iostat = nf90_get_att(ncid, jv, "_FillValue", inputdata_fill_value_sp )
-            CASE( NF90_DOUBLE )
-               iostat = nf90_get_att(ncid, jv, "_FillValue", inputdata_fill_value_dp )
-            CASE DEFAULT
-               iostat = nf90_noerr + 1
-         END SELECT
-         l_ismasked = (iostat == nf90_noerr .AND. ndims >= 3)
+
+         ! Masked data- get the fill value of the input data and/or cell thickness, and set the fill value of the
+         ! output file (that of the input data is prioritised). Unsupported data types/shapes proceed silently using
+         ! the unmasked averaging algorithm.
+         IF( ndims >= 3 ) THEN
+            SELECT CASE( xtype )
+               CASE( NF90_INT )
+                  iostat = nf90_get_att(ncid, jv, "_FillValue", inputdata_fill_value_i4 )
+                  IF( iostat == nf90_noerr ) outputdata_fill_value_i4 = inputdata_fill_value_i4
+               CASE( NF90_FLOAT )
+                  iostat = nf90_get_att(ncid, jv, "_FillValue", inputdata_fill_value_sp )
+                  IF( iostat == nf90_noerr ) THEN
+                     outputdata_fill_value_sp = inputdata_fill_value_sp
+                  ELSE IF( l_thckwgt .AND. l_cellthick_ismasked ) THEN
+                     outputdata_fill_value_sp = cellthick_fill_value_sp
+                  ENDIF
+               CASE( NF90_DOUBLE )
+                  iostat = nf90_get_att(ncid, jv, "_FillValue", inputdata_fill_value_dp )
+                  IF( iostat == nf90_noerr ) THEN
+                     outputdata_fill_value_dp = inputdata_fill_value_dp
+                  ELSE IF( l_thckwgt .AND. l_cellthick_ismasked ) THEN
+                     outputdata_fill_value_dp = cellthick_fill_value_dp
+                  ENDIF
+               CASE DEFAULT
+                  iostat = nf90_noerr + 1
+            END SELECT
+            ! Is the input data masked?
+            l_inputdata_ismasked = iostat == nf90_noerr
+            ! We need to perform masked averaging if the input data and/or cell thickness data is masked
+            l_ismasked = l_inputdata_ismasked .OR. (l_thckwgt .AND. l_cellthick_ismasked)
+         ENDIF
       ENDIF
 
       IF( l_thckwgt .AND. jv_thickness == -1 ) THEN
@@ -417,8 +464,20 @@ PROGRAM mean_nemo
 
       ELSEIF( ndims == 4 ) THEN
 
-         IF( l_ismasked ) THEN
-         ! Initialise ntimes (number of records to be averaged)
+         ! Denominator- either the sum over time of the cell thickness (thickness-weighted average),
+         ! or # of records which is either a scalar (normal average) or array (masked average)
+         IF( l_thckwgt ) THEN
+            SELECT CASE( xtype )
+               CASE( NF90_FLOAT )
+                  ALLOCATE(meancellthick_4d_sp(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
+                    &                          outdimlens(dimids(3)),outdimlens(dimids(4))))
+                  meancellthick_4d_sp(:,:,:,:)=0.0
+               CASE( NF90_DOUBLE )
+                  ALLOCATE(meancellthick_4d_dp(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
+                    &                          outdimlens(dimids(3)),outdimlens(dimids(4))))
+                  meancellthick_4d_dp(:,:,:,:)=0.0
+            END SELECT
+         ELSE IF( l_ismasked ) THEN
             ALLOCATE( ntimes_4d( outdimlens(dimids(1)), outdimlens(dimids(2)),   &
                &                 outdimlens(dimids(3)), outdimlens(dimids(4)) ) )
             ntimes_4d(:,:,:,:) = 0
@@ -444,22 +503,10 @@ PROGRAM mean_nemo
                ALLOCATE(meandata_4d_sp(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
                  &                      outdimlens(dimids(3)),outdimlens(dimids(4))))
                meandata_4d_sp(:,:,:,:)=0.0
-               IF( jv == jv_thickness ) THEN
-                  ALLOCATE(meancellthick_4d_sp(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
-                    &                          outdimlens(dimids(3)),outdimlens(dimids(4))))
-                  meancellthick_4d_sp(:,:,:,:)=0.0
-                  icellthick_type = NF90_FLOAT
-               ENDIF
             CASE( NF90_DOUBLE )
                ALLOCATE(meandata_4d_dp(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
                  &                      outdimlens(dimids(3)),outdimlens(dimids(4))))
                meandata_4d_dp(:,:,:,:)=0.0
-               IF( jv == jv_thickness ) THEN
-                  ALLOCATE(meancellthick_4d_dp(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
-                    &                          outdimlens(dimids(3)),outdimlens(dimids(4))))
-                  meancellthick_4d_dp(:,:,:,:)=0.0
-                  icellthick_type = NF90_DOUBLE
-               ENDIF
             CASE DEFAULT
                WRITE(6,*)'Unknown nf90 type: ', xtype
                STOP 14
@@ -469,7 +516,7 @@ PROGRAM mean_nemo
          WRITE(6,*)'The netcdf variable has more than 4 dimensions which is not taken into account'
          STOP 15
       ENDIF
-    
+
       istop = 0
 
       ! If this variable is a function of the unlimited dimension then
@@ -714,24 +761,39 @@ PROGRAM mean_nemo
 
                         ! Do not include masked data in the average
                         IF( l_ismasked ) THEN
+                           ! Use the union of the input data and cell thickness masks
+                           ALLOCATE(l_mask_4d(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
+                             &                outdimlens(dimids(3)),outdimlens(dimids(4))))
+                           IF( l_inputdata_ismasked .AND. (l_thckwgt .AND. l_cellthick_ismasked) ) THEN
+                              l_mask_4d(:,:,:,:) = (inputdata_4d_sp(:,:,:,:) /= inputdata_fill_value_sp) .AND. &
+                                 &                 (cellthick_4d_sp(:,:,:,:) /= cellthick_fill_value_sp)
+                           ELSE IF( l_inputdata_ismasked ) THEN
+                              l_mask_4d(:,:,:,:) = (inputdata_4d_sp(:,:,:,:) /= inputdata_fill_value_sp)
+                           ELSE
+                              l_mask_4d(:,:,:,:) = (cellthick_4d_sp(:,:,:,:) /= cellthick_fill_value_sp)
+                           ENDIF
+
                            IF( l_thckwgt ) THEN
-                              WHERE( inputdata_4d_sp(:,:,:,:) /= inputdata_fill_value_sp )
+                              WHERE( l_mask_4d )
                                  meandata_4d_sp(:,:,:,:) = meandata_4d_sp(:,:,:,:) + inputdata_4d_sp(:,:,:,:) * cellthick_4d_sp(:,:,:,:)
-                                 ntimes_4d(:,:,:,:) = ntimes_4d(:,:,:,:) + 1
+                                 meancellthick_4d_sp(:,:,:,:) = meancellthick_4d_sp(:,:,:,:) + cellthick_4d_sp(:,:,:,:)
                               ENDWHERE
                            ELSE
-                              WHERE( inputdata_4d_sp(:,:,:,:) /= inputdata_fill_value_sp )
+                              WHERE( l_mask_4d )
                                  meandata_4d_sp(:,:,:,:) = meandata_4d_sp(:,:,:,:) + inputdata_4d_sp(:,:,:,:)
                                  ntimes_4d(:,:,:,:) = ntimes_4d(:,:,:,:) + 1
                               ENDWHERE
                            ENDIF
+
+                           DEALLOCATE(l_mask_4d)
                         ELSE
                            IF( l_thckwgt ) THEN
                               meandata_4d_sp(:,:,:,:) = meandata_4d_sp(:,:,:,:) + inputdata_4d_sp(:,:,:,:) * cellthick_4d_sp(:,:,:,:)
+                              meancellthick_4d_sp(:,:,:,:) = meancellthick_4d_sp(:,:,:,:) + cellthick_4d_sp(:,:,:,:)
                            ELSE
                               meandata_4d_sp(:,:,:,:) = meandata_4d_sp(:,:,:,:) + inputdata_4d_sp(:,:,:,:)
+                              ntimes = ntimes + 1
                            ENDIF
-                           ntimes = ntimes + 1
                         ENDIF
 
                         IF( l_thckwgt ) DEALLOCATE(cellthick_4d_sp)
@@ -752,24 +814,39 @@ PROGRAM mean_nemo
 
                         ! Do not include masked data in the average
                         IF( l_ismasked ) THEN
+                           ! Use the union of the input data and cell thickness masks
+                           ALLOCATE(l_mask_4d(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
+                             &                outdimlens(dimids(3)),outdimlens(dimids(4))))
+                           IF( l_inputdata_ismasked .AND. (l_thckwgt .AND. l_cellthick_ismasked) ) THEN
+                              l_mask_4d(:,:,:,:) = (inputdata_4d_dp(:,:,:,:) /= inputdata_fill_value_dp) .AND. &
+                                 &                     (cellthick_4d_dp(:,:,:,:) /= cellthick_fill_value_dp)
+                           ELSE IF( l_inputdata_ismasked ) THEN
+                              l_mask_4d(:,:,:,:) = (inputdata_4d_dp(:,:,:,:) /= inputdata_fill_value_dp)
+                           ELSE
+                              l_mask_4d(:,:,:,:) = (cellthick_4d_dp(:,:,:,:) /= cellthick_fill_value_dp)
+                           ENDIF
+
                            IF( l_thckwgt ) THEN
-                              WHERE( inputdata_4d_dp(:,:,:,:) /= inputdata_fill_value_dp )
+                              WHERE( l_mask_4d )
                                  meandata_4d_dp(:,:,:,:) = meandata_4d_dp(:,:,:,:) + inputdata_4d_dp(:,:,:,:) * cellthick_4d_dp(:,:,:,:)
-                                 ntimes_4d(:,:,:,:) = ntimes_4d(:,:,:,:) + 1
+                                 meancellthick_4d_dp(:,:,:,:) = meancellthick_4d_dp(:,:,:,:) + cellthick_4d_dp(:,:,:,:)
                               ENDWHERE
                            ELSE
-                              WHERE( inputdata_4d_dp(:,:,:,:) /= inputdata_fill_value_dp )
+                              WHERE( l_mask_4d )
                                  meandata_4d_dp(:,:,:,:) = meandata_4d_dp(:,:,:,:) + inputdata_4d_dp(:,:,:,:)
                                  ntimes_4d(:,:,:,:) = ntimes_4d(:,:,:,:) + 1
                               ENDWHERE
                            ENDIF
+
+                           DEALLOCATE(l_mask_4d)
                         ELSE
                            IF( l_thckwgt ) THEN
                               meandata_4d_dp(:,:,:,:) = meandata_4d_dp(:,:,:,:) + inputdata_4d_dp(:,:,:,:) * cellthick_4d_dp(:,:,:,:)
+                              meancellthick_4d_dp(:,:,:,:) = meancellthick_4d_dp(:,:,:,:) + cellthick_4d_dp(:,:,:,:)
                            ELSE
                               meandata_4d_dp(:,:,:,:) = meandata_4d_dp(:,:,:,:) + inputdata_4d_dp(:,:,:,:)
+                              ntimes = ntimes + 1
                            ENDIF
-                           ntimes = ntimes + 1
                         ENDIF
 
                         IF( l_thckwgt ) DEALLOCATE(cellthick_4d_dp)
@@ -799,7 +876,8 @@ PROGRAM mean_nemo
         
          END DO  !loop over files
 
-         !Divide by number of records to get mean
+         ! Divide numerator (sum of data, possibly thickness-weighted) by denominator (sum of cell thickness
+         ! or number of time records) to get the mean, setting masked results to a fill value
          IF( ndims == 1 ) THEN
 
             SELECT CASE( xtype )
@@ -846,7 +924,7 @@ PROGRAM mean_nemo
                CASE( NF90_INT )
                   IF( l_ismasked ) THEN
                      WHERE( ntimes_3d(:,:,:) == 0 )
-                        meandata_3d_i4(:,:,:) = inputdata_fill_value_i4
+                        meandata_3d_i4(:,:,:) = outputdata_fill_value_i4
                      ELSEWHERE
                         meandata_3d_i4(:,:,:) = meandata_3d_i4(:,:,:) / ntimes_3d(:,:,:)
                      ENDWHERE
@@ -856,7 +934,7 @@ PROGRAM mean_nemo
                CASE( NF90_FLOAT )
                   IF( l_ismasked ) THEN
                      WHERE( ntimes_3d(:,:,:) == 0 )
-                        meandata_3d_sp(:,:,:) = inputdata_fill_value_sp
+                        meandata_3d_sp(:,:,:) = outputdata_fill_value_sp
                      ELSEWHERE
                         meandata_3d_sp(:,:,:) = meandata_3d_sp(:,:,:) / ntimes_3d(:,:,:)
                      ENDWHERE
@@ -866,7 +944,7 @@ PROGRAM mean_nemo
                CASE( NF90_DOUBLE )
                   IF( l_ismasked ) THEN
                      WHERE( ntimes_3d(:,:,:) == 0 )
-                        meandata_3d_dp(:,:,:) = inputdata_fill_value_dp
+                        meandata_3d_dp(:,:,:) = outputdata_fill_value_dp
                      ELSEWHERE
                         meandata_3d_dp(:,:,:) = meandata_3d_dp(:,:,:) / ntimes_3d(:,:,:)
                      ENDWHERE
@@ -889,7 +967,7 @@ PROGRAM mean_nemo
                CASE( NF90_INT )
                   IF( l_ismasked ) THEN
                      WHERE( ntimes_4d(:,:,:,:) == 0 )
-                        meandata_4d_i4(:,:,:,:) = inputdata_fill_value_i4
+                        meandata_4d_i4(:,:,:,:) = outputdata_fill_value_i4
                      ELSEWHERE
                         meandata_4d_i4(:,:,:,:) = meandata_4d_i4(:,:,:,:) / ntimes_4d(:,:,:,:)
                      ENDWHERE
@@ -899,83 +977,54 @@ PROGRAM mean_nemo
                CASE( NF90_FLOAT )
                   IF( l_ismasked ) THEN
                      IF( l_thckwgt ) THEN
-                        IF( icellthick_type == NF90_DOUBLE ) THEN
-                           WHERE( ntimes_4d(:,:,:,:) == 0 )
-                              meandata_4d_sp(:,:,:,:) = inputdata_fill_value_sp
-                           ELSEWHERE
-                              meandata_4d_sp(:,:,:,:) = meandata_4d_sp(:,:,:,:) / (REAL(meancellthick_4d_dp, sp) * ntimes_4d(:,:,:,:))
-                           ENDWHERE
-                        ELSE
-                           WHERE( ntimes_4d(:,:,:,:) == 0 )
-                              meandata_4d_sp(:,:,:,:) = inputdata_fill_value_sp
-                           ELSEWHERE
-                              meandata_4d_sp(:,:,:,:) = meandata_4d_sp(:,:,:,:) / (meancellthick_4d_sp(:,:,:,:) * ntimes_4d(:,:,:,:))
-                           ENDWHERE
-                        ENDIF
+                        WHERE( meancellthick_4d_sp(:,:,:,:) == 0._sp )
+                           meandata_4d_sp(:,:,:,:) = outputdata_fill_value_sp
+                        ELSEWHERE
+                           meandata_4d_sp(:,:,:,:) = meandata_4d_sp(:,:,:,:) / meancellthick_4d_sp(:,:,:,:)
+                        ENDWHERE
                      ELSE
                         WHERE( ntimes_4d(:,:,:,:) == 0 )
-                           meandata_4d_sp(:,:,:,:) = inputdata_fill_value_sp
+                           meandata_4d_sp(:,:,:,:) = outputdata_fill_value_sp
                         ELSEWHERE
                            meandata_4d_sp(:,:,:,:) = meandata_4d_sp(:,:,:,:) / ntimes_4d(:,:,:,:)
                         ENDWHERE
                      ENDIF
                   ELSE
                      IF( l_thckwgt ) THEN
-                        IF( icellthick_type == NF90_DOUBLE ) THEN
-                           meandata_4d_sp(:,:,:,:) = meandata_4d_sp(:,:,:,:) / (REAL(meancellthick_4d_dp, sp) * ntimes)
-                        ELSE
-                           meandata_4d_sp(:,:,:,:) = meandata_4d_sp(:,:,:,:) / (meancellthick_4d_sp(:,:,:,:) * ntimes)
-                        ENDIF
+                        meandata_4d_sp(:,:,:,:) = meandata_4d_sp(:,:,:,:) / meancellthick_4d_sp(:,:,:,:)
                      ELSE
                         meandata_4d_sp(:,:,:,:) = meandata_4d_sp(:,:,:,:) / ntimes
                      ENDIF
                   ENDIF
-
-                  ! If this is the cell thickness, save to normalise thickness-weighted time-means
-                  IF( jv == jv_thickness ) meancellthick_4d_sp(:,:,:,:) = meandata_4d_sp(:,:,:,:)
+                  IF( l_thckwgt ) DEALLOCATE(meancellthick_4d_sp)
                CASE( NF90_DOUBLE )
                   IF( l_ismasked ) THEN
                      IF( l_thckwgt ) THEN
-                        IF( icellthick_type == NF90_FLOAT ) THEN
-                           WHERE( ntimes_4d(:,:,:,:) == 0 )
-                              meandata_4d_dp(:,:,:,:) = inputdata_fill_value_dp
-                           ELSEWHERE
-                              meandata_4d_dp(:,:,:,:) = meandata_4d_dp(:,:,:,:) / (REAL(meancellthick_4d_sp, dp) * ntimes_4d(:,:,:,:))
-                           ENDWHERE
-                        ELSE
-                           WHERE( ntimes_4d(:,:,:,:) == 0 )
-                              meandata_4d_dp(:,:,:,:) = inputdata_fill_value_dp
-                           ELSEWHERE
-                              meandata_4d_dp(:,:,:,:) = meandata_4d_dp(:,:,:,:) / (meancellthick_4d_dp(:,:,:,:) * ntimes_4d(:,:,:,:))
-                           ENDWHERE
-                        ENDIF
+                        WHERE( meancellthick_4d_dp(:,:,:,:) == 0._dp )
+                           meandata_4d_dp(:,:,:,:) = outputdata_fill_value_dp
+                        ELSEWHERE
+                           meandata_4d_dp(:,:,:,:) = meandata_4d_dp(:,:,:,:) / meancellthick_4d_dp(:,:,:,:)
+                        ENDWHERE
                      ELSE
                         WHERE( ntimes_4d(:,:,:,:) == 0 )
-                           meandata_4d_dp(:,:,:,:) = inputdata_fill_value_dp
+                           meandata_4d_dp(:,:,:,:) = outputdata_fill_value_dp
                         ELSEWHERE
                            meandata_4d_dp(:,:,:,:) = meandata_4d_dp(:,:,:,:) / ntimes_4d(:,:,:,:)
                         ENDWHERE
                      ENDIF
                   ELSE
                      IF( l_thckwgt ) THEN
-                        IF( icellthick_type == NF90_FLOAT ) THEN
-                           meandata_4d_dp(:,:,:,:) = meandata_4d_dp(:,:,:,:) / (REAL(meancellthick_4d_sp, dp) * ntimes)
-                        ELSE
-                           meandata_4d_dp(:,:,:,:) = meandata_4d_dp(:,:,:,:) / (meancellthick_4d_dp(:,:,:,:) * ntimes)
-                        ENDIF
+                        meandata_4d_dp(:,:,:,:) = meandata_4d_dp(:,:,:,:) / meancellthick_4d_dp(:,:,:,:)
                      ELSE
                         meandata_4d_dp(:,:,:,:) = meandata_4d_dp(:,:,:,:) / ntimes
                      ENDIF
                   ENDIF
-
-                  ! If this is the cell thickness, save to normalise thickness-weighted time-means
-                  IF( jv == jv_thickness ) meancellthick_4d_dp(:,:,:,:) = meandata_4d_dp(:,:,:,:)
+                  IF( l_thckwgt ) DEALLOCATE(meancellthick_4d_dp)
                CASE DEFAULT
                   WRITE(6,*)'Unknown nf90 type: ', xtype
                   STOP 14
             END SELECT
-            IF( l_ismasked ) DEALLOCATE(ntimes_4d)
-
+            IF( l_ismasked .AND. .NOT. l_thckwgt ) DEALLOCATE(ntimes_4d)
          ENDIF
 
       ELSE
@@ -1172,9 +1221,6 @@ PROGRAM mean_nemo
       ENDIF
 
    END DO  !loop over variables
-
-   IF( allocated(meancellthick_4d_sp) ) DEALLOCATE(meancellthick_4d_sp)
-   IF( allocated(meancellthick_4d_dp) ) DEALLOCATE(meancellthick_4d_dp)
 
    !4.1 Close all input files
 
