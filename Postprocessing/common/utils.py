@@ -23,7 +23,7 @@ import re
 import os
 import errno
 import shutil
-import subprocess
+import shellout
 import timer
 
 
@@ -153,61 +153,13 @@ def finalcycle():
     return fcycle
 
 
-@timer.run_timer
-def exec_subproc(cmd, verbose=True, cwd=os.getcwd()):
-    '''
-    Execute given shell command.
-    'cmd' input should be in the form of either a:
-      string        - "cd DIR; command arg1 arg2"
-      list of words - ["command", "arg1", "arg2"]
-    Optional arguments:
-      verbose = False: only reproduce the command std.out upon
-                failure of the command
-                True: reproduce std.out regardless of outcome
-      cwd     = Directory in which to execute the command
-    '''
-    import shlex
-
-    cmd_array = [cmd]
-    if not isinstance(cmd, list):
-        cmd_array = cmd.split(';')
-        for i, cmd in enumerate(cmd_array):
-            # Use shlex.split to cope with arguments that contain whitespace
-            cmd_array[i] = shlex.split(cmd)
-
-    # Initialise rcode, in the event there is no command
-    rcode = 99
-    output = 'No command provided'
-
-    for cmd in cmd_array:
-        try:
-            output = subprocess.check_output(cmd,
-                                             stderr=subprocess.STDOUT,
-                                             universal_newlines=True, cwd=cwd)
-            rcode = 0
-            if verbose:
-                log_msg('[SUBPROCESS]: ' + str(output))
-        except subprocess.CalledProcessError as exc:
-            output = exc.output
-            rcode = exc.returncode
-        except OSError as exc:
-            output = exc.strerror
-            rcode = exc.errno
-        if rcode != 0:
-            msg = '[SUBPROCESS]: Command: {}\n[SUBPROCESS]: Error = {}:\n\t{}'
-            log_msg(msg.format(' '.join(cmd), rcode, output), level='WARN')
-            break
-
-    return rcode, output
-
-
 def get_utility_avail(utility):
     '''Return True/False if shell command is available'''
     try:
         status = shutil.which(utility)
     except AttributeError:
         # subprocess.getstatusoutput does not exist at Python2.7
-         status, _ = utils.exec_subproc(utility + ' --help', verbose=False)
+         status, _ = shellout.exec_subprocess(utility + ' --help')
 
     return bool(status)
 
@@ -496,7 +448,7 @@ def _mod_all_calendars_date(indate, delta, cal):
                 cmd = '{} {} --calendar {} --offset {} --print-format ' \
                     '%Y,%m,%d,%H,%M'.format(datecmd, dateinput, cal, offset)
 
-                rcode, output = exec_subproc(cmd, verbose=False)
+                rcode, output = shellout._exec_subprocess(cmd)
             else:
                 log_msg('add_period_to_date: Invalid date for conversion to '
                         'ISO 8601 date representation: ' + str(outdate),

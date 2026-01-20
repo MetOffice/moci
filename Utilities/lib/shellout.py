@@ -6,7 +6,7 @@ import shlex
 
 
 @timer.run_timer
-def _exec_subprocess(cmd, verbose=True, current_working_directory=os.getcwd()):
+def _exec_subprocess(cmd, verbose=False, current_working_directory=os.getcwd()):
     """
     Execute a given shell command
 
@@ -44,4 +44,4 @@ def _exec_subprocess(cmd, verbose=True, current_working_directory=os.getcwd()):
         output = exc.strerror
         rcode = exc.errno
 
-    return output, rcode
+    return rcode, output
