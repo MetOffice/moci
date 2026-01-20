@@ -5,7 +5,7 @@ import os
 import sys
 
 
-def _exec_subprocess(cmd, verbose=True,current_working_directory=os.getcwd()):
+def _exec_subprocess(cmd, verbose=True, current_working_directory=os.getcwd()):
     """
     Execute a given shell command
 
@@ -15,15 +15,16 @@ def _exec_subprocess(cmd, verbose=True,current_working_directory=os.getcwd()):
     :param current_working_directory: The directory in which the
     command should be executed.
     """
-    output = subprocess.run(cmd,
-                             stdin= subprocess.PIPE,
-                             capture_output=True,
-                             cwd=current_working_directory,
-                             timeout=10
-                             )
+    output = subprocess.run(
+        cmd,
+        stdin=subprocess.PIPE,
+        capture_output=True,
+        cwd=current_working_directory,
+        timeout=10,
+    )
     if verbose and output:
         sys.stdout.write(f"[DEBUG]{output.stdout}\n")
-    if output.stderr and output.returncode!= 0:
+    if output.stderr and output.returncode != 0:
         sys.stderr.write(f"[ERROR] {output.stderr}\n")
     if sys.version_info[0] >= 3:
         output.stdout = output.stdout.decode()
