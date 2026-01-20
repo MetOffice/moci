@@ -30,26 +30,24 @@ class TestPrivateMethods(unittest.TestCase):
     Test the private methods of the JULES river standalone driver
     '''
 
-    @mock.patch('rivers_driver.common.exec_subproc', return_value=[0, 'output'])
+    @mock.patch('rivers_driver.shellout._exec_subprocess', return_value=[0, 'output'])
     def test_setup_dates(self, mock_exec):
         ''' Test the _setup_dates method '''
 
         start, end = rivers_driver._setup_dates(COMMON_ENV)
-        self.assertIn(mock.call(['isodatetime', '19790901T0000Z',
-                                 '-f', '%Y-%m-%d %H:%M:%S']),
+        self.assertIn(mock.call('isodatetime 19790901T0000Z -f "%Y-%m-%d %H:%M:%S"'),
                       mock_exec.mock_calls)
-        self.assertIn(mock.call(['isodatetime', '19790901T0000Z', '-f',
-                                 '%Y-%m-%d %H:%M:%S', '-s', 'P1Y4M10DT0H0M',
-                                 '--calendar', 'gregorian']),
+        self.assertIn(mock.call('isodatetime 19790901T0000Z -f "%Y-%m-%d %H:%M:%S" -s P1Y4M10DT0H0M --calendar gregorian'),
                       mock_exec.mock_calls)
         self.assertEqual(len(mock_exec.mock_calls), 2)
 
     @mock.patch('rivers_driver.common')
+    @mock.patch('rivers_driver.shellout')
     @mock.patch('rivers_driver.os.path.isfile')
     @mock.patch('rivers_driver.pathlib')
-    def test_update_river_nl(self, mock_lib, mock_path, mock_common):
+    def test_update_river_nl(self, mock_lib, mock_path, mock_shellout, mock_common):
         ''' Test the _update_river_nl method '''
-        mock_common.exec_subproc.return_value = (0, 'dir="this/path/"')
+        mock_shellout._exec_subprocess.returnvalue = (0, 'dir="this/path/"')
 
         rivers_driver._update_river_nl(RIVER_ENV,
                                        '19790901T0000Z', '19810121T0000Z')
@@ -64,14 +62,14 @@ class TestPrivateMethods(unittest.TestCase):
         self.assertIn(mock.call().var_val('output_start', '19790901T0000Z'),
                                           nml_calls)
         self.assertIn(mock.call().replace(), nml_calls)
-        
+
         self.assertIn(mock.call().var_val('main_run_start', '19790901T0000Z'),
                       nml_calls)
         self.assertIn(mock.call().var_val('main_run_end', '19810121T0000Z'),
                       nml_calls)
 
-        mock_common.exec_subproc.assert_called_once_with(
-            ['grep', 'output_dir', 'output.nml']
+        mock_shellout._exec_subprocess.assert_called_once_with(
+            'grep output_dir output.nml'
         )
         mock_lib.Path.assert_called_once_with('this/path')
         mock_lib.Path().mkdir.assert_called_once_with(parents=True,

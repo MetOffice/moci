@@ -29,7 +29,7 @@ class TestGetComponentResolution(unittest.TestCase):
     '''
     Test the construction of component resolution from namelist
     '''
-    @mock.patch('cpmip_utils.common.exec_subproc')
+    @mock.patch('cpmip_utils.shellout._exec_subprocess')
     def test_get_component_resolution(self, mock_subproc):
         '''
         Test construction of total resolution
@@ -44,7 +44,7 @@ class TestGetComponentResolution(unittest.TestCase):
                          6000)
         subproc_calls = []
         for res_var in res_vars:
-            subproc_calls.append(mock.call(['grep', res_var, 'NEMO_NL'],
+            subproc_calls.append(mock.call('grep %s NEMO_NL' % res_var,
                                            verbose=True))
         mock_subproc.assert_has_calls(subproc_calls)
 
@@ -67,7 +67,7 @@ class TestGlobUsage(unittest.TestCase):
             self.assertEqual(patch_output.getvalue(), expected_output)
 
     @mock.patch('cpmip_utils.glob.glob', return_value=['file1', 'file2'])
-    @mock.patch('cpmip_utils.common.exec_subproc_timeout',
+    @mock.patch('cpmip_utils.shellout._exec_subprocess',
                 return_value=(0, '\n128 file1\n128 file2\n256 total\n'))
     def test_get_glob_usage(self, mock_subproc, mock_glob):
         '''
@@ -81,7 +81,7 @@ class TestNCDFOutput(unittest.TestCase):
     Test measurment of NCDF file sizes
     '''
     @mock.patch('cpmip_utils.os.listdir', return_value=[])
-    @mock.patch('cpmip_utils.common.exec_subproc_timeout',
+    @mock.patch('cpmip_utils.shellout._exec_subprocess',
                 return_value=(1, None))
     def test_no_files_output(self, mock_subproc, mock_ncdffiles):
         '''
@@ -91,7 +91,7 @@ class TestNCDFOutput(unittest.TestCase):
 
     @mock.patch('cpmip_utils.os.listdir', return_value=['file1.nc',
                                                         'file2.nc'])
-    @mock.patch('cpmip_utils.common.exec_subproc_timeout',
+    @mock.patch('cpmip_utils.shellout._exec_subprocess',
                 return_value=(0, '\n128 file1.nc\n128 file2.nc\n256 total\n'))
     def test_files_output(self, mock_subproc, mock_ncdffiles):
         '''

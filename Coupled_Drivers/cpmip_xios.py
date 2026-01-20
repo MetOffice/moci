@@ -21,6 +21,7 @@ import os
 import shutil
 import sys
 import common
+import shellout
 
 def data_metrics_setup_nemo():
     '''
@@ -58,8 +59,8 @@ def measure_xios_client_times(timeout=120):
                  'xios_client' in i_f and 'out' in i_f]
     total_files = len(files)
     for i_f in files:
-        rcode, out = common.exec_subproc_timeout(
-            ['grep', 'total time', i_f], timeout)
+        rcode, out = shellout._exec_subprocess(
+            'grep "total time" %s' % i_f, timeout)
         if rcode == 0:
             meas_time = float(out.split()[-2])
             total_measured += 1

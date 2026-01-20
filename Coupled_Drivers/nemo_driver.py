@@ -27,6 +27,7 @@ import glob
 import shutil
 import inc_days
 import common
+import shellout
 import error
 
 try:
@@ -78,8 +79,8 @@ def _get_nemorst(nemo_nl_file):
     '''
     Retrieve the nemo restart directory from the nemo namelist file
     '''
-    ocerst_rcode, ocerst_val = common.exec_subproc([ \
-            'grep', 'cn_ocerst_outdir', nemo_nl_file])
+    ocerst_rcode, ocerst_val = shellout._exec_subprocess(
+            'grep cn_ocerst_outdir %s' % nemo_nl_file)
     if ocerst_rcode == 0:
         nemo_rst = re.findall(r'[\"\'](.*?)[\"\']', ocerst_val)[0]
         if nemo_rst[-1] == '/':
@@ -92,8 +93,8 @@ def _get_ln_icebergs(nemo_nl_file):
     Interrogate the nemo namelist to see if we are running with icebergs,
     Returns boolean, True if icebergs are used, False if not
     '''
-    icb_rcode, icb_val = common.exec_subproc([ \
-            'grep', 'ln_icebergs', nemo_nl_file])
+    icb_rcode, icb_val = shellout._exec_subprocess(
+            'grep ln_icebergs %s' % nemo_nl_file)
     if icb_rcode != 0:
         sys.stderr.write('Unable to read ln_icebergs in &namberg namelist'
                          ' in the NEMO namelist file %s\n'
@@ -303,8 +304,8 @@ def _setup_executable(common_env):
     nemo_rst = _get_nemorst(nemo_envar['NEMO_NL'])
     if nemo_rst:
         restart_direcs.append(nemo_rst)
-    icerst_rcode, icerst_val = common.exec_subproc([ \
-            'grep', 'cn_icerst_dir', nemo_envar['NEMO_NL']])
+    icerst_rcode, icerst_val = shellout._exec_subprocess(
+            'grep cn_icerst_dir %s' % nemo_envar['NEMO_NL'])
     if icerst_rcode == 0:
         ice_rst = re.findall(r'[\"\'](.*?)[\"\']', icerst_val)[0]
         if ice_rst[-1] == '/':
@@ -440,14 +441,14 @@ def _setup_executable(common_env):
         sys.exit(error.MISSING_MODEL_FILE_ERROR)
 
     # First timestep of the previous cycle
-    _, first_step_val = common.exec_subproc(['grep', gl_first_step_match,
-                                             history_nemo_nl])
+    _, first_step_val = shellout._exec_subprocess('grep %s %s' % (gl_first_step_match,
+                                             history_nemo_nl))
 
     nemo_first_step = int(re.findall(r'.+=(.+),', first_step_val)[0])
 
     # Last timestep of the previous cycle
-    _, last_step_val = common.exec_subproc(['grep', gl_last_step_match,
-                                            history_nemo_nl])
+    _, last_step_val = shellout._exec_subprocess('grep %s %s' % (gl_last_step_match,
+                                            history_nemo_nl))
     nemo_last_step = re.findall(r'.+=(.+),', last_step_val)[0]
 
     # The string in the nemo time step field might have any one of
@@ -460,15 +461,15 @@ def _setup_executable(common_env):
         nemo_last_step = 0
 
     # Determine (as an integer) the number of seconds per model timestep
-    _, nemo_step_int_val = common.exec_subproc(['grep', gl_step_int_match,
-                                                nemo_envar['NEMO_NL']])
+    _, nemo_step_int_val = shellout._exec_subprocess('grep %s %s' % (gl_step_int_match,
+                                                nemo_envar['NEMO_NL']))
     nemo_step_int = int(re.findall(r'.+=(\d*)', nemo_step_int_val)[0])
 
     # If the value for nemo_rst_date_value is true then the model uses
     # absolute date convention, otherwise the dump times are relative to the
     # start of the model run and have an integer representation
-    _, nemo_rst_date_value = common.exec_subproc([ \
-            'grep', gl_nemo_restart_date_match, history_nemo_nl])
+    _, nemo_rst_date_value = shellout._exec_subprocess(
+            'grep %s %s' % (gl_nemo_restart_date_match, history_nemo_nl))
     if 'true' in nemo_rst_date_value:
         nemo_rst_date_bool = True
     else:
@@ -480,8 +481,8 @@ def _setup_executable(common_env):
     nemo_dump_time = "00000000"
 
     # Get the model basis time for this run (YYYYMMDD)
-    _, model_basis_val = common.exec_subproc(
-        ['grep', gl_model_basis_time, history_nemo_nl])
+    _, model_basis_val = shellout._exec_subprocess(
+        'grep %s %s' % (gl_model_basis_time, history_nemo_nl))
     nemo_model_basis = re.findall(r'.+=(.+),', model_basis_val)[0]
 
     if os.path.isfile(latest_nemo_dump):
@@ -768,8 +769,7 @@ def _setup_executable(common_env):
     update_nl_cmd = './update_nemo_nl %s' % update_nl_cmd
 
     # REFACTOR TO USE THE SAFE EXEC SUBPROC
-    update_nl_rcode, _ = common.__exec_subproc_true_shell([ \
-            update_nl_cmd])
+    update_nl_rcode, _ = shellout._exec_subprocess(update_nl_cmd)
     if update_nl_rcode != 0:
         sys.stderr.write('[FAIL] Error updating nemo namelist\n')
         sys.exit(error.SUBPROC_ERROR)
@@ -989,8 +989,8 @@ def _finalize_executable(common_env):
 
     write_ocean_out_to_stdout()
 
-    _, error_count = common.__exec_subproc_true_shell([ \
-            'grep "E R R O R" ocean.output | wc -l'])
+    _, error_count = shellout._exec_subprocess(
+            'grep "E R R O R" ocean.output | wc -l')
     if int(error_count) >= 1:
         sys.stderr.write('[FAIL] An error has been found with the NEMO run.'
                          ' Please investigate the ocean.output file for more'

@@ -24,6 +24,7 @@ DESCRIPTION
 import os
 import shutil
 import common
+import shellout
 import dr_env_lib.xios_def
 import dr_env_lib.env_lib
 
@@ -43,7 +44,7 @@ def _update_iodef(
     '''
 
     # Work-around in lieu of viable multi component iodef.xml handling
-    _, _ = common.exec_subproc(['cp', 'mydef.xml', iodef_fname])
+    _, _ = shellout._exec_subprocess('cp mydef.xml %s' % iodef_fname)
 
     # Note we do not use python's xml module for this job, as the comment
     # line prevalent in the first line of the GO5 iodef.xml files renders

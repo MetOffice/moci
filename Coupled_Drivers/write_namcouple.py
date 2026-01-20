@@ -19,6 +19,7 @@ DESCRIPTION
 import sys
 import itertools
 import common
+import shellout
 import default_couplings
 import error
 import write_cf_name_table
@@ -332,4 +333,4 @@ def write_namcouple(common_env, run_info, coupling_list):
 
     # Now that namcouple has been created, we can create the transient
     # field namelist
-    _, _ = common.exec_subproc('./OASIS_fields')
+    _, _ = shellout._exec_subprocess('./OASIS_fields')
