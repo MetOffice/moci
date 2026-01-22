@@ -1,0 +1,9 @@
+name: Ruff linter
+on:
+  pull_request_target:
+
+jobs:
+  name: Run Ruff Linter
+  uses: astral-sh/ruff-action@v3
+  with:
+    version: "Latest"
