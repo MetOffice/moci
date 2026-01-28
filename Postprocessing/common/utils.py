@@ -23,8 +23,9 @@ import re
 import os
 import errno
 import shutil
-import shellout
 import timer
+
+from mocilib import shellout
 
 
 globals()['debug_mode'] = None

@@ -31,8 +31,9 @@ import glob
 import shutil
 import inc_days
 import common
-import shellout
 import error
+
+from mocilib import shellout
 
 try:
     import cf_units

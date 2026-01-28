@@ -73,10 +73,11 @@ import sys
 import glob
 import shutil
 import common
-import shellout
 import error
 import dr_env_lib.ocn_cont_def
 import dr_env_lib.env_lib
+
+from mocilib import shellout
 
 # Define errors for the TOP controller only
 SERIAL_MODE_ERROR = 99

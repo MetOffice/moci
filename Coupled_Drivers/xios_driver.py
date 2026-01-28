@@ -28,9 +28,10 @@ DESCRIPTION
 import os
 import shutil
 import common
-import shellout
 import dr_env_lib.xios_def
 import dr_env_lib.env_lib
+
+from mocilib import shellout
 
 def _copy_iodef_custom(xios_evar):
     '''

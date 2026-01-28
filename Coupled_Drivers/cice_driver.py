@@ -30,14 +30,14 @@ import sys
 import re
 import datetime
 import time
-import subprocess
 import time2days
 import inc_days
 import common
-import shellout
 import error
 import dr_env_lib.cice_def
 import dr_env_lib.env_lib
+
+from mocilib import shellout
 
 
 def __expand_array(short_array):

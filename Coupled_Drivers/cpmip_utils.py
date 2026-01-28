@@ -27,7 +27,8 @@ import re
 import sys
 import error
 import common
-import shellout
+
+from mocilib import shellout
 
 def get_component_resolution(nlist_file, resolution_variables):
     '''

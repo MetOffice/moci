@@ -24,8 +24,8 @@ DESCRIPTION
 import os
 import shutil
 import sys
-import common
-import shellout
+
+from mocilib import shellout
 
 def data_metrics_setup_nemo():
     '''

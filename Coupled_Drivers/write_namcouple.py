@@ -23,12 +23,13 @@ DESCRIPTION
 import sys
 import itertools
 import common
-import shellout
 import default_couplings
 import error
 import write_cf_name_table
 import write_namcouple_fields
 import write_namcouple_header
+
+from mocilib import shellout
 
 # Dictionary containing the RMP mappings
 RMP_MAPPING = {'Bc':'BICUBIC',
