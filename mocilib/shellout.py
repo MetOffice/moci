@@ -43,4 +43,8 @@ def _exec_subprocess(cmd, verbose=False, timeout=None ,current_working_directory
         output = exc.output
         rcode = exc.returncode
 
+    except subprocess.TimeoutExpired as exc:
+        output = exc.output
+        rcode = exc.returncode
+
     return output, rcode
