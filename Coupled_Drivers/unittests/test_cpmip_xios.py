@@ -93,7 +93,7 @@ class TestMeasureXIOSClient(unittest.TestCase):
                 ['xios_client0.out',
                  'xios_client1.out',
                  'xios_client2.out'])
-    @mock.patch('cpmip_xios.shellout._exec_subprocess')
+    @mock.patch('cpmip_xios.common.exec_subproc_timeout')
     def test_three_files(self, mock_exec_subproc, mock_listdir):
         '''
         Test that three files with no timeout give mean and max
@@ -116,7 +116,7 @@ class TestMeasureXIOSClient(unittest.TestCase):
                 ['xios_client0.out',
                  'xios_client1.out',
                  'xios_client2.out'])
-    @mock.patch('cpmip_xios.shellout._exec_subprocess')
+    @mock.patch('cpmip_xios.common.exec_subproc_timeout')
     def test_one_timeout(self, mock_exec_subproc, mock_listdir):
         '''
         Test what happens if there is a timeout

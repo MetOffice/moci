@@ -24,8 +24,6 @@ import sys
 import error
 import common
 
-from mocilib import shellout
-
 def get_component_resolution(nlist_file, resolution_variables):
     '''
     Get the total componenet resolution nx x ny x nz from a given namelist
@@ -34,7 +32,7 @@ def get_component_resolution(nlist_file, resolution_variables):
     '''
     resolution = 1
     for res_var in resolution_variables:
-        _, out = shellout._exec_subprocess('grep %s %s' % (res_var, nlist_file),
+        _, out = common.exec_subproc(['grep', res_var, nlist_file],
                                      verbose=True)
         try:
             i_res = int(re.search(r'(\d+)', out).group(0))
@@ -58,7 +56,7 @@ def get_glob_usage(glob_path, timeout=60):
     filelist = glob.glob(glob_path)
     if filelist:
         du_command = ['du', '-c'] + filelist
-        rcode, output = shellout._exec_subprocess(du_command, timeout)
+        rcode, output = common.exec_subproc_timeout(du_command, timeout)
         if rcode == 0:
             size_k = float(output.split()[-2])
     else:
@@ -133,7 +131,7 @@ def get_workdir_netcdf_output(timeout=60):
                         i_f.split('.')[-1] == 'nc' and not os.path.islink(i_f)]
     size_k = -1.0
     du_command = ['du', '-c'] + output_files
-    rcode, output = shellout._exec_subprocess(du_command, timeout)
+    rcode, output = common.exec_subproc_timeout(du_command, timeout)
     if rcode == 0:
         size_k = float(output.split()[-2])
     return size_k

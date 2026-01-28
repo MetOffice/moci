@@ -241,7 +241,7 @@ def _setup_executable(common_env, envarinsts, run_info):
         # Create transient field namelist (note if we're creating a
         # namcouple on the fly, this will have to wait until after
         # the namcouple have been created).
-        _, _ = shellout._exec_subprocess('./OASIS_fields')
+        _, _ = common.exec_subproc('./OASIS_fields')
 
     for component in mct_envar['COUPLING_COMPONENTS'].split():
         if not component in common_env['models']:

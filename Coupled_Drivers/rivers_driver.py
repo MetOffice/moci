@@ -23,7 +23,6 @@ import sys
 import re
 import pathlib
 import common
-import shellout
 import error
 import dr_env_lib.rivers_def
 import dr_env_lib.env_lib
@@ -61,12 +60,12 @@ def _setup_dates(common_envar):
                                          task_length[2], task_length[3],
                                          task_length[4])
 
-    start_cmd = 'isodatetime %s -f "%s"' % (start_date, format_date)
-    end_cmd = 'isodatetime %s -f "%s" -s %s --calendar %s' % (start_date, format_date,
-                                                                 length_date, calendar)
+    start_cmd = ['isodatetime', '%s' % start_date, '-f', '%s' % format_date]
+    end_cmd = ['isodatetime', '%s' % start_date, '-f', '%s' % format_date,
+               '-s', '%s' % length_date, '--calendar', '%s' % calendar]
 
-    _, run_start = shellout._exec_subprocess(start_cmd)
-    _, run_end = shellout._exec_subprocess(end_cmd)
+    _, run_start = common.exec_subproc(start_cmd)
+    _, run_end = common.exec_subproc(end_cmd)
 
     return run_start.strip(), run_end.strip()
 
@@ -100,7 +99,7 @@ def _update_river_nl(river_envar, run_start, run_end):
     mod_timenl.replace()
 
     # Create the output directory, do not rely on f90nml
-    rcode, val = shellout._exec_subprocess('grep output_dir %s' % output_nl)
+    rcode, val = common.exec_subproc(['grep', 'output_dir', output_nl])
     if rcode == 0:
         try:
             output_dir = re.findall(r'[\"\'](.*?)[\"\']', val)[0].rstrip('/')

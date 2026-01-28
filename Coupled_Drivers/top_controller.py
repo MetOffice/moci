@@ -102,8 +102,8 @@ def _get_toprst_dir(top_nl_file):
     something different.
     '''
 
-    toprst_rcode, toprst_val = shellout._exec_subprocess(
-            'grep cn_trcrst_outdir %s' % top_nl_file)
+    toprst_rcode, toprst_val = common.exec_subproc([ \
+            'grep', 'cn_trcrst_outdir', top_nl_file])
 
     if toprst_rcode == 0:
         top_rst_dir = re.findall('[\"\'](.*?)[\"\']', toprst_val)[0]

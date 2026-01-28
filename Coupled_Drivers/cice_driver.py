@@ -185,21 +185,24 @@ def _setup_executable(common_env):
 
     #any variables containing things that can be globbed will start with gl_
     gl_step_int_match = '^dt='
-    _, step_int_val = shellout._exec_subprocess('grep %s %s' % (gl_step_int_match, cice_nl))
+    _, step_int_val = common.exec_subproc(['grep', gl_step_int_match,
+                                           cice_nl])
     cice_step_int = int(re.findall(r'^dt=(\d*)\.?', step_int_val)[0])
     cice_steps = (tot_runlen_sec - last_dump_seconds) // cice_step_int
 
-    _, cice_histfreq_val = shellout._exec_subprocess('grep histfreq %s' % cice_nl)
+    _, cice_histfreq_val = common.exec_subproc(['grep', 'histfreq', cice_nl])
     cice_histfreq_val = re.findall(r'histfreq\s*=\s*(.*)', cice_histfreq_val)[0]
     cice_histfreq = __expand_array(cice_histfreq_val)[1]
 
-    _, cice_histfreq_n_val = shellout._exec_subprocess('grep histfreq_n %s' % cice_nl)
+    _, cice_histfreq_n_val = common.exec_subproc([ \
+            'grep', 'histfreq_n', cice_nl])
     cice_histfreq_n_val = re.findall(r'histfreq_n\s*=\s*(.*)',
                                      cice_histfreq_n_val)[0]
     cice_histfreq_n = __expand_array(cice_histfreq_n_val)
     cice_histfreq_n = int(cice_histfreq_n.split(',')[0])
 
-    _, cice_age_rest_val = shellout._exec_subprocess('grep ^restart_age %s' % cice_nl)
+    _, cice_age_rest_val = common.exec_subproc([ \
+            'grep', '^restart_age', cice_nl])
     cice_age_rest = re.findall(r'restart_age\s*=\s*(.*)',
                                cice_age_rest_val)[0]
 
@@ -214,7 +217,7 @@ def _setup_executable(common_env):
                              cice_envar['SHARED_FNAME'])
             sys.exit(error.MISSING_DRIVER_FILE_ERROR)
         if not common_env['MODELBASIS']:
-            _, modelbasis_val = shellout._exec_subprocess('grep model_basis_time %s' %
+            _, modelbasis_val = common.exec_subproc('grep', 'model_basis_time',
                                                     cice_envar['SHARED_FNAME'])
             modelbasis_val = re.findall(r'model_basis_time\s*=\s*(.*)',
                                         modelbasis_val)
@@ -223,7 +226,7 @@ def _setup_executable(common_env):
         if not common_env['TASKSTART']:
             common_env.add('TASKSTART', common_env['MODELBASIS'])
         if not common_env['TASKLENGTH']:
-            _, tasklength_val = shellout._exec_subprocess('grep run_target_end %s' %
+            _, tasklength_val = common.exec_subproc('grep', 'run_target_end',
                                                     cice_envar['SHARED_FNAME'])
             tasklength_val = re.findall(r'run_target_end\s*=\s*(.*)',
                                         tasklength_val)
@@ -239,18 +242,20 @@ def _setup_executable(common_env):
                       // cice_step_int
     else:
         # This is probably a coupled NWP suite
-        cmd = 'rose date %s0101T0000Z %s' % (str(run_start[0]), cice_envar['TASK_START_TIME'])
-        _, time_since_year_start = shellout._exec_subprocess(cmd)
+        cmd = ['rose', 'date', str(run_start[0])+'0101T0000Z',
+               cice_envar['TASK_START_TIME']]
+        _, time_since_year_start = common.exec_subproc(cmd)
         #The next command works because rose date assumes
         # 19700101T0000Z is second 0
-        cmd = 'rose date --print-format=%%s 19700101T00Z --offset=%s' % time_since_year_start
+        cmd = ['rose', 'date', '--print-format=%s', '19700101T00Z',
+               '--offset='+time_since_year_start]
         # Account for restarting from a failure in next line
-        # shellout._exec_subprocess returns a tuple containing (return_code, output)
-        seconds_since_year_start = int(shellout._exec_subprocess(cmd)[1]) \
+        # common.exec_subproc returns a tuple containing (return_code, output)
+        seconds_since_year_start = int(common.exec_subproc(cmd)[1]) \
                                      + last_dump_seconds
         cice_istep0 = seconds_since_year_start/cice_step_int
 
-    _, cice_rst_val = shellout._exec_subprocess('grep restart_dir %s' % cice_nl)
+    _, cice_rst_val = common.exec_subproc(['grep', 'restart_dir', cice_nl])
     cice_rst = re.findall(r'restart_dir\s*=\s*\'(.*)\',', cice_rst_val)[0]
     if cice_rst[-1] == '/':
         cice_rst = cice_rst[:-1]
@@ -262,9 +267,9 @@ def _setup_executable(common_env):
         cice_restart = os.path.join(cice_rst,
                                     cice_envar['CICE_RESTART'])
 
-    _, cice_hist_val = shellout._exec_subprocess('grep history_dir %s' % cice_nl)
+    _, cice_hist_val = common.exec_subproc(['grep', 'history_dir', cice_nl])
     cice_hist = re.findall(r'history_dir\s*=\s*\'(.*)\',', cice_hist_val)[0]
-    _, cice_incond_val = shellout._exec_subprocess('grep incond_dir %s' % cice_nl)
+    _, cice_incond_val = common.exec_subproc(['grep', 'incond_dir', cice_nl])
     cice_incond = re.findall(r'incond_dir\s*=\s*\'(.*)\',', cice_incond_val)[0]
 
     for direc in (cice_rst, cice_hist, cice_incond):
@@ -308,7 +313,8 @@ def _setup_executable(common_env):
             if cice_age_rest == 'true':
                 cice_runtype = 'continue'
                 ice_ic = 'set in pointer file'
-                _, _ = shellout._exec_subprocess('%s > %s' % (cice_envar['CICE_START'], cice_restart))
+                _, _ = common.exec_subproc([cice_envar['CICE_START'],
+                                            '>', cice_restart])
                 sys.stdout.write('[INFO] %s > %s' %
                                  (cice_envar['CICE_START'],
                                   cice_restart))

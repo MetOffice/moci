@@ -46,8 +46,8 @@ def _get_si3rst(si3_nl_file):
     '''
     Retrieve the SI3 restart directory from the nemo namelist file
     '''
-    si3rst_rcode, si3rst_val = shellout._exec_subprocess(
-            'grep cn_icerst_outdir %s' % si3_nl_file)
+    si3rst_rcode, si3rst_val = common.exec_subproc([ \
+            'grep', 'cn_icerst_outdir', si3_nl_file])
     if si3rst_rcode == 0:
         si3_rst = re.findall('[\"\'](.*?)[\"\']', si3rst_val)[0]
         if si3_rst[-1] == '/':
