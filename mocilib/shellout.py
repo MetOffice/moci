@@ -44,8 +44,5 @@ def _exec_subprocess(cmd, verbose=False, timeout=None ,current_working_directory
     except subprocess.CalledProcessError as exc:
         output = exc.output
         rcode = exc.returncode
-    except OSError as exc:
-        output = exc.strerror
-        rcode = exc.errno
 
     return output, rcode
