@@ -555,31 +555,26 @@ PROGRAM mean_nemo
                   SELECT CASE( xtype )
                      CASE( NF90_BYTE )
                         ALLOCATE(inputdata_1d_i1(outdimlens(dimids(1))))
-                        inputdata_1d_i1(:)=0
                         iostat = nf90_get_var( ncid, jv, inputdata_1d_i1, start, indimlens)
                         meandata_1d_i1(:)=meandata_1d_i1(:)+inputdata_1d_i1(:)
                         DEALLOCATE(inputdata_1d_i1)
                      CASE( NF90_SHORT )
                         ALLOCATE(inputdata_1d_i2(outdimlens(dimids(1))))
-                        inputdata_1d_i2(:)=0
                         iostat = nf90_get_var( ncid, jv, inputdata_1d_i2, start, indimlens)
                         meandata_1d_i2(:)=meandata_1d_i2(:)+inputdata_1d_i2(:)
                         DEALLOCATE(inputdata_1d_i2)
                      CASE( NF90_INT )
                         ALLOCATE(inputdata_1d_i4(outdimlens(dimids(1))))
-                        inputdata_1d_i4(:)=0
                         iostat = nf90_get_var( ncid, jv, inputdata_1d_i4, start, indimlens)
                         meandata_1d_i4(:)=meandata_1d_i4(:)+inputdata_1d_i4(:)
                         DEALLOCATE(inputdata_1d_i4)
                      CASE( NF90_FLOAT )
                         ALLOCATE(inputdata_1d_sp(outdimlens(dimids(1))))
-                        inputdata_1d_sp(:)=0.0
                         iostat = nf90_get_var( ncid, jv, inputdata_1d_sp, start, indimlens)
                         meandata_1d_sp(:)=meandata_1d_sp(:)+inputdata_1d_sp(:)
                         DEALLOCATE(inputdata_1d_sp)
                      CASE( NF90_DOUBLE )
                         ALLOCATE(inputdata_1d_dp(outdimlens(dimids(1))))
-                        inputdata_1d_dp(:)=0.0
                         iostat = nf90_get_var( ncid, jv, inputdata_1d_dp, start, indimlens)
                         meandata_1d_dp(:)=meandata_1d_dp(:)+inputdata_1d_dp(:)
                         DEALLOCATE(inputdata_1d_dp)
@@ -594,31 +589,26 @@ PROGRAM mean_nemo
                   SELECT CASE( xtype )
                      CASE( NF90_BYTE )
                         ALLOCATE(inputdata_2d_i1(outdimlens(dimids(1)),outdimlens(dimids(2))))
-                        inputdata_2d_i1(:,:)=0
                         iostat = nf90_get_var( ncid, jv, inputdata_2d_i1, start, indimlens)
                         meandata_2d_i1(:,:)=meandata_2d_i1(:,:)+inputdata_2d_i1(:,:)
                         DEALLOCATE(inputdata_2d_i1)
                      CASE( NF90_SHORT )
                         ALLOCATE(inputdata_2d_i2(outdimlens(dimids(1)),outdimlens(dimids(2))))
-                        inputdata_2d_i2(:,:)=0
                         iostat = nf90_get_var( ncid, jv, inputdata_2d_i2, start, indimlens )
                         meandata_2d_i2(:,:)=meandata_2d_i2(:,:)+inputdata_2d_i2(:,:)
                         DEALLOCATE(inputdata_2d_i2)
                      CASE( NF90_INT )
                         ALLOCATE(inputdata_2d_i4(outdimlens(dimids(1)),outdimlens(dimids(2))))
-                        inputdata_2d_i4(:,:)=0
                         iostat = nf90_get_var( ncid, jv, inputdata_2d_i4, start, indimlens )
                         meandata_2d_i4(:,:)=meandata_2d_i4(:,:)+inputdata_2d_i4(:,:)
                         DEALLOCATE(inputdata_2d_i4)
                      CASE( NF90_FLOAT )
                         ALLOCATE(inputdata_2d_sp(outdimlens(dimids(1)),outdimlens(dimids(2))))
-                        inputdata_2d_sp(:,:)=0.0
                         iostat = nf90_get_var( ncid, jv, inputdata_2d_sp, start, indimlens )
                         meandata_2d_sp(:,:)=meandata_2d_sp(:,:)+inputdata_2d_sp(:,:)
                         DEALLOCATE(inputdata_2d_sp)
                      CASE( NF90_DOUBLE )
                         ALLOCATE(inputdata_2d_dp(outdimlens(dimids(1)),outdimlens(dimids(2))))
-                        inputdata_2d_dp(:,:)=0.0
                         iostat = nf90_get_var( ncid, jv, inputdata_2d_dp, start, indimlens )
                         meandata_2d_dp(:,:)=meandata_2d_dp(:,:)+inputdata_2d_dp(:,:)
                         DEALLOCATE(inputdata_2d_dp)
@@ -633,7 +623,6 @@ PROGRAM mean_nemo
                      CASE( NF90_BYTE )
                         ALLOCATE(inputdata_3d_i1(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
                           &                      outdimlens(dimids(3))))
-                        inputdata_3d_i1(:,:,:)=0
                         iostat = nf90_get_var( ncid, jv, inputdata_3d_i1, start, indimlens )
                         meandata_3d_i1(:,:,:)=meandata_3d_i1(:,:,:)+inputdata_3d_i1(:,:,:)
                         DEALLOCATE(inputdata_3d_i1)
@@ -642,7 +631,6 @@ PROGRAM mean_nemo
                      CASE( NF90_SHORT )
                         ALLOCATE(inputdata_3d_i2(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
                           &                      outdimlens(dimids(3))))
-                        inputdata_3d_i2(:,:,:)=0
                         iostat = nf90_get_var( ncid, jv, inputdata_3d_i2, start, indimlens )
                         meandata_3d_i2(:,:,:)=meandata_3d_i2(:,:,:)+inputdata_3d_i2(:,:,:)
                         DEALLOCATE(inputdata_3d_i2)
@@ -651,7 +639,6 @@ PROGRAM mean_nemo
                      CASE( NF90_INT )
                         ALLOCATE(inputdata_3d_i4(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
                           &                      outdimlens(dimids(3))))
-                        inputdata_3d_i4(:,:,:)=0
                         iostat = nf90_get_var( ncid, jv, inputdata_3d_i4, start, indimlens )
 
                         ! Do not include masked data in the average
@@ -669,7 +656,6 @@ PROGRAM mean_nemo
                      CASE( NF90_FLOAT )
                         ALLOCATE(inputdata_3d_sp(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
                           &                      outdimlens(dimids(3))))
-                        inputdata_3d_sp(:,:,:)=0.0
                         iostat = nf90_get_var( ncid, jv, inputdata_3d_sp, start, indimlens )
 
                         ! Do not include masked data in the average
@@ -687,7 +673,6 @@ PROGRAM mean_nemo
                      CASE( NF90_DOUBLE )
                         ALLOCATE(inputdata_3d_dp(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
                           &                      outdimlens(dimids(3))))
-                        inputdata_3d_dp(:,:,:)=0.0
                         iostat = nf90_get_var( ncid, jv, inputdata_3d_dp, start, indimlens )
 
                         ! Do not include masked data in the average
@@ -713,7 +698,6 @@ PROGRAM mean_nemo
                      CASE( NF90_BYTE )
                         ALLOCATE(inputdata_4d_i1(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
                           &                      outdimlens(dimids(3)),outdimlens(dimids(4))))
-                        inputdata_4d_i1(:,:,:,:)=0
                         iostat = nf90_get_var( ncid, jv, inputdata_4d_i1, start, indimlens )
                         meandata_4d_i1(:,:,:,:)=meandata_4d_i1(:,:,:,:)+inputdata_4d_i1(:,:,:,:)
                         DEALLOCATE(inputdata_4d_i1)
@@ -722,7 +706,6 @@ PROGRAM mean_nemo
                      CASE( NF90_SHORT )
                         ALLOCATE(inputdata_4d_i2(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
                           &                      outdimlens(dimids(3)),outdimlens(dimids(4))))
-                        inputdata_4d_i2(:,:,:,:)=0
                         iostat = nf90_get_var( ncid, jv, inputdata_4d_i2, start, indimlens )
                         meandata_4d_i2(:,:,:,:)=meandata_4d_i2(:,:,:,:)+inputdata_4d_i2(:,:,:,:)
                         DEALLOCATE(inputdata_4d_i2)
@@ -731,7 +714,6 @@ PROGRAM mean_nemo
                      CASE( NF90_INT )
                         ALLOCATE(inputdata_4d_i4(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
                           &                      outdimlens(dimids(3)),outdimlens(dimids(4))))
-                        inputdata_4d_i4(:,:,:,:)=0
                         iostat = nf90_get_var( ncid, jv, inputdata_4d_i4, start, indimlens )
 
                         ! Do not include masked data in the average
@@ -749,14 +731,12 @@ PROGRAM mean_nemo
                      CASE( NF90_FLOAT )
                         ALLOCATE(inputdata_4d_sp(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
                           &                      outdimlens(dimids(3)),outdimlens(dimids(4))))
-                        inputdata_4d_sp(:,:,:,:)=0.0
                         iostat = nf90_get_var( ncid, jv, inputdata_4d_sp, start, indimlens )
 
                         ! Thickness-weighting- get cell thickness
                         IF( l_thckwgt ) THEN
                            ALLOCATE(cellthick_4d_sp(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
                              &                      outdimlens(dimids(3)),outdimlens(dimids(4))))
-                           cellthick_4d_sp(:,:,:,:)=0.0
                            iostat = nf90_get_var( ncid, jv_thickness, cellthick_4d_sp, start, indimlens )
                         ENDIF
 
@@ -802,14 +782,12 @@ PROGRAM mean_nemo
                      CASE( NF90_DOUBLE )
                         ALLOCATE(inputdata_4d_dp(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
                           &                      outdimlens(dimids(3)),outdimlens(dimids(4))))
-                        inputdata_4d_dp(:,:,:,:)=0.0
                         iostat = nf90_get_var( ncid, jv, inputdata_4d_dp, start, indimlens )
 
                         ! Thickness-weighting- get cell thickness
                         IF( l_thckwgt ) THEN
                            ALLOCATE(cellthick_4d_dp(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
                              &                      outdimlens(dimids(3)),outdimlens(dimids(4))))
-                           cellthick_4d_dp(:,:,:,:)=0.0
                            iostat = nf90_get_var( ncid, jv_thickness, cellthick_4d_dp, start, indimlens )
                         ENDIF
 
