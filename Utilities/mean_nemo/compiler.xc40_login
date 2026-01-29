@@ -1,8 +1,32 @@
 #!/bin/bash
 
-rm -f mean_nemo.exe
+set -eu
 
-module swap craype-haswell craype-ivybridge
-module unload cray-netcdf
-module load cray-netcdf
-ftn -O0 mean_nemo.f90 -o mean_nemo_login.exe
+NAME=mean_nemo_login
+
+MODE=prod
+#MODE=dev
+#MODE=debug
+
+case ${MODE} in
+    prod)
+        opts="-O2 -Ovector1 -hfp0 -hflex_mp=intolerant"
+        ;;
+    dev)
+        opts="-O0"
+        ;;
+    debug)
+        opts="-O0 -Ovector0 -hflex_mp=intolerant -e CID -Ktrap=fp -g"
+        ;;
+    *)
+        echo "Mode \"${MODE}\" not supported"
+        exit 1
+        ;;
+esac
+
+[ -f ${NAME}.exe ] && rm -f ${NAME}.exe
+
+module unload cray-hdf5 cray-netcdf 2>/dev/null
+module load cray-hdf5 cray-netcdf
+
+ftn ${opts} mean_nemo.f90 -o ${NAME}.exe
