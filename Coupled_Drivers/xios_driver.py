@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2023-2025 Met Office. All rights reserved.
+ (C) Crown copyright 2023-2026 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -26,6 +26,8 @@ import shutil
 import common
 import dr_env_lib.xios_def
 import dr_env_lib.env_lib
+
+from mocilib import shellout
 
 def _copy_iodef_custom(xios_evar):
     '''

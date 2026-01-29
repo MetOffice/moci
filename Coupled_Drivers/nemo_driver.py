@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2023-2025 Met Office. All rights reserved.
+ (C) Crown copyright 2023-2026 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -28,6 +28,8 @@ import shutil
 import inc_days
 import common
 import error
+
+from mocilib import shellout
 
 try:
     import cf_units
