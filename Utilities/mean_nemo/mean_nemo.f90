@@ -26,8 +26,9 @@ PROGRAM mean_nemo
    INTEGER,PARAMETER :: sp=SELECTED_REAL_KIND(6,37)
    INTEGER,PARAMETER :: dp=SELECTED_REAL_KIND(12,307)
 
-   LOGICAL, PARAMETER :: l_verbose = .true. 
-    
+   LOGICAL, PARAMETER :: l_verbose = .true.
+   LOGICAL, PARAMETER :: l_timing = .false.
+
    CHARACTER(LEN=nf90_max_name) :: outfile, attname, dimname, varname, time, date, zone, timestamp
    CHARACTER(LEN=nf90_max_name), ALLOCATABLE :: filenames(:), indimnames(:)
    CHARACTER(LEN=256) :: standard_name,cell_methods 
@@ -126,7 +127,12 @@ PROGRAM mean_nemo
    REAL(dp), ALLOCATABLE, DIMENSION(:,:,:,:) :: meandata_4d_dp
    REAL(dp), ALLOCATABLE, DIMENSION(:,:,:,:) :: meancellthick_4d_dp
 
+   ! Timing-related scalars
+   INTEGER(i8) :: t_section, t_total, t_variable
+   REAL(dp) :: secondclock
 
+   ! Initialise timing
+   CALL timing_init(secondclock)
 
    !End of definitions
 
@@ -153,6 +159,9 @@ PROGRAM mean_nemo
   
    !---------------------------------------------------------------------------
    !2. Read in the global dimensions from the first input file and set up the output file
+
+   CALL timing_start(t_total)    ! Total time taken
+   CALL timing_start(t_section)
 
    iostat = nf90_open( TRIM(filenames(1)), nf90_share, ncid )
    IF( iostat /= nf90_noerr ) THEN
@@ -274,6 +283,7 @@ PROGRAM mean_nemo
    iostat = nf90_enddef( outid )    
    inncids(1) = ncid
    IF (l_verbose) WRITE(6,*)'Finished defining output file.'
+   CALL timing_stop(t_section, 'define output file') ; CALL timing_start(t_section)
 
    !---------------------------------------------------------------------------
    !3. Read in data from each file for each variable
@@ -292,9 +302,11 @@ PROGRAM mean_nemo
       ENDIF
    END DO
    IF (l_verbose) WRITE(6,*)'All input files open.'
+   CALL timing_stop(t_section, 'open input files') ; CALL timing_start(t_section)
 
    !Loop over all variables in first input file
    DO jv = 1, nvars
+      CALL timing_start(t_variable)    ! Total time taken for variable
 
       !3.2 Inquire variable to find out name and how many dimensions it has
 
@@ -518,11 +530,14 @@ PROGRAM mean_nemo
          STOP 15
       ENDIF
 
+      CALL timing_stop(t_section, 'query input files and allocate arrays')
+
       istop = 0
 
       ! If this variable is a function of the unlimited dimension then
       ! Average over unlimited dimension
       IF( l_doavg ) THEN
+         CALL timing_start(t_section)
 
          DO ifile = 1, nargs-1 !Loop through input files
 
@@ -855,6 +870,8 @@ PROGRAM mean_nemo
         
          END DO  !loop over files
 
+         CALL timing_stop(t_section, 'variable '//TRIM(varname)//'- calculate sums for mean') ; CALL timing_start(t_section)
+
          ! Divide numerator (sum of data, possibly thickness-weighted) by denominator (sum of cell thickness
          ! or number of time records) to get the mean, setting masked results to a fill value
          IF( ndims == 1 ) THEN
@@ -1006,10 +1023,13 @@ PROGRAM mean_nemo
             IF( l_ismasked .AND. .NOT. l_thckwgt ) DEALLOCATE(ntimes_4d)
          ENDIF
 
+         CALL timing_stop(t_section, 'variable '//TRIM(varname)//'- calculate mean')
+
       ELSE
          ! Else if the variable does not contain the unlimited dimension just read
          ! in from first file to be copied to outfile as it should be the same in all
          ! files (e.g. coordinates)
+         CALL timing_start(t_section)
 
          ncid = inncids(1)
          iostat = nf90_inquire_variable( ncid, jv, varname, xtype, ndims, dimids, natts)     
@@ -1094,10 +1114,13 @@ PROGRAM mean_nemo
             STOP 16
          ENDIF
 
+         CALL timing_stop(t_section, 'variable '//TRIM(varname)//'- copy data without time coordinate')
+
       ENDIF !End of check for unlimited dimension
 
       !---------------------------------------------------------------------------
       !4. Write data to output file and close files
+      CALL timing_start(t_section)
 
       IF (l_verbose) WRITE(6,*)'Writing variable '//TRIM(varname)//'...'
 
@@ -1200,9 +1223,13 @@ PROGRAM mean_nemo
          STOP 17
       ENDIF
 
+      CALL timing_stop(t_section, 'variable '//TRIM(varname)//'- write to file')
+      CALL timing_stop(t_variable, 'variable '//TRIM(varname)//'- total time')   ! Total time taken for variable
+
    END DO  !loop over variables
 
    !4.1 Close all input files
+   CALL timing_start(t_section)
 
    IF (l_verbose) WRITE(6,*)'Closing input files...'
    DO ifile = 1, nargs-1
@@ -1226,5 +1253,45 @@ PROGRAM mean_nemo
       WRITE(6,*) '    '//TRIM(nf90_strerror(iostat))
       STOP 19
    ENDIF
+
+   CALL timing_stop(t_section, 'close files')
+   CALL timing_stop(t_total, 'TOTAL')     ! Total time taken
+
+   CONTAINS
+
+      SUBROUTINE timing_init( secondclock )
+         ! Timing initialisation- get the processor clock count rate
+         REAL(dp), INTENT(out) :: secondclock
+         INTEGER(i8)           :: count_rate
+
+         IF( .NOT. l_timing ) RETURN
+
+         CALL SYSTEM_CLOCK(COUNT_RATE=count_rate)
+         secondclock = 1._dp / REAL(count_rate, dp)
+      END SUBROUTINE
+
+      SUBROUTINE timing_start( count )
+         ! Start a timing section
+         INTEGER(i8), INTENT(out) :: count
+
+         IF( .NOT. l_timing ) RETURN
+
+         CALL SYSTEM_CLOCK(COUNT=count)
+      END SUBROUTINE
+
+      SUBROUTINE timing_stop( count, sect )
+         ! Stop a timing section and report the time
+         INTEGER(i8),      INTENT(in) :: count    ! Counter returned by timing_start
+         CHARACTER(len=*), INTENT(in) :: sect
+         INTEGER(i8)                  :: count2
+         REAL(dp)                     :: elapsed
+         CHARACTER(len=128) :: clfmt = "(a,f0.6,'s')"
+
+         IF( .NOT. l_timing ) RETURN
+
+         CALL SYSTEM_CLOCK(COUNT=count2)
+         elapsed = REAL(count2-count, dp) * secondclock
+         WRITE(6,clfmt) 'TIMING ('//TRIM(sect)//'): ', elapsed
+      END SUBROUTINE
 
 END PROGRAM mean_nemo
