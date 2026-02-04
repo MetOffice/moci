@@ -1,9 +1,9 @@
 {# Setup graph required to run postproc tasks #}
 
 {% if SITE in MULTISTEP_FCM %}
-    {% set FCMPP_GRAPH = 'fcm_make_pp => fcm_make2_pp ' %}
+    {% set FCMPP_GRAPH = 'extract_source => fcm_make_pp => fcm_make2_pp' %}
 {% else %}
-    {% set FCMPP_GRAPH = 'fcm_make_pp' %}
+    {% set FCMPP_GRAPH = 'extract_source => fcm_make_pp' %}
 {% endif %}
 
 

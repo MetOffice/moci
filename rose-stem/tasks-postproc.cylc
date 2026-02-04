@@ -2,6 +2,10 @@
     
     [[PP_TESTS]]
 
+    [[extract_source]]
+        inherit = PP_BUILD_TASKS, SOURCE_EXTRACTION, EXTRACT_RESOURCE
+        
+
     [[fcm_make_pp]]
         inherit = PP_BUILD_TASKS, EXTRACT_RESOURCE
 
