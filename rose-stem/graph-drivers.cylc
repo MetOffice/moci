@@ -1,17 +1,17 @@
 {# Setup graph required to run postproc tasks #}
 {% set SPACER = "         " %}
 {%- do name_graphs.update({
-    "test_drivers_unit" : SPACER + "fcm_make_drivers => drivers_unittests & mct_validate_unittests" + (" => drivers_local_housekeeping" if HOUSEKEEPING else ""),
-    "test_drivers_misc" : SPACER  + "fcm_make_drivers => drivers_check_python_tabs" + (" => drivers_local_housekeeping" if HOUSEKEEPING else ""),
+    "test_drivers_unit" : SPACER + "extract_source => fcm_make_drivers => drivers_unittests & mct_validate_unittests" + (" => drivers_local_housekeeping" if HOUSEKEEPING else ""),
+    "test_drivers_misc" : SPACER  + "extract_source => fcm_make_drivers => drivers_check_python_tabs" + (" => drivers_local_housekeeping" if HOUSEKEEPING else ""),
     "test_drivers_run" : """
-         fcm_make_drivers => fcm_make2_drivers => coupled
-         fcm_make_um => recon => coupled
-         fcm_make_ocean => fcm_make2_ocean => recon
+         extract_source => fcm_make_drivers => fcm_make2_drivers => coupled
+         extract_source => extract_source_hpc => fcm_make_um => recon => coupled
+         extract_source => fcm_make_ocean => fcm_make2_ocean => recon
          install_ancil => recon
          recon => coupled => check_coupled" + (" => drivers_hpc_housekeeping" if HOUSEKEEPING else "")+"
          """,
-    "test_drivers_verify_metrics" : SPACER + "test_verify_metrics"  + (" => drivers_local_housekeeping" if HOUSEKEEPING else ""),
-    "test_drivers_plot_cpmip" : SPACER + "fcm_make_drivers => test_plot_cpmip_summary" + (" => drivers_local_housekeeping" if HOUSEKEEPING else ""),
+    "test_drivers_verify_metrics" : SPACER + "extract_source => test_verify_metrics"  + (" => drivers_local_housekeeping" if HOUSEKEEPING else ""),
+    "test_drivers_plot_cpmip" : SPACER + "extract_source => fcm_make_drivers => test_plot_cpmip_summary" + (" => drivers_local_housekeeping" if HOUSEKEEPING else ""),
                           }) %}
 
 {# Update groups with drivers tasks. -#}

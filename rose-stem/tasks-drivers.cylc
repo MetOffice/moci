@@ -5,6 +5,22 @@
 
     [[DRIVERS_TESTS]]
 
+    [[extract_source]]
+        inherit = DRIVERS_BUILD_TASKS, SOURCE_EXTRACTION, EXTRACT_RESOURCE
+
+    [[extract_source_hpc]]
+        inherit = DRIVERS_BUILD_TASKS, SOURCE_EXTRACTION, EXTRACT_RESOURCE
+        script  = """
+RELATIVE_SOURCE_DIRECTORY=`echo $SOURCE_DIRECTORY | sed 's|$HOME/||'`
+echo [EFNP] Running: ssh $HOSTNAME mkdir -p $RELATIVE_SOURCE_DIRECTORY
+ssh $HOSTNAME mkdir -p $RELATIVE_SOURCE_DIRECTORY
+echo [EFNP] Attemting rsync....  -avz --exclude='.*' $SOURCE_DIRECTORY/* $HOSTNAME:$RELATIVE_SOURCE_DIRECTORY/
+rsync -avz --exclude='.*' $SOURCE_DIRECTORY/* $HOSTNAME:$RELATIVE_SOURCE_DIRECTORY/
+sleep 5
+                  """
+	[[[environment]]]
+            HOSTNAME = $(rose host-select {{HOST_HPC}})
+
     [[fcm_make_drivers]]
         inherit = DRIVERS_BUILD_TASKS, EXTRACT_RESOURCE
 
