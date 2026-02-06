@@ -1,5 +1,11 @@
 #! /usr/bin/env python3
 
+# -----------------------------------------------------------------------------
+# (C) Crown copyright Met Office. All rights reserved.
+# The file LICENCE, distributed with this code, contains details of the terms
+# under which the code may be used.
+# -----------------------------------------------------------------------------
+
 import os
 import xarray as xr
 import numpy as np
