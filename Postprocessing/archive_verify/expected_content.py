@@ -350,7 +350,7 @@ class RestartFiles(ArchivedFiles):
         for rstcoll in restart_files:
             restart_files[rstcoll] = self.remove_invalid(restart_files[rstcoll])
 
-        if self.finalcycle and not coll.startswith('c'):
+        if self.finalcycle and (self.model != 'unicicles'):
             # Additionally archive the end date dump.
             # Ignore UniCiCles because it does not necessarily
             # run on the final cycle.
