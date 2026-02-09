@@ -1,28 +1,28 @@
 {% set MODULE_CMD = 'module use /data/users/moci/modules/modules; module load GC4-PrgEnv/2024-01-cpe23.05-cce15.0.0/5083; module load scitools;' %}
 
     [[HPC_RESOURCE]]
-	env-script = "eval $(rose task-env)"
+        env-script = "eval $(rose task-env)"
         pre-script = "{{MODULE_CMD}} module list"
-	platform = {{ HOST_HPC }}
+        platform = {{ HOST_HPC }}
 	[[[environment]]]
-	    PLATFORM = ex1a
-	    CONFIG = meto-ex1a-cce
-	    UMDIR = /common/internal/umdir
-	    UM_NSTALL_DIR = /common/internal/umdir
+            PLATFORM = ex1a
+            CONFIG = meto-ex1a-cce
+            UMDIR = /common/internal/umdir
+            UM_NSTALL_DIR = /common/internal/umdir
             OCEANDIR = /common/internal/ocean
-	    INPUT_FILES = /data/users/moci/INPUT_FILES
-	    CMIP6_ANCILS = $INPUT_FILES/GC4_INPUTS_20220804/cmip6
+            INPUT_FILES = /data/users/moci/INPUT_FILES
+            CMIP6_ANCILS = $INPUT_FILES/GC4_INPUTS_20220804/cmip6
         [[[directives]]]
             -W umask=0022
 
     [[EXTRACT_RESOURCE]]
-	[[[environment]]]
-	    CONFIG = meto-ex-cce
-	    OPTIM_LEVEL = safe
+        [[[environment]]]
+            CONFIG = meto-ex-cce
+            OPTIM_LEVEL = safe
 
     [[BUILD_RESOURCE]]
         inherit = HPC_RESOURCE
-	execution time limit = PT1H30M
+        execution time limit = PT1H30M
         [[[environment]]]
             ARCHIVE_FCM_MAKE = true
             ROSE_TASK_N_JOBS = 6
@@ -39,7 +39,7 @@
         [[[environment]]]
             ROSE_TASK_N_JOBS = 1
         [[[directives]]]
-	    -l ncpus = 1
+            -l ncpus = 1
             -q = shared
 
     [[DRIVERS_SCRIPTING_RESOURCE]]
@@ -53,7 +53,7 @@
 
     [[INSTALL_ANCIL_RESOURCE]]
         inherit = None, SCRIPTS_INSTALL_HPC_RESOURCE
-	execution time limit = PT20M
+        execution time limit = PT20M
 
     [[ATMOS_RESOURCE]]
         [[[environment]]]
@@ -74,7 +74,7 @@
             {% set NEMO_SELECT = '{{OCEAN_NODES}}:ncpus=256:mpiprocs={{OCEAN_PPN}}' %}
             {% set XIOS_SELECT = '{{XIOS_NODES}}:ncpus=256:mpiprocs={{XIOS_NPROC}}' %}
 {% if IOS_NPROC > 0 %}
-	    UKMO_THREAD_MULTI = true
+            UKMO_THREAD_MULTI = true
 {% endif %}
             ROSE_LAUNCHER_PREOPTS_NEMO = -n {{NEMO_NPROC}} -d 1
             ROSE_LAUNCHER_PREOPTS_XIOS  = -n {{XIOS_NPROC}} -d 1
@@ -87,14 +87,14 @@
 {% if IOS_NPROC is defined and IOS_NPROC > 0 %}
             UKMO_THREAD_MULTI=true
 {% endif %}
-	    PPN = {{PPN}}
+            PPN = {{PPN}}
             L_MCT_VALIDATE = true
             CPMIP_ANALYSIS = true
-	    IO_COST = true
+            IO_COST = true
             DATA_INTENSITY = true
-	    COKMPLEXITY = false
-	    TOTAL_POWER_CONSUMPTION_NEEDED = 4.8
-	    NODES_IN_HPC_NEEDED = 12932	    
+            COMPLEXITY = false
+            TOTAL_POWER_CONSUMPTION_NEEDED = 4.8
+            NODES_IN_HPC_NEEDED = 12932	    
        [[[directives]]] 
             -l select = '{{ATMOS_NODES}}:ncpus=256:mpiprocs={{ATMOS_MPIPROC_PN}}+{{OCEAN_NODES}}:ncpus=256:mpiprocs={{OCEAN_PPN}}+{{XIOS_NODES}}:ncpus=256:mpiprocs={{XIOS_NPROC}}'
 
