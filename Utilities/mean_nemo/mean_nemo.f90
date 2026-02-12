@@ -19,6 +19,8 @@ PROGRAM mean_nemo
    !       Dave Storkey Feb 2016  - Add support for thickness weighted time-mean variables
    !       Daley Calvert Oct 2024 - Use a more robust approach to missing data
    !                                and resolve issues with thickness-weighting
+   !       Daley Calvert Feb 2026 - Add support for time-varying masking
+   !                              - Add support for 5D data
    !-----------------------------------------------------------------------------
   
    USE netcdf
