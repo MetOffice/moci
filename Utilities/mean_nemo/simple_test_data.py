@@ -58,6 +58,7 @@ data_masked_isel = [                                        # Points to be maske
     {'t': [0], 'x': [0], 'y': [0], 'z': [0]},
     {'t': [2], 'x': [1], 'y': [0], 'z': [0]},
     {'t': [4], 'x': [1], 'y': [1], 'z': [0]},
+    {'t': [2, 4], 'b': [3], 'x': [2]},
     ]
 cellthk_masked_isel = [                                     # Points to be masked in the FULL cell thickness data
     {'x': [2], 'y': [4]},
@@ -70,7 +71,7 @@ data_isel = {                                               # Data shapes to be 
     '2d': {'b': 0, 'z': 0, 'y': 0},
     '3d': {'b': 0, 'z': 0},
     '4d': {'b': 0},
-    # '5d': None,
+    '5d': None,
     }
 data_fillvals = {                                           # Data types to be generated and the fill values
     'byte': -1,                                             # to be used for masked data
@@ -314,7 +315,8 @@ for dtype_name in data_dtypes:
                     if (time_name == 'notime') and (shape_name == '1d'):
                         continue
                     # Skip masked cases not supported by mean_nemo
-                    if (mask_name == 'masked') and not (shape_name in ('3d', '4d') and dtype in (np.intc, np.single, np.double)):
+                    if (mask_name == 'masked') and not (shape_name in ('3d', '4d', '5d') and
+                                                        dtype in (np.intc, np.single, np.double)):
                         continue
 
                     # Get input data and its mask

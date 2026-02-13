@@ -19,6 +19,8 @@ PROGRAM mean_nemo
    !       Dave Storkey Feb 2016  - Add support for thickness weighted time-mean variables
    !       Daley Calvert Oct 2024 - Use a more robust approach to missing data
    !                                and resolve issues with thickness-weighting
+   !       Daley Calvert Feb 2026 - Add support for time-varying masking
+   !                              - Add support for 5D data
    !-----------------------------------------------------------------------------
   
    USE netcdf
@@ -46,7 +48,7 @@ PROGRAM mean_nemo
    INTEGER :: natts, attid, xtype, varid
    ! ntimes is total number of time points to average over (for unmasked data)
    ! ntimes_local is number of time points in each file
-   INTEGER :: jv, jv_thickness, ndims, nvars, dimlen, dimids(4), ntimes, ntimes_local
+   INTEGER :: jv, jv_thickness, ndims, nvars, dimlen, dimids(5), ntimes, ntimes_local
    INTEGER :: dimid, unlimitedDimId, unlimitedDimId_local, varunlimitedDimId
    INTEGER :: chunksize = 32000000
    INTEGER, ALLOCATABLE  :: outdimids(:), outdimlens(:), inncids(:)
@@ -63,30 +65,35 @@ PROGRAM mean_nemo
    ! Time counters (for masked data)
    INTEGER(i2), ALLOCATABLE, DIMENSION(:,:,:) :: ntimes_3d
    INTEGER(i2), ALLOCATABLE, DIMENSION(:,:,:,:) :: ntimes_4d
+   INTEGER(i2), ALLOCATABLE, DIMENSION(:,:,:,:,:) :: ntimes_5d
 
    !Int 1 versions of the local data arrays
    INTEGER(i1), ALLOCATABLE, SAVE, DIMENSION(:) :: inputdata_1d_i1
    INTEGER(i1), ALLOCATABLE, SAVE, DIMENSION(:,:) :: inputdata_2d_i1
    INTEGER(i1), ALLOCATABLE, SAVE, DIMENSION(:,:,:) :: inputdata_3d_i1
    INTEGER(i1), ALLOCATABLE, SAVE, DIMENSION(:,:,:,:) :: inputdata_4d_i1
+   INTEGER(i1), ALLOCATABLE, SAVE, DIMENSION(:,:,:,:,:) :: inputdata_5d_i1
 
    !Int 2 versions of the local data arrays
    INTEGER(i2), ALLOCATABLE, SAVE, DIMENSION(:) :: inputdata_1d_i2
    INTEGER(i2), ALLOCATABLE, SAVE, DIMENSION(:,:) :: inputdata_2d_i2
    INTEGER(i2), ALLOCATABLE, SAVE, DIMENSION(:,:,:) :: inputdata_3d_i2
    INTEGER(i2), ALLOCATABLE, SAVE, DIMENSION(:,:,:,:) :: inputdata_4d_i2
+   INTEGER(i2), ALLOCATABLE, SAVE, DIMENSION(:,:,:,:,:) :: inputdata_5d_i2
 
    !Int 4 versions of the local data arrays
    INTEGER(i4), ALLOCATABLE, SAVE, DIMENSION(:) :: inputdata_1d_i4
    INTEGER(i4), ALLOCATABLE, SAVE, DIMENSION(:,:) :: inputdata_2d_i4
    INTEGER(i4), ALLOCATABLE, SAVE, DIMENSION(:,:,:) :: inputdata_3d_i4
    INTEGER(i4), ALLOCATABLE, SAVE, DIMENSION(:,:,:,:) :: inputdata_4d_i4
+   INTEGER(i4), ALLOCATABLE, SAVE, DIMENSION(:,:,:,:,:) :: inputdata_5d_i4
 
    !Real 4 versions of the local data arrays
    REAL(sp), ALLOCATABLE, SAVE, DIMENSION(:) :: inputdata_1d_sp
    REAL(sp), ALLOCATABLE, SAVE, DIMENSION(:,:) :: inputdata_2d_sp
    REAL(sp), ALLOCATABLE, SAVE, DIMENSION(:,:,:) :: inputdata_3d_sp
    REAL(sp), ALLOCATABLE, SAVE, DIMENSION(:,:,:,:) :: inputdata_4d_sp
+   REAL(sp), ALLOCATABLE, SAVE, DIMENSION(:,:,:,:,:) :: inputdata_5d_sp
    REAL(sp), ALLOCATABLE, SAVE, DIMENSION(:,:,:,:) :: cellthick_4d_sp
 
    !Real 8 versions of the local data arrays
@@ -94,6 +101,7 @@ PROGRAM mean_nemo
    REAL(dp), ALLOCATABLE, SAVE, DIMENSION(:,:) :: inputdata_2d_dp
    REAL(dp), ALLOCATABLE, SAVE, DIMENSION(:,:,:) :: inputdata_3d_dp
    REAL(dp), ALLOCATABLE, SAVE, DIMENSION(:,:,:,:) :: inputdata_4d_dp
+   REAL(dp), ALLOCATABLE, SAVE, DIMENSION(:,:,:,:,:) :: inputdata_5d_dp
    REAL(dp), ALLOCATABLE, SAVE, DIMENSION(:,:,:,:) :: cellthick_4d_dp
 
    !Int 1 versions of the global data arrays
@@ -102,6 +110,7 @@ PROGRAM mean_nemo
    INTEGER(i1), ALLOCATABLE, DIMENSION(:,:) :: meandata_2d_i1
    INTEGER(i1), ALLOCATABLE, DIMENSION(:,:,:) :: meandata_3d_i1
    INTEGER(i1), ALLOCATABLE, DIMENSION(:,:,:,:) :: meandata_4d_i1
+   INTEGER(i1), ALLOCATABLE, DIMENSION(:,:,:,:,:) :: meandata_5d_i1
 
    !Int 2 versions of the global data arrays
    INTEGER(i2) :: meandata_0d_i2
@@ -109,6 +118,7 @@ PROGRAM mean_nemo
    INTEGER(i2), ALLOCATABLE, DIMENSION(:,:) :: meandata_2d_i2
    INTEGER(i2), ALLOCATABLE, DIMENSION(:,:,:) :: meandata_3d_i2
    INTEGER(i2), ALLOCATABLE, DIMENSION(:,:,:,:) :: meandata_4d_i2
+   INTEGER(i2), ALLOCATABLE, DIMENSION(:,:,:,:,:) :: meandata_5d_i2
 
    !Int 4 versions of the global data arrays
    INTEGER(i4) :: meandata_0d_i4
@@ -116,13 +126,15 @@ PROGRAM mean_nemo
    INTEGER(i4), ALLOCATABLE, DIMENSION(:,:) :: meandata_2d_i4
    INTEGER(i4), ALLOCATABLE, DIMENSION(:,:,:) :: meandata_3d_i4
    INTEGER(i4), ALLOCATABLE, DIMENSION(:,:,:,:) :: meandata_4d_i4
- 
+   INTEGER(i4), ALLOCATABLE, DIMENSION(:,:,:,:,:) :: meandata_5d_i4
+
    !Real 4 versions of the global data arrays
    REAL(sp) :: meandata_0d_sp
    REAL(sp), ALLOCATABLE, DIMENSION(:) :: meandata_1d_sp
    REAL(sp), ALLOCATABLE, DIMENSION(:,:) :: meandata_2d_sp
    REAL(sp), ALLOCATABLE, DIMENSION(:,:,:) :: meandata_3d_sp
    REAL(sp), ALLOCATABLE, DIMENSION(:,:,:,:) :: meandata_4d_sp
+   REAL(sp), ALLOCATABLE, DIMENSION(:,:,:,:,:) :: meandata_5d_sp
    REAL(sp), ALLOCATABLE, DIMENSION(:,:,:,:) :: meancellthick_4d_sp
 
    !Real 8 versions of the global data arrays
@@ -131,6 +143,7 @@ PROGRAM mean_nemo
    REAL(dp), ALLOCATABLE, DIMENSION(:,:) :: meandata_2d_dp
    REAL(dp), ALLOCATABLE, DIMENSION(:,:,:) :: meandata_3d_dp
    REAL(dp), ALLOCATABLE, DIMENSION(:,:,:,:) :: meandata_4d_dp
+   REAL(dp), ALLOCATABLE, DIMENSION(:,:,:,:,:) :: meandata_5d_dp
    REAL(dp), ALLOCATABLE, DIMENSION(:,:,:,:) :: meancellthick_4d_dp
 
    ! Timing-related scalars
@@ -373,11 +386,10 @@ PROGRAM mean_nemo
          WRITE(6,*) "        If you want to go ahead anyway (not recommended) remove cell_methods attribute from variable."
          STOP 13
       ENDIF
-      IF( l_thckwgt .AND. ( ( xtype /= NF90_FLOAT .AND. xtype /= NF90_DOUBLE ) .OR. ndims /= 4 ) ) THEN
+      IF( l_thckwgt .AND. .NOT. ( ( xtype == NF90_FLOAT .OR. xtype == NF90_DOUBLE ) .AND. ndims == 4 ) ) THEN
          WRITE(6,*) "ERROR : Thickness-weighted time-mean variable "//TRIM(varname)//" found in file "//TRIM(filenames(ifile))
-         WRITE(6,*) "        This utility currently only takes account of thickness weighting for 4D FLOATS or 4D DOUBLES."
-         WRITE(6,*) "       "//TRIM(varname)//" either has a different number of dimensions or is not a FLOAT or a DOUBLE."
-         WRITE(6,*) "        If you want to mean the variable without thickness weighting remove cell_methods attribute from variable."
+         WRITE(6,*) "        Thickness-weighted averaging is only supported for 4D single- or double-precision "//&
+            &"floating point variables. Remove the cell_methods attribute to perform averaging without thickness-weighting."
          STOP 13
       ENDIF
 
@@ -530,9 +542,54 @@ PROGRAM mean_nemo
                WRITE(6,*)'Unknown nf90 type: ', xtype
                STOP 14
          END SELECT
+
+      ELSEIF( ndims == 5 ) THEN
+
+         ! Denominator- # of records, either a scalar (normal average) or array (masked average)
+         IF( l_ismasked ) THEN
+            ALLOCATE( ntimes_5d( outdimlens(dimids(1)),outdimlens(dimids(2)),    &
+              &                  outdimlens(dimids(3)),outdimlens(dimids(4)),    &
+              &                  outdimlens(dimids(5)) ))
+            ntimes_5d(:,:,:,:,:) = 0
+         ELSE
+            ntimes = 0
+         ENDIF
+
+         ! Numerator- sum over time of the data
+         SELECT CASE( xtype )
+            CASE( NF90_BYTE )
+               ALLOCATE(meandata_5d_i1(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
+                 &                     outdimlens(dimids(3)),outdimlens(dimids(4)),     &
+                 &                     outdimlens(dimids(5))))
+               meandata_5d_i1(:,:,:,:,:)=0
+            CASE( NF90_SHORT )
+               ALLOCATE(meandata_5d_i2(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
+                 &                     outdimlens(dimids(3)),outdimlens(dimids(4)),     &
+                 &                     outdimlens(dimids(5))))
+               meandata_5d_i2(:,:,:,:,:)=0
+            CASE( NF90_INT )
+               ALLOCATE(meandata_5d_i4(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
+                 &                     outdimlens(dimids(3)),outdimlens(dimids(4)),     &
+                 &                     outdimlens(dimids(5))))
+               meandata_5d_i4(:,:,:,:,:)=0
+            CASE( NF90_FLOAT )
+               ALLOCATE(meandata_5d_sp(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
+                 &                     outdimlens(dimids(3)),outdimlens(dimids(4)),     &
+                 &                     outdimlens(dimids(5))))
+               meandata_5d_sp(:,:,:,:,:)=0.0
+            CASE( NF90_DOUBLE )
+               ALLOCATE(meandata_5d_dp(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
+                 &                     outdimlens(dimids(3)),outdimlens(dimids(4)),     &
+                 &                     outdimlens(dimids(5))))
+               meandata_5d_dp(:,:,:,:,:)=0.0
+            CASE DEFAULT
+               WRITE(6,*)'Unknown nf90 type: ', xtype
+               STOP 14
+         END SELECT
+
       ELSE
          WRITE(6,*)'E R R O R: '
-         WRITE(6,*)'The netcdf variable has more than 4 dimensions which is not taken into account'
+         WRITE(6,*)'The netcdf variable has more than 5 dimensions which is not taken into account'
          STOP 15
       ENDIF
 
@@ -856,9 +913,89 @@ PROGRAM mean_nemo
                         STOP 14
                   END SELECT
 
+               ELSEIF( ndims == 5 ) THEN
+
+                  SELECT CASE( xtype )
+                     CASE( NF90_BYTE )
+                        ALLOCATE(inputdata_5d_i1(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
+                           &                     outdimlens(dimids(3)),outdimlens(dimids(4)),     &
+                           &                     outdimlens(dimids(5))))
+                        iostat = nf90_get_var( ncid, jv, inputdata_5d_i1, start, indimlens )
+                        meandata_5d_i1(:,:,:,:,:)=meandata_5d_i1(:,:,:,:,:)+inputdata_5d_i1(:,:,:,:,:)
+                        DEALLOCATE(inputdata_5d_i1)
+
+                        ntimes = ntimes + 1
+                     CASE( NF90_SHORT )
+                        ALLOCATE(inputdata_5d_i2(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
+                           &                     outdimlens(dimids(3)),outdimlens(dimids(4)),     &
+                           &                     outdimlens(dimids(5))))
+                        iostat = nf90_get_var( ncid, jv, inputdata_5d_i2, start, indimlens )
+                        meandata_5d_i2(:,:,:,:,:)=meandata_5d_i2(:,:,:,:,:)+inputdata_5d_i2(:,:,:,:,:)
+                        DEALLOCATE(inputdata_5d_i2)
+
+                        ntimes = ntimes + 1
+                     CASE( NF90_INT )
+                        ALLOCATE(inputdata_5d_i4(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
+                           &                     outdimlens(dimids(3)),outdimlens(dimids(4)),     &
+                           &                     outdimlens(dimids(5))))
+                        iostat = nf90_get_var( ncid, jv, inputdata_5d_i4, start, indimlens )
+
+                        ! Do not include masked data in the average
+                        IF( l_ismasked ) THEN
+                           WHERE( inputdata_5d_i4(:,:,:,:,:) /= inputdata_fill_value_i4 )
+                              meandata_5d_i4(:,:,:,:,:) = meandata_5d_i4(:,:,:,:,:) + inputdata_5d_i4(:,:,:,:,:)
+                              ntimes_5d(:,:,:,:,:) = ntimes_5d(:,:,:,:,:) + 1
+                           ENDWHERE
+                        ELSE
+                           meandata_5d_i4(:,:,:,:,:) = meandata_5d_i4(:,:,:,:,:) + inputdata_5d_i4(:,:,:,:,:)
+                           ntimes = ntimes + 1
+                        ENDIF
+
+                        DEALLOCATE(inputdata_5d_i4)
+                     CASE( NF90_FLOAT )
+                        ALLOCATE(inputdata_5d_sp(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
+                           &                     outdimlens(dimids(3)),outdimlens(dimids(4)),     &
+                           &                     outdimlens(dimids(5))))
+                        iostat = nf90_get_var( ncid, jv, inputdata_5d_sp, start, indimlens )
+
+                        ! Do not include masked data in the average
+                        IF( l_ismasked ) THEN
+                           WHERE( inputdata_5d_sp(:,:,:,:,:) /= inputdata_fill_value_sp )
+                              meandata_5d_sp(:,:,:,:,:) = meandata_5d_sp(:,:,:,:,:) + inputdata_5d_sp(:,:,:,:,:)
+                              ntimes_5d(:,:,:,:,:) = ntimes_5d(:,:,:,:,:) + 1
+                           ENDWHERE
+                        ELSE
+                           meandata_5d_sp(:,:,:,:,:) = meandata_5d_sp(:,:,:,:,:) + inputdata_5d_sp(:,:,:,:,:)
+                           ntimes = ntimes + 1
+                        ENDIF
+
+                        DEALLOCATE(inputdata_5d_sp)
+                     CASE( NF90_DOUBLE )
+                        ALLOCATE(inputdata_5d_dp(outdimlens(dimids(1)),outdimlens(dimids(2)),     &
+                           &                     outdimlens(dimids(3)),outdimlens(dimids(4)),     &
+                           &                     outdimlens(dimids(5))))
+                        iostat = nf90_get_var( ncid, jv, inputdata_5d_dp, start, indimlens )
+
+                        ! Do not include masked data in the average
+                        IF( l_ismasked ) THEN
+                           WHERE( inputdata_5d_dp(:,:,:,:,:) /= inputdata_fill_value_dp )
+                              meandata_5d_dp(:,:,:,:,:) = meandata_5d_dp(:,:,:,:,:) + inputdata_5d_dp(:,:,:,:,:)
+                              ntimes_5d(:,:,:,:,:) = ntimes_5d(:,:,:,:,:) + 1
+                           ENDWHERE
+                        ELSE
+                           meandata_5d_dp(:,:,:,:,:) = meandata_5d_dp(:,:,:,:,:) + inputdata_5d_dp(:,:,:,:,:)
+                           ntimes = ntimes + 1
+                        ENDIF
+
+                        DEALLOCATE(inputdata_5d_dp)
+                     CASE DEFAULT
+                        WRITE(6,*)'Unknown nf90 type: ', xtype
+                        STOP 14
+                  END SELECT
+
                ELSE
                   WRITE(6,*)'E R R O R: '
-                  WRITE(6,*)'The netcdf variable has more than 4 dimensions which is not taken into account'
+                  WRITE(6,*)'The netcdf variable has more than 5 dimensions which is not taken into account'
                   STOP 15
                ENDIF  !End of if statement over number of dimensions
  
@@ -1027,6 +1164,50 @@ PROGRAM mean_nemo
                   STOP 14
             END SELECT
             IF( l_ismasked .AND. .NOT. l_thckwgt ) DEALLOCATE(ntimes_4d)
+
+         ELSEIF( ndims == 5 ) THEN
+
+            SELECT CASE( xtype )
+               CASE( NF90_BYTE )
+                  meandata_5d_i1(:,:,:,:,:)=meandata_5d_i1(:,:,:,:,:)/ntimes
+               CASE( NF90_SHORT )
+                  meandata_5d_i2(:,:,:,:,:)=meandata_5d_i2(:,:,:,:,:)/ntimes
+               CASE( NF90_INT )
+                  IF( l_ismasked ) THEN
+                     WHERE( ntimes_5d(:,:,:,:,:) == 0 )
+                        meandata_5d_i4(:,:,:,:,:) = outputdata_fill_value_i4
+                     ELSEWHERE
+                        meandata_5d_i4(:,:,:,:,:) = meandata_5d_i4(:,:,:,:,:) / ntimes_5d(:,:,:,:,:)
+                     ENDWHERE
+                  ELSE
+                     meandata_5d_i4(:,:,:,:,:) = meandata_5d_i4(:,:,:,:,:) / ntimes
+                  ENDIF
+               CASE( NF90_FLOAT )
+                  IF( l_ismasked ) THEN
+                     WHERE( ntimes_5d(:,:,:,:,:) == 0 )
+                        meandata_5d_sp(:,:,:,:,:) = outputdata_fill_value_sp
+                     ELSEWHERE
+                        meandata_5d_sp(:,:,:,:,:) = meandata_5d_sp(:,:,:,:,:) / ntimes_5d(:,:,:,:,:)
+                     ENDWHERE
+                  ELSE
+                     meandata_5d_sp(:,:,:,:,:) = meandata_5d_sp(:,:,:,:,:) / ntimes
+                  ENDIF
+               CASE( NF90_DOUBLE )
+                  IF( l_ismasked ) THEN
+                     WHERE( ntimes_5d(:,:,:,:,:) == 0 )
+                        meandata_5d_dp(:,:,:,:,:) = outputdata_fill_value_dp
+                     ELSEWHERE
+                        meandata_5d_dp(:,:,:,:,:) = meandata_5d_dp(:,:,:,:,:) / ntimes_5d(:,:,:,:,:)
+                     ENDWHERE
+                  ELSE
+                     meandata_5d_dp(:,:,:,:,:) = meandata_5d_dp(:,:,:,:,:) / ntimes
+                  ENDIF
+               CASE DEFAULT
+                  WRITE(6,*)'Unknown nf90 type: ', xtype
+                  STOP 14
+            END SELECT
+            IF( l_ismasked ) DEALLOCATE(ntimes_5d)
+
          ENDIF
 
          CALL timing_stop(t_section, 'variable '//TRIM(varname)//'- calculate mean')
@@ -1111,6 +1292,24 @@ PROGRAM mean_nemo
                   WRITE(6,*)'Unknown nf90 type: ', xtype
                   STOP 14
             END SELECT
+
+         ELSEIF( ndims == 5 ) THEN
+
+           SELECT CASE( xtype )
+             CASE( NF90_BYTE )
+               iostat = nf90_get_var( ncid, jv, meandata_5d_i1 )
+             CASE( NF90_SHORT )
+               iostat = nf90_get_var( ncid, jv, meandata_5d_i2 )
+             CASE( NF90_INT )
+               iostat = nf90_get_var( ncid, jv, meandata_5d_i4 )
+             CASE( NF90_FLOAT )
+               iostat = nf90_get_var( ncid, jv, meandata_5d_sp )
+             CASE( NF90_DOUBLE )
+               iostat = nf90_get_var( ncid, jv, meandata_5d_dp )
+             CASE DEFAULT
+                WRITE(6,*)'Unknown nf90 type: ', xtype
+                STOP 14
+           END SELECT
 
          ENDIF !End of ndims if statements
 
@@ -1217,6 +1416,29 @@ PROGRAM mean_nemo
                iostat = nf90_put_var( outid, jv, meandata_4d_dp )
                DEALLOCATE(meandata_4d_dp)
             CASE DEFAULT   
+               WRITE(6,*)'Unknown nf90 type: ', xtype
+               STOP 14
+         END SELECT
+
+      ELSEIF( ndims == 5 ) THEN
+
+         SELECT CASE( xtype )
+            CASE( NF90_BYTE )
+               iostat = nf90_put_var( outid, jv, meandata_5d_i1 )
+               DEALLOCATE(meandata_5d_i1)
+            CASE( NF90_SHORT )
+               iostat = nf90_put_var( outid, jv, meandata_5d_i2 )
+               DEALLOCATE(meandata_5d_i2)
+            CASE( NF90_INT )
+               iostat = nf90_put_var( outid, jv, meandata_5d_i4 )
+               DEALLOCATE(meandata_5d_i4)
+            CASE( NF90_FLOAT )
+               iostat = nf90_put_var( outid, jv, meandata_5d_sp )
+               DEALLOCATE(meandata_5d_sp)
+            CASE( NF90_DOUBLE )
+               iostat = nf90_put_var( outid, jv, meandata_5d_dp )
+               DEALLOCATE(meandata_5d_dp)
+            CASE DEFAULT
                WRITE(6,*)'Unknown nf90 type: ', xtype
                STOP 14
          END SELECT
