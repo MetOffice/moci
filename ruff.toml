@@ -1,0 +1,87 @@
+# Ruff configuration file
+# Converted from Utilities/pylint.rc
+
+# Line length
+line-length = 80
+
+# Exclude patterns
+extend-exclude = ["CVS"]
+
+[lint]
+# Enable all rules by default, then selectively disable
+select = ["ALL"]
+
+# Disable rules equivalent to pylint disabled checks
+ignore = [
+    # R0201: Method could be a function (no-self-use)
+    "PLR6301",
+    # R0401: Cyclic import
+    "PLC0415",
+    # R0801: Similar lines in files (duplicate-code)
+    "PLC0414",
+    # R0901: Too many ancestors
+    "PLR0901",
+    # R0902: Too many instance attributes
+    "PLR0902",
+    # R0903: Too few public methods
+    "PLR0903",
+    # R0904: Too many public methods
+    "PLR0904",
+    # R0911: Too many return statements
+    "PLR0911",
+    # R0912: Too many branches
+    "PLR0912",
+    # R0913: Too many arguments
+    "PLR0913",
+    # R0914: Too many local variables
+    "PLR0914",
+    # R0915: Too many statements
+    "PLR0915",
+    # F0401: Unable to import
+    "F401",
+]
+
+[lint.pylint]
+# Design settings
+max-args = 5
+max-locals = 15
+max-returns = 6
+max-branches = 12
+max-statements = 50
+max-parents = 7
+max-attributes = 7
+max-public-methods = 20
+
+[lint.pep8-naming]
+# Naming conventions (from BASIC section)
+# Allow standard variable names
+extend-ignore-names = ["i", "j", "k", "ex", "Run", "_"]
+
+[lint.flake8-builtins]
+# Bad function names (equivalent to bad-functions in pylint)
+builtins-ignorelist = ["map", "filter", "apply", "input", "id"]
+
+[lint.flake8-annotations]
+# Allow untyped definitions (similar to pylint's less strict typing)
+allow-star-arg-any = true
+
+[lint.flake8-import-conventions]
+# Deprecated modules (from IMPORTS section)
+banned-from = ["regsub", "string", "TERMIOS", "Bastion", "rexec"]
+
+[lint.flake8-todo]
+# Note tags to detect (from MISCELLANEOUS section)
+# Ruff detects TODO, FIXME, XXX by default with FIX rules
+
+[lint.pycodestyle]
+# Maximum line length
+max-line-length = 80
+max-doc-length = 80
+
+[lint.pydocstyle]
+# Documentation style
+convention = "google"
+
+[lint.isort]
+# Import sorting
+known-first-party = []
