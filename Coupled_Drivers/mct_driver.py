@@ -29,8 +29,6 @@ import dr_env_lib.mct_def
 import dr_env_lib.env_lib
 import cpmip_controller
 
-from mocilib import shellout
-
 try:
     import f90nml
 except ImportError:

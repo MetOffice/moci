@@ -29,8 +29,6 @@ import inc_days
 import common
 import error
 
-from mocilib import shellout
-
 try:
     import cf_units
 except ImportError:

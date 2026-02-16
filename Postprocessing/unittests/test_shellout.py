@@ -5,7 +5,6 @@
 # -----------------------------------------------------------------------------
 
 import unittest
-from mocilib import shellout
 from hypothesis import given, strategies as st
 
 class ExecTets(unittest.TestCase):

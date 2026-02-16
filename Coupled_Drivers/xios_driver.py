@@ -27,8 +27,6 @@ import common
 import dr_env_lib.xios_def
 import dr_env_lib.env_lib
 
-from mocilib import shellout
-
 def _copy_iodef_custom(xios_evar):
     '''
     If a custom iodef file exists, copy this to the required input filename

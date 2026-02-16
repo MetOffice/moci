@@ -33,8 +33,6 @@ import error
 import dr_env_lib.cice_def
 import dr_env_lib.env_lib
 
-from mocilib import shellout
-
 
 def __expand_array(short_array):
     '''

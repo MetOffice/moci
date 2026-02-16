@@ -26,8 +26,6 @@ import error
 import dr_env_lib.ocn_cont_def
 import dr_env_lib.env_lib
 
-from mocilib import shellout
-
 def _check_si3nl_envar(envar_container):
     '''
     Get the si3 namelist file exists
