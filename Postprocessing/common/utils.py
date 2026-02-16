@@ -164,6 +164,10 @@ def exec_subproc(cmd, verbose=True, cwd=os.getcwd()):
                 failure of the command
                 True: reproduce std.out regardless of outcome
       cwd     = Directory in which to execute the command
+
+    This function is now DEPRECATED in favour of the exec_shellout function in
+    mocilib
+    
     '''
     import shlex
 
