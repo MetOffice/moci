@@ -26,9 +26,6 @@ import shutil
 import subprocess
 import timer
 
-from mocilib import shellout
-
-
 globals()['debug_mode'] = None
 globals()['debug_ok'] = True
 
