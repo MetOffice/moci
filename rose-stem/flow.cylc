@@ -98,8 +98,7 @@
         [[[environment]]]
             SOURCE_DIRECTORY = $CYLC_WORKFLOW_SHARE_DIR/source
             SOURCE_MOCI_BASE = $SOURCE_DIRECTORY/moci
-            SOURCE_MOCILIB = $SOURCE_MOCI_BASE/mocilib
-
+	    
     [[default_task]]
         script = "echo [ERROR] Please select a valid group within the test suite to test the component that has been modified >&2; exit 1"
 
@@ -127,7 +126,7 @@ cp $SOURCE_DIRECTORY/SimSys_Scripts/github_scripts/get_git_sources.py $CYLC_WORK
                     ) }}
             {% endif %}
         {% endif %}
-
+    
 
     [[extract_source]]
         inherit = SOURCE_EXTRACTION, EXTRACT_RESOURCE
@@ -155,6 +154,6 @@ sleep 5
             ROSE_TASK_APP = housekeeping
 
 {% include "site/" + SYSTEM_NAME + ".cylc" %}
-
+ 
 {% include 'tasks-postproc.cylc' %}
 {% include 'tasks-drivers.cylc' %}
