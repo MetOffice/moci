@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../atmos/atmos_transform.py
+# hypothesis_version: 6.151.3
+
+[10.3, 120, '(.*)a\\.({})\\d{{4}}', ',', '-', '.cut', '.pp', '1m', '1s', '1x', '1y', '360day', 'CYLC_SUITE_NAME', 'ERROR', 'INFO', 'OK', 'STASHMASTER', 'STASHmaster_A', 'Source grid is {}x{}', 'WARN', 'Writing fields to ', '^(.+a\\.)\\w{2}(\\d{4})', '_', 'a.', 'append', 'atmos_{}a', 'bmdi', 'complevel', 'file', 'full', 'indices', 'mule-convpp', 'mule-cutout', 'ncftype', 'netcdf', 'p9', 'pp', 'strlist', 'um-convpp', 'um-ff2pp', 'ymdh', '{} --stashmaster {}']

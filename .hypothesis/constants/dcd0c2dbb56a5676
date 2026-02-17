@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../atmos/validation.py
+# hypothesis_version: 6.151.3
+
+[9.1, 10.9, '(\\d*):\\s*([-\\d]*)', '(\\d{4})([a-z]{3})', '({})', '-', '-pumfhead.out', '.*a\\.[dpm]([ms])', '1m', '1s', 'April', 'August', 'December', 'ERROR', 'FAIL', 'FIXED LENGTH HEADER', 'February', 'INFO', 'January', 'July', 'June', 'March', 'May', 'Monthly', 'November', 'October', 'Problem with PUMF', 'Seasonal', 'September', 'WARN', 'Yearly', '[pm][a-z1-9]', '\\d', '\\d*:', '\\d{2}', '_', 'apr', 'aug', 'create_{}_mean', 'dec', 'feb', 'h', 'intlist', 'jan', 'jul', 'jun', 'm', 'mar', 'may', 'monthly', 'ndjf', 'nov', 'oct', 'ondec', 'r', 's', 'seasonal', 'sep', 'um-pumf', 'vn(\\d+\\.\\d+)', '{} -h {} {}', '|', '}']

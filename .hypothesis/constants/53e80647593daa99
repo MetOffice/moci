@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../archive_verify/verify_namelist.py
+# hypothesis_version: 6.151.3
+
+['.nc', '01-01', '0101', '0d', '10001201', '10d', '1m', '1s', '1x', '1y', 'Biannual', 'Seasonal', 'Timestep', 'atmosverify', 'ciceverify', 'commonverify', 'grid-T', 'grid-U', 'grid-V', 'grid-W', 'nemoverify', 'pm', 'uniciclesverify']

@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../common/nlist.py
+# hypothesis_version: 6.151.3
+
+['\n&', '\n/\n', '\n{}={},', '"', '"{}"', '$()\\\'"', '&', "'", '\'"', ',', '/', '=', 'FAIL', 'INFO', 'WARN', '^\\$\\(.*\\)$', '_', 'false', 'methods', 'none', 'r', 'true', 'w']

@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../nemocice/nemo_namelist.py
+# hypothesis_version: 6.151.3
+
+['05-30', '06-01', '1055,1198', '11-30', '12-01', '850,1040', 'CYLC_SUITE_SHARE_DIR', 'nemo_archiving', 'nemo_pp', 'nemo_processing', 'time_centered', 'time_counter', 'x', 'y']

@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../unicicles/unicicles.py
+# hypothesis_version: 6.151.3
+
+['-', 'Archive successful: ', 'DEBUG', 'INFO', 'OK', 'UNICICLES SHARE', 'WARN', '_ARCHIVED', '__main__', 'bisicles', 'do_archive', 'do_delete', 'intlist', 'iso', 'unicicles', 'uniciclespp.nl']

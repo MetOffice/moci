@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../atmos/atmos_namelist.py
+# hypothesis_version: 6.151.3
+
+['00253', '30453', 'Monthly', 'NETCDF4', 'VN', 'archiving', 'atmospp', 'coords', 'delete_sc', 'p4', 'pm']

@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../platforms/jdma.py
+# hypothesis_version: 6.151.3
+
+[100, 200, ',', '/', '/group_workspaces/', '/gws/', 'ERROR', 'FAIL', 'Failed to copy files', 'Files to copy: {}', 'INFO', 'JDMA Batch id: {}', 'JDMA Request id: {}', 'MIGRATE', 'Made directory {}', 'ON_STORAGE', 'WARN', '__main__', '_vol[0-9]+$', 'batch_id', 'cp {} {}', 'elastictape', 'error', 'jasmin.nl', 'jasmin_arch', 'migration_id', 'migrations', 'mkdir {}', 'request_id', 'stage', 'username: {}', 'workspace: {}', '{}/*p[{}]*', '{}/{}']

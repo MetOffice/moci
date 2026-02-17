@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../nemocice/template_namelist.py
+# hypothesis_version: 6.151.3
+
+['/../coupled', '06-01', '10d', '12-01', 'CYLC_TASK_WORK_DIR', 'DATAM', 'nccopy', 'time']

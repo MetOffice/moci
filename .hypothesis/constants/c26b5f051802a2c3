@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../common/netcdf_utils.py
+# hypothesis_version: 6.151.3
+
+['FAIL', 'bounds', 'calendar', 'r', 'r+', 'shape', 'units']

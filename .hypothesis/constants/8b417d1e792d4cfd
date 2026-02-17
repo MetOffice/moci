@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../atmos/housekeeping.py
+# hypothesis_version: 6.151.3
+
+['$', '.arch', '.nc', '.pp', 'DEBUG', 'FAILED', 'INFO', 'No files marked ', 'Removing pp files:\n ', '^atmos_{0}a_.*_({1})', '^{0}a\\.({1})', '^{0}a\\.da\\d{{8}}', '^{}a\\.[pm][a-z1-9]', '_ARCHIVED', 'a.da(\\d{8})', 'dump_names', 'iso', 'nc_names', 'pp_inst_names', 'pp_mean_names', 'r']

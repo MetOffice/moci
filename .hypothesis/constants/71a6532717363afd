@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../nemocice/cice.py
+# hypothesis_version: 6.151.3
+
+['(0[2-9]|[1-3][0-9])', '(\\d+)(\\w+)', '-', '-m', '.', '.1d.', '.1m.', '.age', '00', '01', '1d', '1m', '2d', '2m', 'ERROR', 'WARN', '\\d+[hdsy]', '\\d{2}', '\\d{4}', '__main__', 'cice', 'cicecat', 'concat_daily_means', 'i', 'ncrcat', 'nemocicepp.nl', 'restart', '|1m.\\d{4}-\\d{2}']

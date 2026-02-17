@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../platforms/transfer.py
+# hypothesis_version: 6.151.3
+
+[1024.0, 255, 1024, ' -n ls ', ' -n ls -A ', ' -n rm ', ' | wc -l', '*', '--notify {}', '--verify-checksum', '-c', '-n', '-oBatchMode=yes', '/*', ':', ';', '>', 'ERROR', 'FAIL', 'Found {} files in {}', 'Globus task id: {}', 'INFO', 'OK', 'Push', 'ROSE_DATAC', 'True', 'WARN', '__main__', 'cd', 'checksums', 'ls -A ', 'md5sum', 'md5sum -c ', 'notify: {}', 'off', 'pptransfer', 'pptransfer.nl', 'push', 'retcode: {}', 'ssh', 'ssh ', 'ssh -oBatchMode=yes ', 'transfer.py: {}', 'w', 'when using Globus. ', '{} {}:{} {}:{}']

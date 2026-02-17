@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../common/climatemean.py
+# hypothesis_version: 6.151.3
+
+[999, '(\\d+)([hdmsyx])', '({})', ', ', ', ending', '-', '-1d', '.tmp', '00', '01', '1', '12', '1m', '1s', '1x', '1y', '360day', '??', 'Annual', 'April', 'August', 'Autumn', 'Created {}: {}', 'Decadal', 'December', 'ERROR', 'February', 'INFO', 'January', 'July', 'June', 'March', 'May', 'Monthly', 'November', 'OK', 'October', 'Seasonal', 'September', 'Spring', 'Summer', 'Unknown', 'WARN', 'Winter', '\\d{2}', '\\d{3}', '\\d{4}', 'create_{}_mean', 'd', 'file', 'full', 'h', 'hd', 'm', 'mean for', 'msyx', 'path', 'period ending', 's', 'y', 'year ending', '{}{}', '|']

@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../atmos/atmos.py
+# hypothesis_version: 6.151.3
+
+['$', '(\\.pp)?', '(\\.pp)?$', '(\\d{4})(ndj|djf)', '({I}{S}){A}', '({})', '-', '.*', '.arch', '.nc', '.pp', '.pp$', '1-9', '1m', '?!', 'ATMOS SHARE', 'ATMOS WORK', 'CYLC_SUITE_WORK_DIR', 'CYLC_TASK_LOG_ROOT', 'Continuing. {} is ', 'ERROR', 'FAIL', 'INFO', 'RUNID', 'WARN', '[{ID}]', '\\d+[hdmsyx]', '\\d{8}(\\d{2})?', '^', '^.*a.{}(\\d{{4}})', '^1-9', '^\\^?(\\w?)(\\w)-?(\\w?)', '^a-z', '^{}a\\.{}{}$', '_ARCHIVED', '__main__', 'a', 'a-l', 'atmos_{}a', 'atmospp.nl', 'do_archive', 'do_delete', 'do_meaning', 'do_ozone', 'do_transform', 'file', 'finalcycle_complete', 'finalise_debug', 'full', 'hdms', 'intlist', 'm', 'mean_archflags', 'ms', 'n-r', 'p', 'pm', 's', 't-x', 'w', 'y', 'yx', 'z', '{}a.p{}{}', '|']

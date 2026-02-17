@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../archive_verify/archive_integrity.py
+# hypothesis_version: 6.151.3
+
+['\nCollection {} ', '$', '.file', '.pp', '19800901T0000Z', '20000101T0000Z', '360day', ':ens', 'CYLC_CYCLING_MODE', 'CYLC_SUITE_SHARE_DIR', 'Collection {} ', 'DEBUG', 'ERROR', 'FAIL', 'INFO', 'OK', 'WARN', '_', '__main__', 'cylclog', 'dummy', 'moo ls -r {}', 'moose:crum/', 'r', 'verify', 'verify.nl', 'verify_model']

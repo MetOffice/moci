@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../common/netcdf_filenames.py
+# hypothesis_version: 6.151.3
+
+['(\\d+)([a-z]+)', '(_[\\-\\da-zA-Z]+)?', '(_\\d*)?', '-', '.', '.nc', '01', '1', 'ERROR', '[._\\-]', '[\\-\\da-z]+', '[\\-\\da-z]+[aio]', '\\.nc$', '\\d*[xysmdh]+', '\\d+[hdmsyx]{1}', '\\d{2}', '\\d{4}', '\\d{6,10}', '\\d{8,10}', '^', '^\\d{6,10}$', '_', '{C}_{S}{R}', '{}(00)?', '{}(\\d{{2}})?']

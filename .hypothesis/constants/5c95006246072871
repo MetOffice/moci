@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../common/utils.py
+# hypothesis_version: 6.151.3
+
+[1.0, 100, 360, 400, ' - ', ' --help', '(-?\\d+)([{}])', ',', '-', '.tmp', '360day', '365day', ';', 'ARCHIVE_FINAL', 'CALENDAR', 'CYCLEPERIOD', 'CYCLEPOINT_OVERRIDE', 'CYLC_CYCLING_MODE', 'Command Terminated', 'D', 'DEBUG', 'ERROR', 'FAIL', 'FINALCYCLE_OVERRIDE', 'H', 'INFO', 'M', 'No command provided', 'None', 'OK', 'P', 'T', 'WARN', 'Y', '[ OK ] ', '[DEBUG] ', '[ERROR] ', '[FAIL] ', '[INFO] ', '[SUBPROCESS]: ', '[WARN] ', '\\d+', '\\d{8}T\\d{4}Z', '^\\d{8}T\\d{4}$', 'a', 'd', 'debug_mode', 'debug_ok', 'false', 'gregorian', 'h', 'integer', 'intlist', 'iso', 'isodatetime', 'm', 'rb', 'rose date', 's', 'strlist', 'true', 'wb', 'x', 'y', '{} {}\n']

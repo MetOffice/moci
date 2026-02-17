@@ -1,0 +1,4 @@
+# file: /home/users/umadmin/mule/mule-2025.10.1/python-3.12.12_numpy-2.2.6/openmp/lib/mule/pp.py
+# hypothesis_version: 6.151.3
+
+[b'\x00\x00\x00\x00', 2.0, 256, 1000, '000', '001', '>f4', '>f8', '>i', '>i4', '>i8', 'endgame', 'new_dynamics', 'pp_extra_data', 'rb', 'stash', 'wb', '{0:03d}']

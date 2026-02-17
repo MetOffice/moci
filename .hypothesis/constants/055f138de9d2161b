@@ -1,0 +1,4 @@
+# file: /home/users/umadmin/mule/mule-2025.10.1/python-3.12.12_numpy-2.2.6/openmp/lib/mule/stashmaster.py
+# hypothesis_version: 6.151.3
+
+[100, 1000, '(?<!\\\\)(\\$\\w+)', 'END OF FILE MARK', 'PCA', 'PC{0:d}', 'blev', 'cfff', 'cfll', 'dataT', 'dumpP', 'grid', 'halo', 'item', 'lbvc', 'levcom', 'levelF', 'levelL', 'levelT', 'model', 'name', 'n{0:d}', 'option_codes', 'packing_codes', 'point', 'ppfc', 'pseudF', 'pseudT', 'psuedL', 'r', 'rblevv', 'rotate', 'section', 'space', 'time', 'tlev', 'user', 'version_mask', '{0:02d}{1:03d}', '{0:05d}', '{0}.{1}', '|']

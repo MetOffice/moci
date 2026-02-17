@@ -1,0 +1,4 @@
+# file: /home/users/umadmin/mule/mule-2025.10.1/python-3.12.12_numpy-2.2.6/openmp/lib/mule/ancil.py
+# hypothesis_version: 6.151.3
+
+['col_spacing', 'extra_constants', 'integer_constants', 'lambda_p', 'north_pole_lat', 'north_pole_lon', 'num_cols', 'num_field_types', 'num_levels', 'num_rows', 'num_times', 'phi_p', 'real_constants', 'row_spacing', 'start_lat', 'start_lon', 'temp_historyfile']

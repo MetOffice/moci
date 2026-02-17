@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../common/iris_transform.py
+# hypothesis_version: 6.151.3
+
+[360, '2.0.0', 'IRIS save data - ', 'OK', 'STASH', 'WARN', '_save_', 'append', 'complevel', 'd', 'h', 'm', 'm01s(\\d{2})i(\\d{3})', 'm01s{}i{}', 'ncftype', 'time', 'unknown', 'y', '{:02}', '{:04}{:02}{:02}']

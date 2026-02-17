@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../common/control.py
+# hypothesis_version: 6.151.3
+
+['\n\t return: boolean', 'FAIL', 'WARN', 'archer', 'archive integrity', 'atmos_namelist', 'cice_namelist', 'main_pp', 'moo', 'nemo_namelist', 'suite', 'transfer', 'unicicles_namelist', 'verify', 'verify_namelist', '{} directory: {}']

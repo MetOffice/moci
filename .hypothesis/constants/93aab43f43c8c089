@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../platforms/archer.py
+# hypothesis_version: 6.151.3
+
+['\n -> Failed to copy ', 'ARCHIVE_ROOT', 'Archiving {} to {}', 'CURRENT_RQST_NAME', 'CYLC_SUITE_NAME', 'DATAM', 'ERROR', 'INFO', 'ROSE_DATAC', 'RUNID', 'WARN', '__main__', 'archer_arch', 'mv {} {}', 'to']

@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../common/timer.py
+# hypothesis_version: 6.151.3
+
+[10000000000.0, '\nTIMING SUMMARY\n', '-', '.', 'Average', 'Calls', 'Function Name', 'Max', 'Min', 'Timer is not running', 'Timer is running', 'Total', '[INFO] {}\n', 'class', 'custom_{}', 'monitorpp.nl', 'skiptimer', 'tim']

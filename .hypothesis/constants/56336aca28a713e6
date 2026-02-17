@@ -1,0 +1,4 @@
+# file: /home/users/pierre.siddall/github/moci/./Postprocessing/unittests/../nemocice/cice_namelist.py
+# hypothesis_version: 6.151.3
+
+['cice_archiving', 'cice_pp', 'cice_processing']
