@@ -98,8 +98,7 @@
         [[[environment]]]
             SOURCE_DIRECTORY = $CYLC_WORKFLOW_SHARE_DIR/source
             SOURCE_MOCI_BASE = $SOURCE_DIRECTORY/moci
-            SOURCE_MOCILIB = $SOURCE_MOCI_BASE/mocilib
-
+	    
     [[default_task]]
         script = "echo [ERROR] Please select a valid group within the test suite to test the component that has been modified >&2; exit 1"
 
@@ -126,7 +125,7 @@ cp $CYLC_WORKFLOW_RUN_DIR/bin/github_scripts/get_git_sources.py $CYLC_WORKFLOW_R
                     ) }}
             {% endif %}
         {% endif %}
-
+    
 
     [[HOUSEKEEPING]]
 {% if HOUSEKEEPING == true %}
@@ -138,6 +137,6 @@ cp $CYLC_WORKFLOW_RUN_DIR/bin/github_scripts/get_git_sources.py $CYLC_WORKFLOW_R
             ROSE_TASK_APP = housekeeping
 
 {% include "site/" + SYSTEM_NAME + ".cylc" %}
-
+ 
 {% include 'tasks-postproc.cylc' %}
 {% include 'tasks-drivers.cylc' %}
