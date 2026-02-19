@@ -86,33 +86,33 @@ class ExecTests(unittest.TestCase):
     def test_success(self):
         '''Test shell out to subprocess command'''
         func.logtest('Shell out with simple echo command:')
-        rcode, _ = shellout.exec_subprocess(self.cmd, verbose=False)
+        rcode, _ =utils.exec_subproc(self.cmd, verbose=False)
         self.assertEqual(rcode, 0)
 
     def test_list_success(self):
         '''test shell out with a list of commands'''
         func.logtest('Shell out with simple list as single command:')
-        rcode, _ = shellout.exec_subprocess(self.cmd.split(), verbose=False)
+        rcode, _ =utils.exec_subproc(self.cmd.split(), verbose=False)
         self.assertEqual(rcode, 0)
 
     def test_failed_exec(self):
         '''Test failure mode of exec_subproc with invalid arguments'''
         func.logtest('Attempt to shell out with invalid arguments:')
-        _, output = shellout.exec_subprocess(self.cmd.replace('echo', 'ls'))
+        _, output =utils.exec_subproc(self.cmd.replace('echo', 'ls'))
         # Code should catch exception: subprocess.CalledProcessError
         self.assertIn('no such file or directory', output.lower())
 
     def test_unknown_cmd(self):
         '''Test failure mode of exec_subproc with unknown command'''
         func.logtest('Attempt to shell out with unknown command:')
-        rcode, _ = shellout.exec_subprocess(self.cmd.replace('echo', 'pumpkin'))
+        rcode, _ =utils.exec_subproc(self.cmd.replace('echo', 'pumpkin'))
         # Code should catch exception: OSError
         self.assertNotEqual(rcode, 0)
 
     def test_multi_command(self):
         '''Test subprocess with consecutive commands'''
         func.logtest('Attempt to shell out with consecutive commands:')
-        _, output = shellout.exec_subprocess(self.cmd.replace(' World',
+        _, output =utils.exec_subproc(self.cmd.replace(' World',
                                                         '; echo World'))
         self.assertEqual(output.strip(), 'World!')
 
@@ -120,14 +120,14 @@ class ExecTests(unittest.TestCase):
         '''Test subprocess with consecutive commands'''
         func.logtest('Attempt to shell out with consecutive commands:')
         cmd = 'pumpkin "Hello\n"; echo "There"'
-        rcode, _ = shellout.exec_subprocess(cmd)
+        rcode, _ =utils.exec_subproc(cmd)
         # Code should catch exception: OSError
         self.assertNotEqual(rcode, 0)
 
     def test_output(self):
         '''Test verbose output of exec_subproc'''
         func.logtest('Verbose output of subprocess command:')
-        _, output = shellout.exec_subprocess(self.cmd)
+        _, output =utils.exec_subproc(self.cmd)
         self.assertEqual(output.strip(), 'Hello World!')
 
     def test_command_path(self):
@@ -136,24 +136,22 @@ class ExecTests(unittest.TestCase):
         func.logtest('Subprocess command run in an alternative location:')
         os.mkdir('TestDir')
         open('TestDir/MyFile', 'w').close()
-        rcode, output = shellout.exec_subprocess('ls', cwd='TestDir', verbose=False)
+        rcode, output =utils.exec_subproc('ls', cwd='TestDir', verbose=False)
         self.assertEqual(rcode, 0)
         self.assertIn('MyFile', output)
 
     def test_subproc_options(self):
         '''Test subprocess calls optional arguments with default settings'''
         func.logtest('Test optional arguments to subprocess calls:')
-        with mock.patch('mocilib.shellout.exec_subprocess') as mock_lib:
-            mock_lib.side_effect = ['CMD1 output', 'CMD2 output']
-            _, _ = shellout.exec_subprocess('cmd 1')
-            _, _ = shellout.exec_subprocess('cmd2', verbose=False, cwd='MyDir')
+        with mock.patch('utils.shellout.exec_subprocess') as mock_lib:
+            mock_lib.side_effect = [(1, 'CMD1 output'), (0, 'CMD2 output')]
+            _, _ = utils.exec_subproc(['cmd', '1'])
+            _, _ = shellout.exec_subprocess('cmd2',current_working_directory='MyDir')
 
             self.assertListEqual(
-                mock_check.mock_calls,
-                [mock.call(['cmd', '1'], stderr=mock.ANY, cwd=os.getcwd(),
-                           universal_newlines=True),
-                 mock.call(['cmd2'], stderr=mock.ANY, cwd='MyDir',
-                           universal_newlines=True)])
+                mock_lib.mock_calls,
+                [mock.call('cmd 1', verbose=True, current_working_directory=os.getcwd()),
+                 mock.call('cmd 2', current_working_directory='MyDir')])
 
         self.assertIn('CMD1 output', func.capture())
         self.assertNotIn('CMD2 output', func.capture())
