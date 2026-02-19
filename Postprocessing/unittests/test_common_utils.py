@@ -143,7 +143,7 @@ class ExecTests(unittest.TestCase):
     def test_subproc_options(self):
         '''Test subprocess calls optional arguments with default settings'''
         func.logtest('Test optional arguments to subprocess calls:')
-        with mock.patch('utils.shellout.exec_subprocess') as mock_lib:
+        with mock.patch('mocilib.shellout.exec_subprocess') as mock_lib:
             mock_lib.side_effect = ['CMD1 output', 'CMD2 output']
             _, _ = shellout.exec_subprocess('cmd 1')
             _, _ = shellout.exec_subprocess('cmd2', verbose=False, cwd='MyDir')

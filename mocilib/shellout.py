@@ -41,11 +41,15 @@ def exec_subprocess(cmd, verbose=False, timeout=None ,current_working_directory=
             sys.stderr.write(f"[ERROR] {output.stderr}\n")
 
     except subprocess.CalledProcessError as exc:
-        output_message = exc.stdout.decode() if exc.stdout else ""
+        output_message = exc.stderr.decode() if exc.stderr else ""
         rcode = exc.returncode
 
     except subprocess.TimeoutExpired as exc:
         output_message = exc.stdout.decode() if exc.stdout else ""
         rcode = exc.returncode
+
+    except FileNotFoundError as exc:
+        output_message = exc.strerror if exc.strerror else ""
+        rcode = exc.errno
 
     return rcode,output_message
