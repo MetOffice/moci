@@ -2,17 +2,8 @@
     
     [[PP_TESTS]]
 
-    [[extract_source]]
-        inherit = PP_BUILD_TASKS, SOURCE_EXTRACTION, EXTRACT_RESOURCE
-        
-
-    [[fcm_make_pp]]
-        inherit = PP_BUILD_TASKS, EXTRACT_RESOURCE
-
-{% if SITE in MULTISTEP_FCM %}
-    [[fcm_make2_pp]]
-        inherit = PP_BUILD_TASKS, BUILD_RESOURCE
-{% endif %}
+    [[build_pp]]
+       inherit = PP_BUILD_TASKS, {{ "BUILD_RESOURCE" if REMOTE_PP else "EXTRACT_RESOURCE" }}
 
     [[POSTPROC]]
         inherit = POSTPROC_RESOURCE
@@ -190,13 +181,13 @@ echo Command: {{TASK_RUN}} --command-key=pp_unicicles
         inherit = PP_TESTS, POSTPROC_SCRIPTING_RESOURCE
 
     [[pp_unittests]]
-        inherit = PP_TESTS, POSTPROC_SCRIPTING_RESOURCE
-        env-script = "eval $(rose task-env)"
+        inherit = PP_TESTS, UNITTESTS, POSTPROC_SCRIPTING_RESOURCE
+        env-script = "eval $(rose task-env) ; PATH=$CYLC_WORKFLOW_RUN_DIR/app/postproc/bin:$PATH"
 	# Run each of the main groups (common, atmos, nemocice) first - helps to spot any leaking tests.
         # Finally run 'all' - sweeps up any tests not covered in the main groups
         script = run_python_env.sh test_postproc -g common -g atmos -g nemocice -g platforms -g unicicles -g all
 	[[[environment]]]
-	    STASHMASTER = 
+	    STASHMASTER =
 
     [[test_mule]]
         inherit = PP_TESTS, POSTPROC_SCRIPTING_RESOURCE
@@ -214,4 +205,4 @@ echo Command: {{TASK_RUN}} --command-key=pp_unicicles
     [[housekeeping_pp]]
         inherit = HOUSEKEEP_RESOURCE, HOUSEKEEPING 
         [[[environment]]]
-            RUNDIR="$CYLC_WORKFLOW_SHARE_DIR/data/postproc $CYLC_WORKFLOW_WORK_DIR/1/fcm_mak*_pp $CYLC_WORKFLOW_WORK_DIR/1/p*_* $CYLC_WORKFLOW_WORK_DIR/1/housekeeping_pp $CYLC_WORKFLOW_WORK_DIR/1/coupled_dummy_*"
+            RUNDIR="$CYLC_WORKFLOW_SHARE_DIR/data/postproc $CYLC_WORKFLOW_WORK_DIR/1/build_pp $CYLC_WORKFLOW_WORK_DIR/1/p*_* $CYLC_WORKFLOW_WORK_DIR/1/housekeeping_pp $CYLC_WORKFLOW_WORK_DIR/1/coupled_dummy_*"

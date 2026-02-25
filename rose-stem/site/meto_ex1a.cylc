@@ -3,7 +3,7 @@
     [[HPC_RESOURCE]]
         env-script = "eval $(rose task-env)"
         pre-script = "{{MODULE_CMD}} module list"
-        platform = {{ HOST_HPC }}
+        platform = {{ COMPUTE_HOST }}
 	[[[environment]]]
             PLATFORM = ex1a
             CONFIG = meto-ex1a-cce
@@ -35,7 +35,7 @@
 
     [[SCRIPTS_INSTALL_HPC_RESOURCE]]
         inherit = None, HPC_RESOURCE
-	execution time limit = PT10M
+        execution time limit = PT10M
         [[[environment]]]
             ROSE_TASK_N_JOBS = 1
         [[[directives]]]
@@ -107,3 +107,14 @@
             OMP_NUM_THREADS  = 1
             RECON_LAUNCHER = mpiexec -n {{RCF_PROCX * RCF_PROCY}}
             ROSE_LAUNCHER_PREOPTS = -n {{RCF_PROCX * RCF_PROCY}}
+
+{% if REMOTE_PP %}
+    [[POSTPROC_SCRIPTING_RESOURCE]]
+        inherit = None, SCRIPTS_INSTALL_HPC_RESOURCE
+        pre-script = 'module load scitools/default-current ; module load um_tools ; module load nco'
+
+    [[POSTPROC_RESOURCE]]
+        inherit = POSTPROC_SCRIPTING_RESOURCE
+	[[[environment]]]
+            STASHMASTER = /data/users/moci/KGO/pp_test_execs/STASHmaster_vn10.2
+{% endif %}

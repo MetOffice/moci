@@ -13,13 +13,15 @@
 {% do LOG.info("MOCI SOURCE CLONE="~SOURCE_DIRECTORY) %}
 
 {# Read the sources of dependencies from the dependencies.yaml file #}
-{% set dependencies = read_sources(SOURCE_DIRECTORY, "moci", USE_HEADS) %}
+{% set dependencies = read_sources(SOURCE_DIRECTORY, "moci", false) %}
 
 {# Read in groups to run #}
 {% if group is defined %}
     {% set RUN_NAMES = group %}
 {% elif g is defined %}
     {% set RUN_NAMES = g %}
+{% else %}
+    {% set RUN_NAMES = ["default"] %}
 {% endif %}
 {% do LOG.info("Running groups: "~RUN_NAMES|join('
                    ')) %}
@@ -27,9 +29,6 @@
 {% set TASK_RUN = "rose task-run --verbose -O '(" + SITE + ")'"%}
 {% set PP_CYCLES = range(110,113)|list + range(201,213)|list + [301,]|list %}
 {% set PP_UNICICLES_CYCLES = [112,203,206,209,212,]|list %}
-
-{# Test to determine when to use single fcm_make tasks #}
-{% set MULTISTEP_FCM = ['archer'] %}
 
 {% macro format_wallclock(time_list) -%}
     PT{{'%02d' % (time_list[0])}}H{{'%02d' % (time_list[1])}}M{{'%02d' % (time_list[2])}}S
@@ -47,6 +46,7 @@
 {# groups contains group_option-trigger_list key-value pairs. -#}
 {# If a group option is set, each group or task in the trigger list will be set. -#}
 {%- set groups = {
+    "tests"             : [],
     "ALL"               : [],
     "all"               : ["ALL"]
     }
@@ -105,18 +105,19 @@
     [[SOURCE_EXTRACTION]]
         post-script = """
 cp $SOURCE_DIRECTORY/moci/dependencies.yaml $CYLC_WORKFLOW_RUN_DIR
-cp $CYLC_WORKFLOW_RUN_DIR/bin/github_scripts/suite_report_git.py $CYLC_WORKFLOW_RUN_DIR/bin
-cp $CYLC_WORKFLOW_RUN_DIR/bin/github_scripts/suite_data.py $CYLC_WORKFLOW_RUN_DIR/bin
-cp $CYLC_WORKFLOW_RUN_DIR/bin/github_scripts/git_bdiff.py $CYLC_WORKFLOW_RUN_DIR/bin
-cp $CYLC_WORKFLOW_RUN_DIR/bin/github_scripts/get_git_sources.py $CYLC_WORKFLOW_RUN_DIR/bin
+cp $SOURCE_DIRECTORY/SimSys_Scripts/github_scripts/suite_report_git.py $CYLC_WORKFLOW_RUN_DIR/bin
+cp $SOURCE_DIRECTORY/SimSys_Scripts/github_scripts/suite_data.py $CYLC_WORKFLOW_RUN_DIR/bin
+cp $SOURCE_DIRECTORY/SimSys_Scripts/github_scripts/git_bdiff.py $CYLC_WORKFLOW_RUN_DIR/bin
+cp $SOURCE_DIRECTORY/SimSys_Scripts/github_scripts/get_git_sources.py $CYLC_WORKFLOW_RUN_DIR/bin
 """
         [[[environment]]]
             ROSE_TASK_APP = extract_source
             DEPENDENCIES = {{dependencies}}
             USE_MIRRORS = {{USE_MIRRORS}}
             USE_TOKENS = false
+            USE_HEADS = false
         {% if USE_MIRRORS %}
-            {% if GIT_MIRROR_LOC %}
+            {% if GIT_MIRROR_LOC is defined and GIT_MIRROR_LOC %}
             GIT_MIRROR_LOC = {{GIT_MIRROR_LOC}}
             {% else %}
                 {{ raise(
@@ -125,7 +126,22 @@ cp $CYLC_WORKFLOW_RUN_DIR/bin/github_scripts/get_git_sources.py $CYLC_WORKFLOW_R
                     ) }}
             {% endif %}
         {% endif %}
-    
+
+    [[extract_source]]
+        inherit = SOURCE_EXTRACTION, EXTRACT_RESOURCE
+
+    [[mirror_source]]
+        inherit = SOURCE_EXTRACTION, EXTRACT_RESOURCE
+        script  = """
+RELATIVE_SOURCE_DIRECTORY=`echo $SOURCE_DIRECTORY | sed 's|$HOME/||'`
+ssh $HOSTNAME mkdir -p $RELATIVE_SOURCE_DIRECTORY
+rsync -avz --exclude='.*' $SOURCE_DIRECTORY/* $HOSTNAME:$RELATIVE_SOURCE_DIRECTORY/
+sleep 5
+                  """
+       [[[environment]]]
+           HOSTNAME = $(rose host-select {{COMPUTE_HOST}})
+
+    [[UNITTESTS]]
 
     [[HOUSEKEEPING]]
 {% if HOUSEKEEPING == true %}
