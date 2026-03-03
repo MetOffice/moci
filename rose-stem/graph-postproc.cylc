@@ -1,16 +1,11 @@
 {# Setup graph required to run postproc tasks #}
 
-{% if SITE in MULTISTEP_FCM %}
-    {% set FCMPP_GRAPH = 'fcm_make_pp => fcm_make2_pp ' %}
-{% else %}
-    {% set FCMPP_GRAPH = 'fcm_make_pp' %}
-{% endif %}
-
+{% set BUILD_GRAPH = "extract_source => " + ("mirror_source => " if REMOTE_PP else "") + "build_pp" %}
 
 {# Setup Multi-date tasks #}
 {% set SPACER = "         " %}
 {% set FAM_SUCCEED = ":succeed-all" if SPLIT_PP else "" %}
-{% set COUPLED_GRAPH = [ SPACER + "pp_clearlog => " + FCMPP_GRAPH + " => coupled_dummy_198" + PP_CYCLES[0]|string + "01" + " & pp_unicicles_startup" ] %}
+{% set COUPLED_GRAPH = [ SPACER + "pp_clearlog => " + BUILD_GRAPH + " => coupled_dummy_198" + PP_CYCLES[0]|string + "01" + " & pp_unicicles_startup" ] %}
 {% set PP_GRAPH = [] %}
 {% set VERIFY_GRAPH = []  %}
 {% for i in range(PP_CYCLES|length - 1) %}
@@ -42,7 +37,7 @@
 {%- do name_graphs.update({
     "postproc_tests" : "
          test_mule:fail? => remove_mule_from_postproc
-         test_mule? | remove_mule_from_postproc => " + FCMPP_GRAPH + " => pp_unittests",
+         test_mule? | remove_mule_from_postproc => " + BUILD_GRAPH + " => pp_unittests",
     "coupled_run" :  COUPLED_GRAPH|join("\n"),
     "postproc_run" : PP_GRAPH|join("\n"),
     "postproc_transfer": PPTRANSFER_GRAPH|join("\n"),
@@ -60,3 +55,4 @@
 
 
 {%- do groups['ALL'].append( "postproc" ) %}
+{%- do groups['tests'].append( "pp_unittests" ) %}
