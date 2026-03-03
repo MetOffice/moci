@@ -126,7 +126,22 @@ cp $SOURCE_DIRECTORY/SimSys_Scripts/github_scripts/get_git_sources.py $CYLC_WORK
                     ) }}
             {% endif %}
         {% endif %}
-    
+
+    [[extract_source]]
+        inherit = SOURCE_EXTRACTION, EXTRACT_RESOURCE
+
+    [[mirror_source]]
+        inherit = SOURCE_EXTRACTION, EXTRACT_RESOURCE
+        script  = """
+RELATIVE_SOURCE_DIRECTORY=`echo $SOURCE_DIRECTORY | sed 's|$HOME/||'`
+ssh $HOSTNAME mkdir -p $RELATIVE_SOURCE_DIRECTORY
+rsync -avz --exclude='.*' $SOURCE_DIRECTORY/* $HOSTNAME:$RELATIVE_SOURCE_DIRECTORY/
+sleep 5
+                  """
+       [[[environment]]]
+           HOSTNAME = $(rose host-select {{COMPUTE_HOST}})
+
+    [[UNITTESTS]]
 
     [[extract_source]]
         inherit = SOURCE_EXTRACTION, EXTRACT_RESOURCE
