@@ -23,9 +23,9 @@ import re
 import os
 import errno
 import shutil
-import subprocess
 import timer
 
+from mocilib import shellout
 
 globals()['debug_mode'] = None
 globals()['debug_ok'] = True
@@ -165,37 +165,26 @@ def exec_subproc(cmd, verbose=True, cwd=os.getcwd()):
                 failure of the command
                 True: reproduce std.out regardless of outcome
       cwd     = Directory in which to execute the command
+
+    This function is now DEPRECATED in favour of the exec_shellout function in
+    mocilib
+
     '''
-    import shlex
-
-    cmd_array = [cmd]
-    if not isinstance(cmd, list):
+    if isinstance(cmd, list):
+        cmd_array = [' '.join(cmd)]
+    else:
         cmd_array = cmd.split(';')
-        for i, cmd in enumerate(cmd_array):
-            # Use shlex.split to cope with arguments that contain whitespace
-            cmd_array[i] = shlex.split(cmd)
-
     # Initialise rcode, in the event there is no command
-    rcode = 99
+    rcode = -99
     output = 'No command provided'
 
-    for cmd in cmd_array:
-        try:
-            output = subprocess.check_output(cmd,
-                                             stderr=subprocess.STDOUT,
-                                             universal_newlines=True, cwd=cwd)
-            rcode = 0
-            if verbose:
-                log_msg('[SUBPROCESS]: ' + str(output))
-        except subprocess.CalledProcessError as exc:
-            output = exc.output
-            rcode = exc.returncode
-        except OSError as exc:
-            output = exc.strerror
-            rcode = exc.errno
+    for i, cmd in enumerate(cmd_array):
+        rcode, output = shellout.exec_subprocess(
+            cmd, verbose=verbose, current_working_directory=cwd
+        )
         if rcode != 0:
-            msg = '[SUBPROCESS]: Command: {}\n[SUBPROCESS]: Error = {}:\n\t{}'
-            log_msg(msg.format(' '.join(cmd), rcode, output), level='WARN')
+            msg = f'[SUBPROCESS]: Command: {cmd}\n[SUBPROCESS]: Error = {rcode}:\n\t {output}'
+            log_msg(msg,level="WARN")
             break
 
     return rcode, output

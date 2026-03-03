@@ -143,6 +143,22 @@ sleep 5
 
     [[UNITTESTS]]
 
+    [[extract_source]]
+        inherit = SOURCE_EXTRACTION, EXTRACT_RESOURCE
+
+    [[mirror_source]]
+        inherit = SOURCE_EXTRACTION, EXTRACT_RESOURCE
+        script  = """
+RELATIVE_SOURCE_DIRECTORY=`echo $SOURCE_DIRECTORY | sed 's|$HOME/||'`
+ssh $HOSTNAME mkdir -p $RELATIVE_SOURCE_DIRECTORY
+rsync -avz --exclude='.*' $SOURCE_DIRECTORY/* $HOSTNAME:$RELATIVE_SOURCE_DIRECTORY/
+sleep 5
+                  """
+       [[[environment]]]
+           HOSTNAME = $(rose host-select {{COMPUTE_HOST}})
+
+    [[UNITTESTS]]
+
     [[HOUSEKEEPING]]
 {% if HOUSEKEEPING == true %}
         script = "rose task-run --verbose"

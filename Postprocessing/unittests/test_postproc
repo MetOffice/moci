@@ -19,6 +19,10 @@ import os
 
 assert sys.version_info >= (2, 7)
 
+# Path to mocilib
+sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
+
+# Path to PostProc modules.  Pre-pend since (at least) 'utils' is a common name
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir))
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'common'))
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'platforms'))
