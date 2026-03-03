@@ -52,4 +52,8 @@ def exec_subprocess(cmd, verbose=False, timeout=None ,current_working_directory=
         output_message = exc.strerror if exc.strerror else ""
         rcode = exc.errno
 
+    except PermissionError as exc:
+        output_message = exc.strerror if exc.strerror else ""
+        rcode = exc.errno
+
     return rcode,output_message
