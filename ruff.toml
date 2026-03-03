@@ -17,8 +17,6 @@ ignore = [
     "PLR6301",
     # R0401: Cyclic import - remove PLC0415, use import rules if needed
     # R0801: Duplicate code - Ruff has no direct equivalent
-    # R0901: Too many ancestors
-    "PLR0901",
     # R0902: Too many instance attributes
     "PLR0902",
     # R0903: Too few public methods
