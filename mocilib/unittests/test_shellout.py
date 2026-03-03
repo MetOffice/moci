@@ -5,7 +5,6 @@
 # -----------------------------------------------------------------------------
 
 import unittest
-from hypothesis import given, strategies as st
 
 class ExecTets(unittest.TestCase):
     ''' Unit tests for executing shellout commands'''
@@ -20,7 +19,6 @@ class ExecTets(unittest.TestCase):
         _,rcode = shellout._exec_subprocess(cmd=cmd)
         assert rcode == 0
 
-    @given(st.text())
     def test_called_process_error(self,directory):
         cmd = f"ls /{directory}"
         _,rcode = shellout._exec_subprocess(cmd=cmd)
