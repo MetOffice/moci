@@ -143,15 +143,17 @@ class ExecTests(unittest.TestCase):
     def test_subproc_options(self):
         '''Test subprocess calls optional arguments with default settings'''
         func.logtest('Test optional arguments to subprocess calls:')
-        with mock.patch('utils.shellout.exec_subprocess') as mock_lib:
-            mock_lib.side_effect = [(1, 'CMD1 output'), (0, 'CMD2 output')]
-            _, _ = utils.exec_subproc(['cmd', '1'])
-            _, _ = shellout.exec_subprocess('cmd2',current_working_directory='MyDir')
+        with mock.patch('subprocess.check_output') as mock_check:
+            mock_check.side_effect = ['CMD1 output', 'CMD2 output']
+            _, _ = utils.exec_subproc('cmd 1')
+            _, _ = utils.exec_subproc('cmd2', verbose=False, cwd='MyDir')
 
             self.assertListEqual(
-                mock_lib.mock_calls,
-                [mock.call('cmd 1', verbose=True, current_working_directory=os.getcwd()),
-                 mock.call('cmd 2', current_working_directory='MyDir')])
+                mock_check.mock_calls,
+                [mock.call(['cmd', '1'], stderr=mock.ANY, cwd=os.getcwd(),
+                           universal_newlines=True),
+                 mock.call(['cmd2'], stderr=mock.ANY, cwd='MyDir',
+                           universal_newlines=True)])
 
         self.assertIn('CMD1 output', func.capture())
         self.assertNotIn('CMD2 output', func.capture())
