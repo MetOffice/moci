@@ -15,10 +15,8 @@ select = ["ALL"]
 ignore = [
     # R0201: Method could be a function (no-self-use)
     "PLR6301",
-    # R0401: Cyclic import
-    "PLC0415",
-    # R0801: Similar lines in files (duplicate-code)
-    "PLC0414",
+    # R0401: Cyclic import - remove PLC0415, use import rules if needed
+    # R0801: Duplicate code - Ruff has no direct equivalent
     # R0901: Too many ancestors
     "PLR0901",
     # R0902: Too many instance attributes
@@ -37,8 +35,8 @@ ignore = [
     "PLR0914",
     # R0915: Too many statements
     "PLR0915",
-    # F0401: Unable to import
-    "F401",
+    # Unused imports (if you want to allow them)
+    # "F401",
 ]
 
 [lint.pylint]
