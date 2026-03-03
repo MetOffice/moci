@@ -69,7 +69,7 @@ allow-star-arg-any = true
 # Deprecated modules (from IMPORTS section)
 banned-from = ["regsub", "string", "TERMIOS", "Bastion", "rexec"]
 
-[lint.flake8-todo]
+[lint.flake8-todos]
 # Note tags to detect (from MISCELLANEOUS section)
 # Ruff detects TODO, FIXME, XXX by default with FIX rules
 
