@@ -215,7 +215,7 @@ class STASHPrint(rose.macro.MacroBase):
             except:
                 pass
         return tuple(newlist)
-
+        
 
 class STASHPrint_wiki(STASHPrint):
     """Print out the STASH requests, and domain, time and usage profiles,
@@ -654,7 +654,7 @@ def get_stash_times_list(config):
         time_output_intervals = time_sampling = "--"
         time_processing_period = time_processing_start = "--"
         if ityp in "2 3 4 5 6 7".split():
-            if intv is not None:
+            if 'intv' is not None:
                 value = "all" if intv == "-1" else intv
                 time_processing_period = (
                     "{0:s} {1:s}".format(value, _unit_conv[unt1]))

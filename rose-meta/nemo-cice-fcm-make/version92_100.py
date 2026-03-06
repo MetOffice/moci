@@ -27,7 +27,7 @@ class vn92_t1(rose.upgrade.MacroUpgrade):
 
     def make_relative(self, project, sources):
         """Convert standard absolute paths into relative paths"""
-        if project == 'IOIPSL':
+        if project is 'IOIPSL':
             repos = 'NEMO'
         else:
             repos = project
@@ -46,7 +46,7 @@ class vn92_t1(rose.upgrade.MacroUpgrade):
     def upgrade(self, config, meta_config=None):
         """Redirect fcm_make app to build from the mirrored configs"""
         warn_msg = ''
-        config_root_path = self.get_setting_value(config,
+        config_root_path = self.get_setting_value(config, 
                            ["env", "config_root_path"])
         config_revision = self.get_setting_value(config,
                            ["env", "config_revision"])
@@ -56,7 +56,7 @@ class vn92_t1(rose.upgrade.MacroUpgrade):
                                     config_root_path)
             if not re.match(r'@(head)(?i)', config_revision):
                 # Presumably not a branch, so:
-                config_revision = '@vn9.2.1'
+                config_revision = '@vn9.2.1'            
 
         # Met Office only:
         elif re.match(r'\s*svn://fcm\d/UM_svn/UM', config_root_path):
@@ -64,7 +64,7 @@ class vn92_t1(rose.upgrade.MacroUpgrade):
                                     config_root_path)
             if not re.match(r'@(head)(?i)', config_revision):
                 # Presumably not a branch, so:
-                config_revision = '@vn9.2.1'
+                config_revision = '@vn9.2.1'            
 
         # Last resort - set it to use the mirrored trunk.
         # If users need to edit this to use a branch, at least that's easy.
@@ -128,14 +128,14 @@ class vn92_t1(rose.upgrade.MacroUpgrade):
                              baseval)):
                     # trunk is the default, remove:
                     self.remove_setting(config, ["env", basename])
-
+    
                 elif (re.match(r'\s*(fcm:'+project+'[-_/]br)(?i)', baseval)
                    or re.match(r'\s*svn://fcm\d/'+repos+'_svn/'+project+'/branches',
                                baseval)):
                     # Keep branch, remove project:
                     baseval = self.make_relative(project, baseval)
                     self.change_setting_value(config, ["env", basename], baseval)
-
+    
                 elif re.match(r'\s*(fcm:|svn:|/)', baseval):
                     # Any remaining match is an unexpected keyword, URL or
                     # filepath. Don't second-guess; simply warn the user:
@@ -167,7 +167,7 @@ class vn92_t1(rose.upgrade.MacroUpgrade):
   !!!!! You are advised to use relative paths where possible.
   !!!!!
   !!!!! Additionally, any value of nemo_base, ioipsl_base or cice_base referring
-  !!!!! to that project's trunk can be removed, as this is the default in all
+  !!!!! to that project's trunk can be removed, as this is the default in all 
   !!!!! cases.
                    """ + warn_msg
         self.add_report(info=warn_msg, is_warning=True)
@@ -190,7 +190,7 @@ class vn100_t40(rose.upgrade.MacroUpgrade):
         else:
             config_root = 'fcm:um.xm_tr'
             config_revision = '@vn10.0'
-            self.add_report('env', 'config_root_path', config_root,
+            self.add_report('env', 'config_root_path', config_root, 
                 info='Upgrading fcm_make config version to trunk@vn10.0',
                 is_warning=True)
         self.change_setting_value(config, ['env', 'config_revision'], config_revision)
