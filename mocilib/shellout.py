@@ -10,7 +10,9 @@ import sys
 import shlex
 
 
-def exec_subprocess(cmd, verbose=False, timeout=None ,current_working_directory=os.getcwd()):
+def exec_subprocess(
+    cmd, verbose=False, timeout=None, current_working_directory=os.getcwd()
+):
     """
     Execute a given shell command
 
@@ -30,7 +32,7 @@ def exec_subprocess(cmd, verbose=False, timeout=None ,current_working_directory=
             capture_output=True,
             cwd=current_working_directory,
             timeout=timeout,
-            check=True
+            check=True,
         )
         rcode = output.returncode
         output_message = output.stdout.decode()
@@ -56,4 +58,4 @@ def exec_subprocess(cmd, verbose=False, timeout=None ,current_working_directory=
         output_message = exc.strerror if exc.strerror else ""
         rcode = exc.errno
 
-    return rcode,output_message
+    return rcode, output_message
