@@ -15,12 +15,12 @@ class ExecTets(unittest.TestCase):
     ''' Unit tests for executing shellout commands'''
 
     def test_semicolon_commands(self):
-        cmd = "echo Hello There;echo General Kenobi"
+        cmd = "echo Hello;echo World"
         _,rcode = shellout.exec_subprocess(cmd=cmd)
         assert rcode == 0
 
     def test_and_commands(self):
-        cmd ="echo Hello There&&echo General Kenobi"
+        cmd ="echo Hello &&echo World"
         _,rcode = shellout.exec_subprocess(cmd=cmd)
         assert rcode == 0
 
