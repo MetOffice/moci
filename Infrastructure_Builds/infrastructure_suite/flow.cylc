@@ -1,54 +1,40 @@
 #!jinja2
 
-{% set HPC_HOST_OASIS = DEPLOYMENT_HOST if DEPLOYMENT_HOST is defined else HPC_HOST_OASIS %}
-
-MODULE_STR = {{ MODULES|join(' ') }}
-{% set MODULE_STR =  MODULES|join(' ')  %}
-{% set MODULE_CMD = 'for mod in '+MODULE_STR+'; do module load $mod; module swap $mod; done; module list' %}
+{% set HPC_HOST = DEPLOYMENT_HOST if DEPLOYMENT_HOST is defined else HPC_HOST %}
 
 
-[cylc]
+[scheduler]
     UTC mode = True
+    install = src/, file/
     [[events]]
-        timeout handler = "rose suite-hook --shutdown"
-	timeout = PT6H
+        stall timeout handlers = "rose suite-hook --shutdown"
 
-[scheduling]
-    [[dependencies]]
-	graph = """
-                prepare_hpc_host => extract_xios_background => build_xios => create_xios_module => create_prgenv_module => run_xios_toy_attached & run_xios_toy_server
+[scheduling] 
+    [[graph]]
+	 R1 = """
+         prepare_hpc_host => extract_xios_background => build_xios => create_xios_module => create_prgenv_module => run_xios_toy_attached & run_xios_toy_server
 {% if not XIOS_ONLY %}
                 prepare_hpc_host => extract_oasis => build_oasis => run_oasis_tutorial => create_oasis_module => build_xios
 {% endif %}
                 """
-
 [runtime]
     [[root]]
         script = 'rose task-run --verbose'
     [[LINUX_SERVER]]
-        [[[job]]]
-            batch system = slurm
-            execution time limit = PT15M
+        execution time limit = PT15M
+	platform = slurm
         [[[directives]]]
             --ntasks=1
             --mem=1G
             --qos=normal
-            --partition=rhel7
     [[LOCALHOST]]
-        [[[remote]]]
-            host={{ROSE_ORIG_HOST}}
-        [[[job]]]
-            batch system = background
+        platform=localhost
     [[HPC]]
 	env-script = "{{MODULE_CMD}}"
-        [[[job]]]
-            batch system = pbs
-        [[[remote]]]
-            host = $(rose host-select {{ HPC_HOST_OASIS }})
+	platform = {{HPC_HOST}}
     [[HPC_SERIAL]]
         inherit = None, HPC
-        [[[job]]]
-            execution time limit = PT10M
+	execution time limit = PT10M
         [[[environment]]]
             ROSE_TASK_N_JOBS = 1
         [[[directives]]]
@@ -72,7 +58,7 @@ MODULE_STR = {{ MODULES|join(' ') }}
             --mem=8G
         [[[environment]]]
             HPC_HOST_USERNAME={{HPC_HOST_USERNAME}}
-            HPC_HOST_OASIS={{HPC_HOST_OASIS}}
+            HPC_HOST={{HPC_HOST}}
 	    EXTRACT_OASIS={{EXTRACT_OASIS}}
 {% if EXTRACT_OASIS == true %}
 	    OASIS_BRANCH={{OASIS_BRANCH}}
@@ -82,8 +68,7 @@ MODULE_STR = {{ MODULES|join(' ') }}
 {% endif %}
     [[build_oasis]]
         inherit = None, HPC_SERIAL, OASIS
-        [[[job]]]
-            execution time limit = PT20M
+	execution time limit = PT20M
         [[[environment]]]
 	    BUILD_MCT={{BUILD_MCT}}
 	    BUILD_TEST={{BUILD_TEST}}
@@ -130,11 +115,7 @@ MODULE_STR = {{ MODULES|join(' ') }}
         [[[environment]]]
             XIOSPATH=$CYLC_SUITE_RUN_DIR/share/xios
     [[extract_xios_background]]
-        inherit = XIOS
-        [[[remote]]]
-            host = login.exz
-        [[[job]]]
-            execution time limit = PT10M
+        inherit = XIOS, HPC_SERIAL
         [[[environment]]]
             ROSE_TASK_APP=extract_xios
             XIOS_VERSION={{XIOS_VERSION}}
@@ -142,6 +123,7 @@ MODULE_STR = {{ MODULES|join(' ') }}
 	    XIOS_URL={{XIOS_URL}}
     [[build_xios]]
         inherit = None, HPC, XIOS
+	execution time limit = PT2H
 	env-script = """
 		     {{MODULE_CMD}};
 {% if not XIOS_ONLY %}
@@ -153,8 +135,6 @@ MODULE_STR = {{ MODULES|join(' ') }}
 		     """
         [[[environment]]]
             XIOS_ONLY={{XIOS_ONLY}}
-        [[[job]]]
-            execution time limit = PT2H
 	[[[directives]]]
 	    -l select=1:ncpus=8
     [[create_xios_module]]
@@ -176,6 +156,7 @@ MODULE_STR = {{ MODULES|join(' ') }}
 {% endif %}
     [[RUN_XIOS_TOY]]
         env-script = """
+                     {{MODULE_CMD}};
                      eval $(cat $CYLC_SUITE_RUN_DIR/share/load_prgenv_mod.sh);
                      module use $TEST_PRGENV_MODULE_PATH
                      module load $TEST_PRGENV_MODULE_NAME
@@ -206,7 +187,7 @@ MODULE_STR = {{ MODULES|join(' ') }}
 		     """
         [[[environment]]]
             XIOS_ONLY={{XIOS_ONLY}}
-	    MODULE_STR={{MODULE_STR}}
+	    MODULE_STR={{MODULE_CMD}}
 {% if not XIOS_ONLY %}
 	    PRG_ENV_VERSION={{GC_PRG_ENV_VERSION}}
 	    PRG_ENV_NAME={{GC_PRG_ENV_NAME}}
