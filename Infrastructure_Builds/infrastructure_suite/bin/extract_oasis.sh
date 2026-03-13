@@ -7,7 +7,7 @@
 #
 # ENVIRONMENT VARIABLES (COMPULSORY):
 #    EXTRACT_OASIS
-#    HPC_HOST_OASIS
+#    HPC_HOST
 #    OASIS_BRANCH
 #    OASIS_REPOSITORY
 #
@@ -27,7 +27,7 @@ if [ "$EXTRACT_OASIS" = "True" ]; then
 	exit 999
     fi
 
-    if [ -z "$HPC_HOST_OASIS" ]; then
+    if [ -z "$HPC_HOST" ]; then
 	hpc_build="False"
     else
 	hpc_build="True"
@@ -55,31 +55,31 @@ if [ "$hpc_build" = "True" ] && [ -z "$CYLC_SUITE_RUN_DIR" ]; then
     # manually
     # upload to the HPC
     ssh $user@$HPC_HOST "mkdir -p $OASIS_BUILD_DIR/";
-    scp -r $oasis_extract_dir $user@$HPC_HOST_OASIS:$OASIS_BUILD_DIR/;
+    scp -r $oasis_extract_dir $user@$HPC_HOST:$OASIS_BUILD_DIR/;
     # cleanup, only if we have extracted the code from GIT
     if [ "$EXTRACT_OASIS" = "True" ]; then
 	rm -rf $oasis_extract_dir
     fi
     # upload build scripts to hpc
-    scp bin/oasis_build.sh $user@$HPC_HOST_OASIS:$OASIS_BUILD_DIR/
+    scp bin/oasis_build.sh $user@$HPC_HOST:$OASIS_BUILD_DIR/
     # pass
     if [ "$BUILD_TEST" = "True" ]; then
 	# upload our test executables to the HPC
-	scp src/*.F90 $user@$HPC_HOST_OASIS:$OASIS_BUILD_DIR/oasis3-mct/examples/tutorial/
+	scp src/*.F90 $user@$HPC_HOST:$OASIS_BUILD_DIR/oasis3-mct/examples/tutorial/
 	# upload the run script
-	scp bin/run_tutorial_mo_xc40.sh $user@$HPC_HOST_OASIS:$OASIS_BUILD_DIR/oasis3-mct/examples/tutorial/
+	scp bin/run_tutorial_mo_xc40.sh $user@$HPC_HOST:$OASIS_BUILD_DIR/oasis3-mct/examples/tutorial/
 	# upload the other files to make the test run
 	for i_file in namcouple_TP script_ferret_FRECVOCN.jnl script_ferret_FSENDOCN_to_File.jnl
 	do
-	    scp file/$i_file $user@$HPC_HOST_OASIS:$OASIS_BUILD_DIR/oasis3-mct/examples/tutorial/data_oasis3
+	    scp file/$i_file $user@$HPC_HOST:$OASIS_BUILD_DIR/oasis3-mct/examples/tutorial/data_oasis3
 	done
     fi
 else
     # we are running in a suite context and only need to upload the oasis
     # source code
-    scp -r $oasis_extract_dir $user@$HPC_HOST_OASIS:$OASIS_BUILD_DIR/;
+    scp -r $oasis_extract_dir $user@$HPC_HOST:$OASIS_BUILD_DIR/;
     if [ $? -ne 0 ]; then
-	1>&2 echo "Unable to succesfully upload oasis source to $HPC_HOST_OASIS"
+	1>&2 echo "Unable to succesfully upload oasis source to $HPC_HOST"
 	exit 999;
     fi
     # cleanup, only if we have extracted the code from GIT
@@ -89,5 +89,5 @@ else
 fi
 
 #End of script test, check that the code is avaliable
-ssh $user@$HPC_HOST_OASIS ls $OASIS_BUILD_DIR/oasis3-mct
+ssh $user@$HPC_HOST ls $OASIS_BUILD_DIR/oasis3-mct
 [ $? -eq 0 ] || exit 1
