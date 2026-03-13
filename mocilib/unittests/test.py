@@ -13,6 +13,8 @@ assert sys.version_info >= (3, 6)
 
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir))
 
+#TODO: sort out why extract source hold the moci source code needs /moci/moci 
+
 def main():
     '''
     Runs all mocilib unit tests

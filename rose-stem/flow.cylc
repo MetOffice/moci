@@ -164,7 +164,7 @@ sleep 5
 
     [[mocilib_unittests]]
         inherit = UNITTESTS, EXTRACT_RESOURCE
-        script = "python $SOURCE_DIRECTORY/mocilib/unittests/test.py"
+        script = "python $SOURCE_DIRECTORY/moci/mocilib/unittests/test.py"
 
     [[HOUSEKEEPING]]
 {% if HOUSEKEEPING == true %}
