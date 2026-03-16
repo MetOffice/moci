@@ -9,29 +9,29 @@ import os
 import unittest
 
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir))
-import shellout
+import shellouts
 
 class ExecTets(unittest.TestCase):
     ''' Unit tests for executing shellout commands'''
 
     def test_semicolon_commands(self):
         cmd = "echo Hello;echo World"
-        _,rcode = shellout.exec_subprocess(cmd)
+        _,rcode = shellouts.exec_subprocess(cmd)
         self.assertEqual(rcode,0)
 
     def test_and_commands(self):
-        cmd ="echo Hello &&echo World"
-        _,rcode = shellout.exec_subprocess(cmd)
+        cmd ="echo Hello&&echo World"
+        _,rcode = shellouts.exec_subprocess(cmd)
         self.assertEqual(rcode,0)
 
     def test_called_process_error(self,directory):
         cmd = f"ls /{directory}"
-        _,rcode = shellout.exec_subprocess(cmd)
+        _,rcode = shellouts.exec_subprocess(cmd)
         self.assertGreater(rcode,0)
 
     def test_timeout_expired(self):
         cmd = "sleep 15"
-        _,rcode = shellout.exec_subprocess(cmd,timeout=1)
+        _,rcode = shellouts.exec_subprocess(cmd,timeout=1)
         self.assertGreater(rcode,0)
 
 

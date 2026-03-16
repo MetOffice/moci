@@ -1,2 +1,2 @@
 ___all__ = ["shellout"]
-from . import shellout
+from . import shellouts

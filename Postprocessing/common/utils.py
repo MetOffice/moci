@@ -25,7 +25,7 @@ import errno
 import shutil
 import timer
 
-from mocilib import shellout
+from mocilib import shellouts
 
 globals()['debug_mode'] = None
 globals()['debug_ok'] = True
@@ -179,7 +179,7 @@ def exec_subproc(cmd, verbose=True, cwd=os.getcwd()):
     output = 'No command provided'
 
     for i, cmd in enumerate(cmd_array):
-        rcode, output = shellout.exec_subprocess(
+        rcode, output = shellouts.exec_subprocess(
             cmd, verbose=verbose, current_working_directory=cwd
         )
         if rcode != 0:

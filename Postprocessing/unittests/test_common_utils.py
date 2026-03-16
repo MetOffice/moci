@@ -26,7 +26,7 @@ except ImportError:
 import testing_functions as func
 import utils
 
-from mocilib import shellout
+from mocilib import shellouts
 
 DUMMY = ['fileone', 'filetwo', 'filethree']
 
