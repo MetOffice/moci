@@ -24,8 +24,8 @@ class ExecTets(unittest.TestCase):
         _,rcode = shellouts.exec_subprocess(cmd)
         self.assertEqual(rcode,0)
 
-    def test_called_process_error(self,directory):
-        cmd = f"ls /{directory}"
+    def test_called_process_error(self):
+        cmd = f"ls peche"
         _,rcode = shellouts.exec_subprocess(cmd)
         self.assertGreater(rcode,0)
 
