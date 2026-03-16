@@ -48,7 +48,7 @@ def exec_subprocess(
 
     except subprocess.TimeoutExpired as exc:
         output_message = exc.stdout.decode() if exc.stdout else ""
-        rcode = exc.returncode
+        rcode = 124
 
     except FileNotFoundError as exc:
         output_message = exc.strerror if exc.strerror else ""
