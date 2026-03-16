@@ -27,7 +27,7 @@ class ExecTets(unittest.TestCase):
     def test_called_process_error(self):
         cmd = f"ls peche"
         _,rcode = shellouts.exec_subprocess(cmd)
-        self.assertGreater(rcode,0)
+        self.assertGreater(int(rcode),0)
 
     def test_timeout_expired(self):
         cmd = "sleep 15"
