@@ -11,9 +11,7 @@ import os
 
 assert sys.version_info >= (3, 6)
 
-sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir))
-
-#TODO: sort out why extract source hold the moci source code needs /moci/moci 
+sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir,os.pardir))
 
 def main():
     '''
@@ -21,7 +19,7 @@ def main():
     '''
     groups = {
         'all':'test*.py',
-        'shellout':'test_shellout.py'
+        'shellouts':'test_shellouts.py'
     }
 
     parser = argparse.ArgumentParser(

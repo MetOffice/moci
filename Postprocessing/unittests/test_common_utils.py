@@ -26,8 +26,6 @@ except ImportError:
 import testing_functions as func
 import utils
 
-from mocilib import shellouts
-
 DUMMY = ['fileone', 'filetwo', 'filethree']
 
 class EnvironTests(unittest.TestCase):

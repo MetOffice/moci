@@ -32,7 +32,6 @@ def exec_subprocess(
         output = subprocess.run(
             formatted_cmd,
             capture_output=True,
-            shell=True,
             cwd=current_working_directory,
             timeout=timeout,
             check=True,
@@ -48,21 +47,21 @@ def exec_subprocess(
     except subprocess.CalledProcessError as exc:
         output_message = exc.stderr.decode() if exc.stderr else ""
         rcode = exc.returncode
-        print(f"An expection was thrown and returned the value {rcode}")
+        print(f"An CalledProcessError was thrown and returned the value {rcode}")
 
     except subprocess.TimeoutExpired as exc:
         output_message = exc.stdout.decode() if exc.stdout else ""
         rcode = 124
-        print(f"An expection was thrown and returned the value {rcode}")
+        print(f"An TimeoutExpired was thrown and returned the value {rcode}")
 
     except FileNotFoundError as exc:
         output_message = exc.strerror if exc.strerror else ""
         rcode = exc.errno
-        print(f"An expection was thrown and returned the value {rcode}")
+        print(f"FileNotFoundError was thrown and returned the value {rcode}")
 
     except PermissionError as exc:
         output_message = exc.strerror if exc.strerror else ""
         rcode = exc.errno
-        print(f"An expection was thrown and returned the value {rcode}")
+        print(f"An PermissionError was thrown and returned the value {rcode}")
 
     return rcode, output_message

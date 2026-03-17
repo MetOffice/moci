@@ -25,7 +25,7 @@ import errno
 import shutil
 import timer
 
-from mocilib import shellouts
+from mocilib import shellout
 
 globals()['debug_mode'] = None
 globals()['debug_ok'] = True
@@ -166,7 +166,7 @@ def exec_subproc(cmd, verbose=True, cwd=os.getcwd()):
                 True: reproduce std.out regardless of outcome
       cwd     = Directory in which to execute the command
 
-    This function is now DEPRECATED in favour of the exec_shellout function in
+    This function is now DEPRECATED in favour of the exec_subprocess function in
     mocilib
 
     '''
@@ -179,7 +179,7 @@ def exec_subproc(cmd, verbose=True, cwd=os.getcwd()):
     output = 'No command provided'
 
     for i, cmd in enumerate(cmd_array):
-        rcode, output = shellouts.exec_subprocess(
+        rcode, output = shellout.exec_subprocess(
             cmd, verbose=verbose, current_working_directory=cwd
         )
         if rcode != 0:
