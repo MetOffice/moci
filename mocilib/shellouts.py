@@ -23,13 +23,16 @@ def exec_subprocess(
     command should be executed.
     """
 
-    cmd = shlex.split(cmd)
+    cmd = shlex.shlex(cmd,posix=True,punctuation_chars=True)
+    cmd.whitespace_split = True
+    formatted_cmd = list(cmd)
 
     try:
-
+        print(f"Attempting to execute {formatted_cmd}")
         output = subprocess.run(
-            cmd,
+            formatted_cmd,
             capture_output=True,
+            shell=True,
             cwd=current_working_directory,
             timeout=timeout,
             check=True,
@@ -45,17 +48,21 @@ def exec_subprocess(
     except subprocess.CalledProcessError as exc:
         output_message = exc.stderr.decode() if exc.stderr else ""
         rcode = exc.returncode
+        print(f"An expection was thrown and returned the value {rcode}")
 
     except subprocess.TimeoutExpired as exc:
         output_message = exc.stdout.decode() if exc.stdout else ""
         rcode = 124
+        print(f"An expection was thrown and returned the value {rcode}")
 
     except FileNotFoundError as exc:
         output_message = exc.strerror if exc.strerror else ""
         rcode = exc.errno
+        print(f"An expection was thrown and returned the value {rcode}")
 
     except PermissionError as exc:
         output_message = exc.strerror if exc.strerror else ""
         rcode = exc.errno
+        print(f"An expection was thrown and returned the value {rcode}")
 
     return rcode, output_message

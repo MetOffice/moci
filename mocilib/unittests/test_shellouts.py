@@ -17,21 +17,25 @@ class ExecTets(unittest.TestCase):
     def test_semicolon_commands(self):
         cmd = "echo Hello;echo World"
         _,rcode = shellouts.exec_subprocess(cmd)
+        print(f"The rcode which was returned is {rcode}")
         self.assertEqual(rcode,0)
 
     def test_and_commands(self):
         cmd ="echo Hello&&echo World"
         _,rcode = shellouts.exec_subprocess(cmd)
+        print(f"The rcode which was returned is {rcode}")
         self.assertEqual(rcode,0)
 
     def test_called_process_error(self):
         cmd = f"ls peche"
         _,rcode = shellouts.exec_subprocess(cmd)
-        self.assertGreater(int(rcode),0)
+        print(f"The rcode which was returned is {rcode}")
+        self.assertGreater(rcode,0)
 
     def test_timeout_expired(self):
         cmd = "sleep 15"
         _,rcode = shellouts.exec_subprocess(cmd,timeout=1)
+        print(f"The rcode which was returned is {rcode}")
         self.assertGreater(rcode,0)
 
 
