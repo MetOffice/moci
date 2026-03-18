@@ -21,13 +21,13 @@ DESCRIPTION
 COMMON_ENVIRONMENT_VARS_INIT_FIN = {
     'models': {'desc': ('A space separated list of all the components in this'
                         ' run'),
-               'trigger': [[ 'cice' in my_val or 'nemo' in my_val,
+               'trigger': [[ my_val == 'cice' or my_val == 'nemo',
                             ['CALENDAR', 'MODELBASIS', 'TASKSTART',
                              'LAST_DUMP_HOURS']],
-                           ['cice' in my_val  \
-                            or 'nemo' in my_val or 'cpmip' in my_val ,
+                           [my_val == 'cice'  \
+                            or my_val == 'nemo' or my_val == 'cpmip' ,
                             ['TASKLENGTH']],
-                           ['um' in my_val or 'nemo' in my_val,
+                           [my_val == 'um' or my_val == 'nemo',
                             ['CPL_RIVER_COUNT']]]},
     'RUNID': {},
     'DATAM': {},
