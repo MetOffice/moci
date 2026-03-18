@@ -17,9 +17,14 @@ class ExecTets(unittest.TestCase):
     ''' Unit tests for executing shellout commands'''
 
     def test_called_process_error_fail(self):
-        cmd = f"ls peche"
+        cmd = "ls peche"
         rcode,_ = shellout.exec_subprocess(cmd)
         self.assertGreater(rcode,0)
+
+    def test_called_process_error_pass(self):
+        cmd="ls ."
+        rcode,_ = shellout.exec_subprocess(cmd)
+        self.assertEqual(rcode,0)
 
     def test_timeout_expired_fail(self):
         cmd = "sleep 15"
