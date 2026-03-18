@@ -11,8 +11,6 @@ import unittest
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir,os.pardir))
 from mocilib import shellout
 
-#TODO: Add success tests and other tests on same line
-
 class ExecTets(unittest.TestCase):
     ''' Unit tests for executing shellout commands'''
 
