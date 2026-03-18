@@ -34,5 +34,15 @@ class ExecTets(unittest.TestCase):
         rcode, _ = shellout.exec_subprocess(cmd,timeout=5)
         self.assertEqual(rcode,0)
 
+    def test_file_not_found_fail(self):
+        cmd = "pineapple"
+        rcode,_ = shellout.exec_subprocess(cmd)
+        self.assertGreater(rcode,0)
+
+    def test_file_not_found_pass(self):
+        cmd = "man sleep"
+        rcode,_ = shellout.exec_subprocess(cmd)
+        self.assertEqual(rcode,0)
+
 if __name__ == "__main__":
     unittest.main()
