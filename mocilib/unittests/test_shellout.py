@@ -16,16 +16,14 @@ from mocilib import shellout
 class ExecTets(unittest.TestCase):
     ''' Unit tests for executing shellout commands'''
 
-    def test_called_process_error(self):
+    def test_called_process_error_fail(self):
         cmd = f"ls peche"
         rcode,_ = shellout.exec_subprocess(cmd)
-        print(f"The rcode which was returned is {rcode}")
         self.assertGreater(rcode,0)
 
-    def test_timeout_expired(self):
+    def test_timeout_expired_fail(self):
         cmd = "sleep 15"
         rcode,_ = shellout.exec_subprocess(cmd,timeout=1)
-        print(f"The rcode which was returned is {rcode}")
         self.assertGreater(rcode,0)
 
 if __name__ == "__main__":
