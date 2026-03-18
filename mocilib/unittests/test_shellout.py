@@ -27,9 +27,14 @@ class ExecTets(unittest.TestCase):
         self.assertEqual(rcode,0)
 
     def test_timeout_expired_fail(self):
-        cmd = "sleep 15"
+        cmd = "sleep 3"
         rcode,_ = shellout.exec_subprocess(cmd,timeout=1)
         self.assertGreater(rcode,0)
+
+    def test_timeout_expried_pass(self):
+        cmd = "sleep 3"
+        rcode, _ = shellout.exec_subprocess(cmd,timeout=5)
+        self.assertEqual(rcode,0)
 
 if __name__ == "__main__":
     unittest.main()
