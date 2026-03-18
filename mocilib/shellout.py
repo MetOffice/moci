@@ -23,7 +23,7 @@ def exec_subprocess(
     command should be executed.
     """
 
-    cmd = shlex.shlex(cmd,posix=True,punctuation_chars=True)
+    cmd = shlex.shlex(cmd, posix=True, punctuation_chars=True)
     cmd.whitespace_split = True
     formatted_cmd = list(cmd)
 
