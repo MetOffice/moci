@@ -28,7 +28,6 @@ def exec_subprocess(
     formatted_cmd = list(cmd)
 
     try:
-        print(f"Attempting to execute {formatted_cmd}")
         output = subprocess.run(
             formatted_cmd,
             capture_output=True,
@@ -47,21 +46,17 @@ def exec_subprocess(
     except subprocess.CalledProcessError as exc:
         output_message = exc.stderr.decode() if exc.stderr else ""
         rcode = exc.returncode
-        print(f"An CalledProcessError was thrown and returned the value {rcode}")
 
     except subprocess.TimeoutExpired as exc:
         output_message = exc.stdout.decode() if exc.stdout else ""
         rcode = 1
-        print(f"An TimeoutExpired was thrown and returned the value {rcode}")
 
     except FileNotFoundError as exc:
         output_message = exc.strerror if exc.strerror else ""
         rcode = exc.errno
-        print(f"FileNotFoundError was thrown and returned the value {rcode}")
 
     except PermissionError as exc:
         output_message = exc.strerror if exc.strerror else ""
         rcode = exc.errno
-        print(f"An PermissionError was thrown and returned the value {rcode}")
 
     return rcode, output_message
