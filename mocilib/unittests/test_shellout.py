@@ -30,7 +30,7 @@ class ExecTets(unittest.TestCase):
         rcode, _ = shellout.exec_subprocess(cmd, timeout=1)
         self.assertGreater(rcode, 0)
 
-    def test_timeout_expried_pass(self):
+    def test_timeout_expired_pass(self):
         cmd = "sleep 3"
         rcode, _ = shellout.exec_subprocess(cmd, timeout=5)
         self.assertEqual(rcode, 0)
