@@ -12,7 +12,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
 from mocilib import shellout
 
 
-class ExecTets(unittest.TestCase):
+class ExecTests(unittest.TestCase):
     """Unit tests for executing shellout commands"""
 
     def test_called_process_error_fail(self):
