@@ -184,7 +184,7 @@ def exec_subproc(cmd, verbose=True, cwd=os.getcwd()):
         )
         if rcode != 0:
             msg = f'[SUBPROCESS]: Command: {cmd}\n[SUBPROCESS]: Error = {rcode}:\n\t {output}'
-            log_msg(msg,level="WARN")
+            log_msg(msg, level='WARN')
             break
 
     return rcode, output
