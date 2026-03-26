@@ -20,7 +20,7 @@ PP_SOURCE_DIR=${PP_SOURCE_DIR:=$CYLC_WORKFLOW_RUN_DIR/share/source/moci_postproc
 PP_TARGET_DIR=${PP_TARGET_DIR:-$CYLC_WORKFLOW_SHARE_DIR/bin}
 
 MOCILIB=${MOCILIB:=true}
-MOCILIB_PATH=${MOCILIB_PATH:=$CYLC_WORKFLOW_RUN_DIR/share/moci/mocilib}
+MOCILIB_PATH=${MOCILIB_PATH:=$CYLC_WORKFLOW_SHARE_DIR/source/moci/mocilib}
 
 PP_COMPONENTS="atmos nemocice unicicles archive_verify"
 PP_TESTS=${PP_TESTS:=false}
@@ -38,10 +38,12 @@ if [[ ! -d $PP_TARGET_DIR ]] ; then
 fi
 
 # Copy mocilib
+
 if [[ "$MOCILIB" != true ]] ; then
     echo [INFO] MOCIlib library not installed
 elif [[ -d "$MOCILIB_PATH" ]] ; then
-    cp -r $MOCILIB $PP_TARGET_DIR
+    echo [INFO] Copying MOCILIB ...
+    cp -r $MOCILIB_PATH $PP_TARGET_DIR
 else
     echo [ERROR] Failed to find the required \"mocilib\" library >&2
     exit 1

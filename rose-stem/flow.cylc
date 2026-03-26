@@ -15,8 +15,9 @@
 {# Read the sources of dependencies from the dependencies.yaml file #}
 {% set dependencies = read_sources(SOURCE_DIRECTORY, "moci", false) %}
 
+{% set SPACER = "         " %}
 {# Read in groups to run #}
-{% if group is defined %}
+ {% if group is defined %}
     {% set RUN_NAMES = group %}
 {% elif g is defined %}
     {% set RUN_NAMES = g %}
@@ -38,7 +39,8 @@
 # set of cylc task dependencies
 {# name_graphs contains test_option-dependency key-value pairs -#}
 {%- set name_graphs = {
-    "default" : "default_task",
+     "default" : "default_task",
+     "mocilib_unittests" : SPACER + "extract_source => mocilib_unittests"
     }
 -%}
 
@@ -46,12 +48,13 @@
 {# groups contains group_option-trigger_list key-value pairs. -#}
 {# If a group option is set, each group or task in the trigger list will be set. -#}
 {%- set groups = {
-    "tests"             : [],
-    "ALL"               : [],
+    "tests"             : ["mocilib_unittests"],
+    "ALL"               : ["tests"],
     "all"               : ["ALL"]
     }
  %}
 
+{% set SPACER = "         " %}
 {% include 'graph-postproc.cylc' %}
 {% include 'graph-drivers.cylc' %}
 
@@ -98,7 +101,7 @@
         [[[environment]]]
             SOURCE_DIRECTORY = $CYLC_WORKFLOW_SHARE_DIR/source
             SOURCE_MOCI_BASE = $SOURCE_DIRECTORY/moci
-	    
+
     [[default_task]]
         script = "echo [ERROR] Please select a valid group within the test suite to test the component that has been modified >&2; exit 1"
 
@@ -143,6 +146,26 @@ sleep 5
 
     [[UNITTESTS]]
 
+    [[extract_source]]
+        inherit = SOURCE_EXTRACTION, EXTRACT_RESOURCE
+
+    [[mirror_source]]
+        inherit = SOURCE_EXTRACTION, EXTRACT_RESOURCE
+        script  = """
+RELATIVE_SOURCE_DIRECTORY=`echo $SOURCE_DIRECTORY | sed 's|$HOME/||'`
+ssh $HOSTNAME mkdir -p $RELATIVE_SOURCE_DIRECTORY
+rsync -avz --exclude='.*' $SOURCE_DIRECTORY/* $HOSTNAME:$RELATIVE_SOURCE_DIRECTORY/
+sleep 5
+                  """
+       [[[environment]]]
+           HOSTNAME = $(rose host-select {{COMPUTE_HOST}})
+
+    [[UNITTESTS]]
+
+    [[mocilib_unittests]]
+        inherit = UNITTESTS, EXTRACT_RESOURCE
+        script = "python $SOURCE_DIRECTORY/moci/mocilib/unittests/test.py"
+
     [[HOUSEKEEPING]]
 {% if HOUSEKEEPING == true %}
         script = "rose task-run --verbose"
@@ -153,6 +176,6 @@ sleep 5
             ROSE_TASK_APP = housekeeping
 
 {% include "site/" + SYSTEM_NAME + ".cylc" %}
- 
+
 {% include 'tasks-postproc.cylc' %}
 {% include 'tasks-drivers.cylc' %}
