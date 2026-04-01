@@ -7,3 +7,5 @@
 | ericaneininger  | Erica Neininger | Met Office  | 2026-02-04 |
 | dcalve          | Daley Calvert   | Met Office  | 2026-02-04 |
 | harry-shepherd  | Harry Shepherd  | Met Office  | 2026-02-27 |
+| marcstring      | Marc Stringer   | NCAS        | 2026-04-01 |
+
