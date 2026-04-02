@@ -109,7 +109,7 @@ class UniciclesPostProc(control.RunPostProc):
                 format('bisicles', self.suite.prefix),
                 r'^{0}_{1}c_\d*[dmy]_\d{{8}}-\d{{8}}_plot-(A|Gr)IS\.hdf5$'.
                 format('bisicles', self.suite.prefix),
-                r'^{0}_{1}c_\d*[dmy]_\d{{8}}-\d{{8}}_plot\.CF-(A|Gr)IS\.hdf5$'.
+                r'^{0}_{1}c_\d*[dmy]_\d{{8}}-\d{{8}}_plot-CF-(A|Gr)IS\.hdf5$'.
                 format('bisicles', self.suite.prefix),
                 r'^{0}_{1}c_\d*[dmy]_\d{{8}}-\d{{8}}_nemo-icecouple-AIS\.hdf5$'.
                 format('bisicles', self.suite.prefix),
