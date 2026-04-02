@@ -36,7 +36,7 @@ MODEL_COMPONENTS = {
     'unicicles': {'bisicles':
                   ('c', ['calving-AIS', 'calving-GrIS', 'nemo-icecouple-AIS',
                          'plot-AIS', 'plot-GrIS',
-                         'plot.CF-AIS', 'plot.CF-GrIS'], ['']),
+                         'plot-CF-AIS', 'plot-CF-GrIS'], ['']),
                   'unicicles':
                   ('c', ['atmos-icecouple', 'bisicles-icecouple',
                          'bisicles-icecouple-AIS', 'bisicles-icecouple-GrIS',
