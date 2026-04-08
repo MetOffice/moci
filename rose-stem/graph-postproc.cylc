@@ -3,7 +3,6 @@
 {% set BUILD_GRAPH = "extract_source => " + ("mirror_source => " if REMOTE_PP else "") + "build_pp" %}
 
 {# Setup Multi-date tasks #}
-{% set SPACER = "         " %}
 {% set FAM_SUCCEED = ":succeed-all" if SPLIT_PP else "" %}
 {% set COUPLED_GRAPH = [ SPACER + "pp_clearlog => " + BUILD_GRAPH + " => coupled_dummy_198" + PP_CYCLES[0]|string + "01" + " & pp_unicicles_startup" ] %}
 {% set PP_GRAPH = [] %}

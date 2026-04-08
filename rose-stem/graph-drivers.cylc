@@ -1,5 +1,4 @@
 {# Setup graph required to run postproc tasks #}
-{% set SPACER = "         " %}
 {%- do name_graphs.update({
     "test_drivers_unit" : SPACER + "extract_source => drivers_unittests & mct_validate_unittests" + (" => drivers_local_housekeeping" if HOUSEKEEPING else ""),
     "test_drivers_misc" : SPACER  + "extract_source => drivers_check_python_tabs" + (" => drivers_local_housekeeping" if HOUSEKEEPING else ""),
