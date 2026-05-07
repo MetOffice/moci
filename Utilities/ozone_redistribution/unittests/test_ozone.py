@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2022 Met Office. All rights reserved.
+ (C) Crown copyright 2022-2026 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -292,8 +292,10 @@ class OzoneDataProcessingTests(unittest.TestCase):
             rval = retrieve_ozone_data.shell_cmd('run this command')
 
         self.assertNotEqual(rval, 0)
-        self.assertIn('[SUBPROCESS] No such file or directory',
-                      str(mock_out.write.mock_calls[0]))
+        # Depending on Python version, output may differ
+        errmsg = ['No such file or directory', 'Permission denied']
+        self.assertTrue(any(['[SUBPROCESS] ' + e for e in errmsg
+                             if e in str(mock_out.write.mock_calls[0])]))
 
 
 class OzoneMainTests(unittest.TestCase):
