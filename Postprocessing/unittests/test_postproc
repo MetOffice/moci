@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-'''
+"""
 *****************************COPYRIGHT******************************
  (C) Crown copyright 2015-2025 Met Office. All rights reserved.
 
@@ -11,7 +11,8 @@
 
  Met Office, FitzRoy Road, Exeter, Devon, EX1 3PB, United Kingdom
 *****************************COPYRIGHT******************************
-'''
+"""
+
 import argparse
 import unittest
 import sys
@@ -19,100 +20,112 @@ import os
 
 assert sys.version_info >= (2, 7)
 
+# Path to mocilib
+sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
+
+# Path to PostProc modules.  Pre-pend since (at least) 'utils' is a common name
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir))
-sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'common'))
-sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'platforms'))
-sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'atmos'))
-sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'nemocice'))
-sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, 'unicicles'))
-sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir,
-                             'archive_verify'))
+sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, "common"))
+sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, "platforms"))
+sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, "atmos"))
+sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, "nemocice"))
+sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, "unicicles"))
+sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, "archive_verify"))
 
 # Setup a null timer instance to ensure the decorated functions behave
 # correctly with the unit tests
 import runtime_environment
+
 runtime_environment.setup_env()
 import timer
+
 timer.set_nulltimer()
 
 
 def main():
-    '''Run unit tests for postproc app'''
+    """Run unit tests for postproc app"""
     groups = {
-        'all':       'test_*.py',
-        'main':      'test_main.py',
-        'common':    'test_common_*.py',
-        'control':   'test_common_control.py',
-        'suitegen':  'test_common_suitegen.py',
-        'nlist':     'test_common_nlist.py',
-        'utils':     'test_common_utils.py',
-        'timer':     'test_common_timer.py',
-        'netcdf':    'test_common_netcdf_*.py',
-        'iris':      'test_common_iris.py',
-        'means':     'test_common_climatemean.py',
-        'atmos':     'test_atmos_*.py',
-        'atmbase':   'test_atmos_base.py',
-        'atmutils':  'test_atmos_utils.py',
-        'nemocice':  'test_nemocice*.py',
-        'nemo':      'test_nemocice_nemo.py',
-        'cice':      'test_nemocice_cice.py',
-        'template':  'test_nemocice_template.py',
-        'unicicles': 'test_unicicles.py',
-        'verify':    'test_verify_*.py',
-        'archer':    'test_platforms_archer.py',
-        'moo':       'test_platforms_moo.py',
-        'platforms': 'test_platforms_*.py',
-        'transfer':  'test_platforms_transfer.py',
-        'jdma':      'test_platforms_jdma.py',
-        }
+        "all": "test_*.py",
+        "main": "test_main.py",
+        "common": "test_common_*.py",
+        "control": "test_common_control.py",
+        "suitegen": "test_common_suitegen.py",
+        "nlist": "test_common_nlist.py",
+        "utils": "test_common_utils.py",
+        "timer": "test_common_timer.py",
+        "netcdf": "test_common_netcdf_*.py",
+        "iris": "test_common_iris.py",
+        "means": "test_common_climatemean.py",
+        "atmos": "test_atmos_*.py",
+        "atmbase": "test_atmos_base.py",
+        "atmutils": "test_atmos_utils.py",
+        "nemocice": "test_nemocice*.py",
+        "nemo": "test_nemocice_nemo.py",
+        "cice": "test_nemocice_cice.py",
+        "template": "test_nemocice_template.py",
+        "unicicles": "test_unicicles.py",
+        "verify": "test_verify_*.py",
+        "archer": "test_platforms_archer.py",
+        "moo": "test_platforms_moo.py",
+        "platforms": "test_platforms_*.py",
+        "transfer": "test_platforms_transfer.py",
+        "jdma": "test_platforms_jdma.py",
+    }
 
     subgroups = [
-        ' '.join(['common groups:'] + [c for c in groups if
-                                       'common_' in groups[c]]),
-        ' '.join(['atmos groups:'] + [a for a in groups if
-                                      'atmos_' in groups[a]]),
-        ' '.join(['nemo and cice groups:'] + [n for n in groups if
-                                              'nemocice_' in groups[n]]),
-        ' '.join(['unicicles groups:'] + [u for u in groups if
-                                          'unicicles_' in groups[u]]),
-        ' '.join(['verification group:'] + [v for v in groups if
-                                            'verify_' in groups[v]]),
-        ' '.join(['platforms group:'] + [p for p in groups if
-                                         'platforms_' in groups[p]]),
-        ]
+        " ".join(["common groups:"] + [c for c in groups if "common_" in groups[c]]),
+        " ".join(["atmos groups:"] + [a for a in groups if "atmos_" in groups[a]]),
+        " ".join(
+            ["nemo and cice groups:"] + [n for n in groups if "nemocice_" in groups[n]]
+        ),
+        " ".join(
+            ["unicicles groups:"] + [u for u in groups if "unicicles_" in groups[u]]
+        ),
+        " ".join(
+            ["verification group:"] + [v for v in groups if "verify_" in groups[v]]
+        ),
+        " ".join(
+            ["platforms group:"] + [p for p in groups if "platforms_" in groups[p]]
+        ),
+    ]
 
     parser = argparse.ArgumentParser(
-        description='MOCI PostProcessing App UnitTests',
-        formatter_class=argparse.RawTextHelpFormatter)
+        description="MOCI PostProcessing App UnitTests",
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
 
-    parser.add_argument('-g', '--group',
-                        help='''Specify a group of tests to run.  Default=all
+    parser.add_argument(
+        "-g",
+        "--group",
+        help="""Specify a group of tests to run.  Default=all
 Additional groups may be requested with further --group arguments.
-Available groups: \n\t{}'''.format('\n\t'.join(subgroups)),
-                        action='append')
+Available groups: \n\t{}""".format("\n\t".join(subgroups)),
+        action="append",
+    )
     args = parser.parse_args()
 
     if args.group:
         testgroup = args.group
     else:
-        testgroup = ['all']
+        testgroup = ["all"]
 
     rtn_code = 0
     for grp in testgroup:
         try:
-            test_suite = unittest.TestLoader().\
-                discover(os.path.dirname(os.path.realpath(__file__)),
-                         pattern=groups[grp])
+            test_suite = unittest.TestLoader().discover(
+                os.path.dirname(os.path.realpath(__file__)), pattern=groups[grp]
+            )
         except KeyError:
             sys.stderr.write(
-                '[ERROR] UnitTest - Unknown group: {}.  See help'.format(grp)
-                )
+                "[ERROR] UnitTest - Unknown group: {}.  See help".format(grp)
+            )
             continue
-        sys.stdout.write('[INFO] Running test group: {}'.format(grp))
+        sys.stdout.write("[INFO] Running test group: {}".format(grp))
         test_rtn = unittest.TextTestRunner(buffer=True).run(test_suite)
         rtn_code += len(test_rtn.failures) + len(test_rtn.errors)
 
     exit(rtn_code)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

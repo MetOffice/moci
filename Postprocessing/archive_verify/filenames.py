@@ -35,13 +35,13 @@ MODEL_COMPONENTS = {
     'cice': {'cice': ('i', '', ['', 'age'])},
     'unicicles': {'bisicles':
                   ('c', ['calving-AIS', 'calving-GrIS', 'nemo-icecouple-AIS',
-                         'plot-AIS', 'plot-GrIS'], ['']),
+                         'plot-AIS', 'plot-GrIS',
+                         'plot-CF-AIS', 'plot-CF-GrIS'], ['']),
                   'unicicles':
-                  ('c', ['atmos-icecouple', 'nemo-bathy-isf',
-                         'bisicles-icecouple', 'bisicles-icecouple-AIS',
-                         'bisicles-icecouple-GrIS', 'calv-AIS',
-                         'calv-GrIS', 'calving',
-                         'nemo-icecouple'],
+                  ('c', ['atmos-icecouple', 'bisicles-icecouple',
+                         'bisicles-icecouple-AIS', 'bisicles-icecouple-GrIS',
+                         'calv-AIS', 'calv-GrIS', 'calving',
+                         'nemo-bathy-isf', 'nemo-domain', 'nemo-icecouple'],
                    [''])},
     }
 
