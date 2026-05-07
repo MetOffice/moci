@@ -18,5 +18,4 @@ verbose - a boolean (True or False) to determine if the standard output (stdout)
 
 timeout - an integer number determining the number of seconds a shell command can run for before a TimeoutExpired error is raised.
 
-current_working_directory - The working directory which the shell command will be executed in given as a string. 
-
+current_working_directory - The working directory which the shell command will be executed in given as a string.
