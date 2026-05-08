@@ -1,6 +1,6 @@
-# mocilib
+# MOCIlib
 
-Mocilib is intended as a library to hold an assorted range on utility functions that can be used throughout new development and maintainance of moci along with their associated unit tests to ensure the robustness of moci's functionality.
+MOCIlib is intended as a library to hold an assorted range on utility functions that can be used throughout new development and maintainance of MOCI along with their associated unit tests to ensure robust and unified approach to MOCI's functionality.
 
 ## shellout
 
