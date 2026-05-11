@@ -8,4 +8,4 @@
 | dcalve          | Daley Calvert   | Met Office  | 2026-02-04 |
 | harry-shepherd  | Harry Shepherd  | Met Office  | 2026-02-27 |
 | marcstring      | Marc Stringer   | NCAS        | 2026-04-01 |
-
+| jonseddon       | Jon Seddon      | Met Offiec  | 2026-05-11 |
