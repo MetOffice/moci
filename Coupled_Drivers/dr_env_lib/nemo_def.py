@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2021-2025 Met Office. All rights reserved.
+ (C) Crown copyright 2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -22,18 +22,20 @@ DESCRIPTION
 # Variables required for both initalise and finalise
 NEMO_ENVIRONMENT_VARS_COMMON = {
     'NEMO_NL': {'default_val': 'namelist_cfg'},
-    'L_OCN_PASS_TRC': {'default_val': 'false'}
+    'L_OCN_PASS_TRC': {'default_val': 'false'},
+    'NEMO_NPROC': {'desc': 'Number of NEMO processors'},
+    'RST_LINK_DIR': {'default_val': '.',
+                     'desc': 'Subdirectory of $CYCL_TASK_WORK_DIR containing' \
+                     ' ocean restart links'}
     }
 
 NEMO_ENVIRONMENT_VARS_INITIAL = {
     'OCEAN_EXEC': {'desc': ('Ocean executable (OCEAN_EXEC=<full path to'
                             ' exec>)')},
-    'NEMO_NPROC': {'desc': 'Number of NEMO processors'},
     'NEMO_IPROC': {'desc': 'Number of NEMO processors in the i direction'},
     'NEMO_JPROC': {'desc': 'Number of NEMO processors in the j direction'},
     'NEMO_VERSION': {},
     'OCEAN_LINK': {'default_val': 'ocean.exe'},
-    'OCN_RES': {'default_val': ''},
     'NEMO_NL': {'default_val': 'namelist_cfg'},
     'NEMO_START': {'default_val': ''},
     'NEMO_ICEBERGS_START': {'default_val': ''},

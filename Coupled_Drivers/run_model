@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #*****************************COPYRIGHT******************************
-# (C) Crown copyright 2021-2025 Met Office. All rights reserved.
+# (C) Crown copyright 2021 Met Office. All rights reserved.
 #
 # Use, duplication or disclosure of this code is subject to the restrictions
 # as set forth in the licence. If no licence has been raised with this copy
@@ -37,42 +37,14 @@ export DRIVERS_FINALISED=false
 L_MCT_VALIDATE=${L_MCT_VALIDATE:=false}
 
 
-# Copy scripts to work directory so they can be found. We use the dependency
-# checker script so we only copy the files we need.
-if [[ $DRIVER_EXTRACT_DIR == *"fcm_make"* ]] ; then
-    # fcm_make infrastructure
-    extract_path=extract/drivers
-else
-    extract_path=
-fi
-FILES_TO_INSTALL=$($DRIVER_EXTRACT_DIR/$extract_path/Coupled_Drivers/driver_dependencies.py --extract-directory $DRIVER_EXTRACT_DIR/$extract_path/Coupled_Drivers)
-for file in $FILES_TO_INSTALL; do
-    # handle any packages
-    package_name=$(dirname "${file}")
-    if [[ $package_name != '.' && ! -d $package_name ]]; then
-	mkdir $package_name
-    fi
-    # as package_name will default to . then this will handle all cases
-    cp $DRIVER_EXTRACT_DIR/$extract_path/Coupled_Drivers/$file $package_name
-done
+# Copy scripts to work directory so they can be found.
+cp $DRIVER_EXTRACT_DIR/extract/drivers/Coupled_Drivers/*py ./
+cp $DRIVER_EXTRACT_DIR/extract/drivers/Coupled_Drivers/run_model ./
+cp $DRIVER_EXTRACT_DIR/extract/drivers/Coupled_Drivers/link_drivers ./
+cp $DRIVER_EXTRACT_DIR/extract/drivers/Coupled_Drivers/OASIS_fields ./
 
-# If the run uses LFRic, and environment variable NAMCOUPLE_STATIC is .false.
-# then we need to use the NGMS_utils libraries. NAMCOUPLE_STATIC is not a
-# compulsory environment variable, so we set a default for backward
-# compatibility
-NAMCOUPLE_STATIC=${NAMCOUPLE_STATIC:=True}
-if [[ "$models" == *lfric* && "$NAMCOUPLE_STATIC" == .false. ]]; then
-    cp $DRIVER_EXTRACT_DIR/$extract_path/Utilities/NGMS_utils/ngms_namcouple_gen/*py ./
-    cp $DRIVER_EXTRACT_DIR/$extract_path/Utilities/NGMS_utils/ngms_suite_lib/*py ./
-fi
-
-EXTRA_LINK_DRIVERS_INFO=$( echo ${EXTRA_LINK_DRIVERS_INFO:-} | tr '[:upper:]' '[:lower:]')
-if [[ ${EXTRA_LINK_DRIVERS_INFO:-} == "true" ]]; then
-    stat ./
-    stat ./link_drivers
-    lfs getstripe --mdt-index ./link_drivers
-    lfs getstripe ./link_drivers
-fi
+# Copy our packages to work directory so they can be found
+cp -r $DRIVER_EXTRACT_DIR/extract/drivers/Coupled_Drivers/dr_*_lib ./
 
 # Run our drivers, this produces two command files
 #  driver_envar containing environment variables to be exported
@@ -85,8 +57,6 @@ echo '[DRIVER_TEST_SCRIPT] Drivers successfully linked'
 # ensure that any dynamic namcouple setup, namelist setup, and file moving
 # had been completed
 if [ "$L_MCT_VALIDATE" = True ]; then
-    echo "Running MCT validate"
-    cp $DRIVER_EXTRACT_DIR/$extract_path/Coupled_Drivers/driver_utilities/mct_validate/mct_validate.py ./
     ./mct_validate.py
 fi
 
@@ -111,24 +81,21 @@ done
 
 # Export the enviromnent variables from all the drivers
 source driver_envar
-# Run the MPI launcher command and provide timing information if required
+# Run the aprun command and provide timing information if required
 start=$(date +%s)
 source driver_cmd
 end=$(date +%s)
 
-time_in_launcher=$((end-start))
-echo "[DRIVER_TEST_SCRIPT] $time_in_launcher seconds are spent in the"
-echo "[DRIVER_TEST_SCRIPT] MPI Launcher"
+time_in_aprun=$((end-start))
+echo "[DRIVER_TEST_SCRIPT] $time_in_aprun seconds are spent in APRUN"
 
-#export time_in_launcher variable so the cpmip controller can find it 
-#if required
-export time_in_launcher
+#export time_in_aprun variable so the cpmip controller can find it if required
+export time_in_aprun
 
 # Run the drivers in finalize mode (after completion of the model). This deals
 # with model standard out / standard error, and also with any file details
 # required prior to the start of the next model cycle (if applicable). If
-# the MPI launcher has failed, we run the drivers in a stripped down failure 
-# mode
+# aprun has failed, we run the drivers in a stripped down failure mode
 echo '[DRIVER_TEST_SCRIPT] Finalizing drivers'
 ./link_drivers --finalize;
 export DRIVERS_FINALISED=true

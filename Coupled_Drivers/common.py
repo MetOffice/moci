@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2022-2025 Met Office. All rights reserved.
+ (C) Crown copyright 2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -18,11 +18,9 @@ DESCRIPTION
     Common functions and classes required by multiple model drivers
 '''
 
-
-
-import datetime
-import glob
-import shutil
+#The from __future__ imports ensure compatibility between python2.7 and 3.x
+from __future__ import absolute_import
+import copy
 import re
 import os
 import sys
@@ -31,7 +29,6 @@ import threading
 import math
 import error
 import inc_days
-
 
 class ModNamelist(object):
     '''
@@ -49,7 +46,7 @@ class ModNamelist(object):
     def var_val(self, variable, value):
         '''
         Create a container of variable name, value pairs to be updated. Note
-        that if a variable doesn't exist in the namelist file, then it
+        that if a variable doesn't exisit in the namelist file, then it
         will be ignored
         '''
         if isinstance(value, str):
@@ -83,7 +80,7 @@ def find_previous_workdir(cyclepoint, workdir, taskname, task_param_run=None):
     '''
     Find the work directory for the previous cycle. Takes as argument
     the current cyclepoint, the path to the current work directory, and
-    the current taskname, a value specifying multiple tasks within
+    the current taskname, a value specifying multiple tasks within 
     same cycle (e.g. coupled_run1, coupled_run2) as used in coupled NWP
     and returns an absolute path.
     '''
@@ -100,7 +97,7 @@ def find_previous_workdir(cyclepoint, workdir, taskname, task_param_run=None):
 
         return previous_workdir
 
-    else:
+    else:      
         cyclesdir = os.sep.join(workdir.split(os.sep)[:-2])
         #find the work directory for the previous cycle
         work_cycles = os.listdir(cyclesdir)
@@ -121,7 +118,7 @@ def find_previous_workdir(cyclepoint, workdir, taskname, task_param_run=None):
             sys.stderr.write('[FAIL] Can not find previous work directory for'
                              ' task %s\n' % taskname)
             sys.exit(error.MISSING_DRIVER_FILE_ERROR)
-
+    
         return os.path.join(cyclesdir, previous_task_cycle, taskname)
 
 
@@ -139,6 +136,7 @@ def get_filepaths(directory):
     return file_paths
 
 
+
 def open_text_file(name, mode):
     '''
     Provide a common function to open a file and provide a suitiable error
@@ -152,7 +150,7 @@ def open_text_file(name, mode):
              'a+':'updating (appending)'}
     if mode not in list(modes.keys()):
         options = ''
-        for k in modes:
+        for k in modes.keys():
             options += '  %s: %s\n' % (k, modes[k])
         sys.stderr.write('[FAIL] Attempting to open file %s, do not recognise'
                          ' mode %s. Please use one of the following modes:\n%s'
@@ -187,6 +185,28 @@ def remove_file(filename):
         return True
     else:
         return False
+
+def remove_trailing_slash(path_str):
+    '''
+    Takes a string of a path and removes any trailing slashes and spaces if
+    there are any present
+    '''
+    trailing_slash_regex = r'[\w/]*\w+([\s/]+)$'
+    match = re.match(trailing_slash_regex, path_str)
+    if match:
+        num_trailing_slashes = len(match.group(1))
+        return path_str[:-num_trailing_slashes]
+    return path_str
+        
+
+def remove_trailing_slash_orig(path_str):
+    '''
+    Takes a string of a path and removes the trailing slash if there is one
+    present
+    '''
+    if path_str[-1] == '/':
+        return path_str[:-1]
+    return path_str
 
 def setup_runtime(common_env):
     '''
@@ -324,53 +344,3 @@ def set_aprun_options(nproc, nodes, ompthr, hyperthreads, ss):
         rose_launcher_preopts = "-ss " + rose_launcher_preopts
 
     return rose_launcher_preopts
-
-
-def _sort_hist_dirs_by_date(dir_list):
-    '''
-    Sort a list of history directories by date
-    '''
-    # Pattern that defines the name of the history directories,
-    # which contain a date of the form YYYYmmddHHMM.
-    pattern = r'\.(\d{12})'
-
-    try:
-        dir_list.sort(key=lambda dname: datetime.datetime.strptime(
-            re.search(pattern, dname).group(1), '%Y%m%d%H%M'))
-    except AttributeError:
-        msg = '[FAIL] Cannot order directories: %s' % " ".join(dir_list)
-        sys.stderr.write(msg)
-        sys.exit(error.IOERROR)
-
-    return dir_list
-
-
-def remove_latest_hist_dir(old_hist_dir):
-    '''
-    If a model task has failed, then removed the last created history
-    directory, before a new one is created, associated with the
-    re-attempt.
-    '''
-    # Replace the regex pattern that defines the history directory
-    # name (that contains a date of the format YYYYmmddHHMM) with a
-    # generic pattern so that we can perform the directory glob.
-    history_pattern = re.sub(
-        r'\.\d{12}', '.????????????', old_hist_dir)
-
-    # Find and sort the history directories, and delete
-    # the latest one, corresponding to the last entry in
-    # the list.
-    history_dirs = glob.glob(history_pattern)
-    history_dirs = _sort_hist_dirs_by_date(history_dirs)
-
-    msg = '[INFO] Found history directories: %s \n' % ' '.join(
-        history_dirs)
-    sys.stdout.write(msg)
-
-    latest_hist_dir = history_dirs[-1]
-    msg = ("[WARN] Re-attempting failed model step. \n"
-           "[WARN] Clearing out latest history \n"
-           "[WARN] directory %s. \n" % latest_hist_dir)
-    sys.stdout.write(msg)
-
-    shutil.rmtree(latest_hist_dir)
