@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2020 Met Office. All rights reserved.
+ (C) Crown copyright 2020-2026 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -75,7 +75,7 @@ def generate_timestep(filename):
     helmholtz_regex = re.compile(
         r'\*.*Linear solve for Helmholtz problem.*\*'
         )
-    norms_regex = re.compile(r'\*\s+\d+\s+\d+\s+(\d+)\s+(\S+)\s+\*')
+    norms_regex = re.compile(r'\*\s+\d+\s+\d+\s+(\d+)\s+(\S+)\s+(?:\s+\S+)?\s+\*')
 
     with open(filename, 'r') as fhandle:
         nextstep = None

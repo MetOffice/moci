@@ -24,7 +24,7 @@ space for all contributors.
 Please see the
 [Momentum Contributors Licence Agreement](https://github.com/MetOffice/Momentum/blob/main/CLA.md)
 
-Agreement of the CLA can be shown by adding yourself to the CONTRIBUTORS file
+Agreement of the CLA can be shown by adding yourself to the CONTRIBUTORS.md file
 alongside this one, and is a requirement for contributing to this project.
 
 ### Code of Conduct
@@ -44,3 +44,18 @@ Questions are encouraged in the Simulation Systems
 
 Please be aware of and follow the Simulation Systems
 [AI Policy.](https://metoffice.github.io/simulation-systems/FurtherDetails/ai.html)
+
+#### Testing
+
+MOCI rose-stem provides testing for the Coupled_Drivers and Postprocessing applications plus Utilities unittests.
+`cylc vip -z group=<group> -n <run name> <path to rose-stem dir>
+
+Available test groups:
+`all`       Runs all available tasks
+`tests`     Runs all unit tests covering MOCI code
+`postproc`  Runs all Postprocessing application tasks
+`drivers`   Runs all Coupled_Drivers related tasks.
+            Drivers run tasks currently only available on Met Office internal machines.
+            `drivers_non_run` tests are available on other platforms
+
+
