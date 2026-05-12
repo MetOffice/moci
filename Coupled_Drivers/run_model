@@ -74,6 +74,9 @@ if [[ ${EXTRA_LINK_DRIVERS_INFO:-} == "true" ]]; then
     lfs getstripe ./link_drivers
 fi
 
+# Add MOCIlib
+cp $DRIVER_EXTRACT_DIR/$extract_path/mocilib/*py ./
+
 # Run our drivers, this produces two command files
 #  driver_envar containing environment variables to be exported
 #  driver_cmd containing a command for the system launcher
