@@ -80,7 +80,7 @@ def find_previous_workdir(cyclepoint, workdir, taskname, task_param_run=None):
     '''
     Find the work directory for the previous cycle. Takes as argument
     the current cyclepoint, the path to the current work directory, and
-    the current taskname, a value specifying multiple tasks within 
+    the current taskname, a value specifying multiple tasks within
     same cycle (e.g. coupled_run1, coupled_run2) as used in coupled NWP
     and returns an absolute path.
     '''
@@ -97,7 +97,7 @@ def find_previous_workdir(cyclepoint, workdir, taskname, task_param_run=None):
 
         return previous_workdir
 
-    else:      
+    else:
         cyclesdir = os.sep.join(workdir.split(os.sep)[:-2])
         #find the work directory for the previous cycle
         work_cycles = os.listdir(cyclesdir)
@@ -118,7 +118,7 @@ def find_previous_workdir(cyclepoint, workdir, taskname, task_param_run=None):
             sys.stderr.write('[FAIL] Can not find previous work directory for'
                              ' task %s\n' % taskname)
             sys.exit(error.MISSING_DRIVER_FILE_ERROR)
-    
+
         return os.path.join(cyclesdir, previous_task_cycle, taskname)
 
 
@@ -185,28 +185,6 @@ def remove_file(filename):
         return True
     else:
         return False
-
-def remove_trailing_slash(path_str):
-    '''
-    Takes a string of a path and removes any trailing slashes and spaces if
-    there are any present
-    '''
-    trailing_slash_regex = r'[\w/]*\w+([\s/]+)$'
-    match = re.match(trailing_slash_regex, path_str)
-    if match:
-        num_trailing_slashes = len(match.group(1))
-        return path_str[:-num_trailing_slashes]
-    return path_str
-        
-
-def remove_trailing_slash_orig(path_str):
-    '''
-    Takes a string of a path and removes the trailing slash if there is one
-    present
-    '''
-    if path_str[-1] == '/':
-        return path_str[:-1]
-    return path_str
 
 def setup_runtime(common_env):
     '''

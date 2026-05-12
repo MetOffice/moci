@@ -27,7 +27,7 @@ echo $CYLC_SUITE_RUN_DIR
 # compatibility, and future flexibility
 DRIVER_EXTRACT_DIR=${DRIVER_EXTRACT_DIR:=$CYLC_SUITE_SHARE_DIR/fcm_make_drivers}
 
-echo "[DRIVER_TEST_SCRIPT] DRIVER_EXTRACT_DIR is $DRIVER_EXTRACT_DIR" 
+echo "[DRIVER_TEST_SCRIPT] DRIVER_EXTRACT_DIR is $DRIVER_EXTRACT_DIR"
 
 # This lets us set up a failure mode
 export DRIVERS_FINALISED=false
@@ -79,7 +79,7 @@ for S in $SIGNALS; do
     trap 'FINALLY' $S
 done
 
-# Export the enviromnent variables from all the drivers
+# Export the environment variables from all the drivers
 source driver_envar
 # Run the aprun command and provide timing information if required
 start=$(date +%s)
