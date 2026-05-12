@@ -37,14 +37,42 @@ export DRIVERS_FINALISED=false
 L_MCT_VALIDATE=${L_MCT_VALIDATE:=false}
 
 
-# Copy scripts to work directory so they can be found.
-cp $DRIVER_EXTRACT_DIR/extract/drivers/Coupled_Drivers/*py ./
-cp $DRIVER_EXTRACT_DIR/extract/drivers/Coupled_Drivers/run_model ./
-cp $DRIVER_EXTRACT_DIR/extract/drivers/Coupled_Drivers/link_drivers ./
-cp $DRIVER_EXTRACT_DIR/extract/drivers/Coupled_Drivers/OASIS_fields ./
+# Copy scripts to work directory so they can be found. We use the dependency
+# checker script so we only copy the files we need.
+if [[ $DRIVER_EXTRACT_DIR == *"fcm_make"* ]] ; then
+    # fcm_make infrastructure
+    extract_path=extract/drivers
+else
+    extract_path=
+fi
+FILES_TO_INSTALL=$($DRIVER_EXTRACT_DIR/$extract_path/Coupled_Drivers/driver_dependencies.py --extract-directory $DRIVER_EXTRACT_DIR/$extract_path/Coupled_Drivers)
+for file in $FILES_TO_INSTALL; do
+    # handle any packages
+    package_name=$(dirname "${file}")
+    if [[ $package_name != '.' && ! -d $package_name ]]; then
+	mkdir $package_name
+    fi
+    # as package_name will default to . then this will handle all cases
+    cp $DRIVER_EXTRACT_DIR/$extract_path/Coupled_Drivers/$file $package_name
+done
 
-# Copy our packages to work directory so they can be found
-cp -r $DRIVER_EXTRACT_DIR/extract/drivers/Coupled_Drivers/dr_*_lib ./
+# If the run uses LFRic, and environment variable NAMCOUPLE_STATIC is .false.
+# then we need to use the NGMS_utils libraries. NAMCOUPLE_STATIC is not a
+# compulsory environment variable, so we set a default for backward
+# compatibility
+NAMCOUPLE_STATIC=${NAMCOUPLE_STATIC:=True}
+if [[ "$models" == *lfric* && "$NAMCOUPLE_STATIC" == .false. ]]; then
+    cp $DRIVER_EXTRACT_DIR/$extract_path/Utilities/NGMS_utils/ngms_namcouple_gen/*py ./
+    cp $DRIVER_EXTRACT_DIR/$extract_path/Utilities/NGMS_utils/ngms_suite_lib/*py ./
+fi
+
+EXTRA_LINK_DRIVERS_INFO=$( echo ${EXTRA_LINK_DRIVERS_INFO:-} | tr '[:upper:]' '[:lower:]')
+if [[ ${EXTRA_LINK_DRIVERS_INFO:-} == "true" ]]; then
+    stat ./
+    stat ./link_drivers
+    lfs getstripe --mdt-index ./link_drivers
+    lfs getstripe ./link_drivers
+fi
 
 # Run our drivers, this produces two command files
 #  driver_envar containing environment variables to be exported
