@@ -1,4 +1,4 @@
-# moci - Met Office Coupling Infrastructure
+# MOCI - Met Office Coupling Infrastructure
 
 The Met Office global coupled models (GC) couple together the ​
 [UM](https://github.com/MetOffice/um) and [​NEMO](https://www.nemo-ocean.eu/) in
