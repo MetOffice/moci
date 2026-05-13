@@ -1,4 +1,4 @@
-{% set MODULE_CMD = 'module use /data/users/moci/modules/modules; module load GC4-PrgEnv/2024-01-cpe23.05-cce15.0.0/5083; module load scitools; module load um_tools' %}
+{% set MODULE_CMD = 'module use /data/users/moci/modules/modules; module load GC4-PrgEnv/2024-01-cpe23.05-cce15.0.0/5083; module load scitools; module load um_tools;' %}
 
     [[HPC_RESOURCE]]
         env-script = "eval $(rose task-env)"
