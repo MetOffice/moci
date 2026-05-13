@@ -184,11 +184,17 @@ MISSING_OCN_RESOL = 832
 # Not on ORCA grid
 NOT_ORCA_GRID = 833
 
+# Not declared ocean resolution when creating namcouple on fly after NEMO3.6
+NOT_DECLARE_OCN_RES = 834
+
+# Unknown ocean resolution
+UNKNOWN_OCN_RESOL = 835
+
 # Missing namelist oasis_ocn_send_nml from OASIS_OCN_SEND
-MISSING_OASIS_OCN_SEND_NML = 834
+MISSING_OASIS_OCN_SEND_NML = 836
 
 # Missing entry oasis_ocn_send from namelist oasis_ocn_send_nml
-MISSING_OASIS_OCN_SEND = 835
+MISSING_OASIS_OCN_SEND = 837
 
 # Missing OASIS send file for UM
 MISSING_OASIS_ATM_SEND = 840
@@ -254,3 +260,15 @@ MISSING_DEFAULT_OPTION = 870
 
 # Not found the coupling namelist in namelist_cfg
 MISSING_NAMSBC_CPL = 871
+
+# Missing the JULES river resolution namelist
+MISSING_RIVER_RESOL_NML = 872
+
+# Missing the JULES river resolution parameters
+MISSING_RIVER_RESOL = 873
+
+# Missing OASIS send file for JULES river
+MISSING_OASIS_RIV_SEND = 874
+
+# Missing namelist oasis_riv_send_nml from OASIS_RIV_SEND
+MISSING_OASIS_RIV_SEND_NML = 875
