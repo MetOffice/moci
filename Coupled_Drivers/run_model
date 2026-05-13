@@ -88,6 +88,8 @@ echo '[DRIVER_TEST_SCRIPT] Drivers successfully linked'
 # ensure that any dynamic namcouple setup, namelist setup, and file moving
 # had been completed
 if [ "$L_MCT_VALIDATE" = True ]; then
+    echo "Running MCT validate"
+    cp $DRIVER_EXTRACT_DIR/$extract_path/Coupled_Drivers/driver_utilities/mct_validate/mct_validate.py ./
     ./mct_validate.py
 fi
 
