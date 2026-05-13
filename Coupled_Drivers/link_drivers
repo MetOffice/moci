@@ -44,8 +44,8 @@ def _check_drivers(models):
     '''
     sys.stdout.write('MODELS %s\n' % models)
 
-    models = [model for model in models.split(' ') if model not in SUBMODELS]
-    for model in models:
+    models = models.split('')
+    for model in models[:]:
         drivername = '%s_driver.py' % model
         if not os.path.isfile(drivername):
             # check to see if this is a controller rather than a driver
