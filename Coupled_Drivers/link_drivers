@@ -44,7 +44,7 @@ def _check_drivers(models):
     '''
     sys.stdout.write('MODELS %s\n' % models)
 
-    models = models.split('')
+    models = models.split(' ')
     for model in models[:]:
         drivername = '%s_driver.py' % model
         if not os.path.isfile(drivername):
