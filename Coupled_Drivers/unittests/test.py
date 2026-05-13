@@ -33,7 +33,6 @@ def main():
     groups = {
         'all': 'test*.py',
         'env_lib': 'test_env_lib.py',
-        'aprun_command': 'test_aprun_command_construction.py',
         'ocn_lib': 'test_ocn_lib.py',
         'nemo_nl': 'test_update_nemo_nl.py',
         'nemo_driver': 'test_nemo_*.py',
@@ -41,6 +40,18 @@ def main():
         'nemo_restart_lib': 'test_nemo_restart_lib*.py',
         'common': 'test_common*.py',
         'dev': 'test_ocn_lib.py',
+        'mct': 'test_mct_driver.py',
+        'lfric': 'test_lfric_driver.py',
+        'xios': 'test_xios_driver.py',
+        'dependency_checker': 'test_driver_dependencies.py',
+        'cpmip': 'test_cpmip*py',
+        'nemo_driver': 'test_nemo_driver.py',
+        'um_driver': 'test_um_driver.py',
+        'cice_driver': 'test_cice_driver.py',
+        'rivers': 'test_rivers_driver.py',
+        'common': 'test_common.py',
+        'namcouple': 'test_update_namcouple.py',
+        'link': 'test_link_drivers.py',
     }
 
     parser = argparse.ArgumentParser(
