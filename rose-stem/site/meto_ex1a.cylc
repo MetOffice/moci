@@ -1,4 +1,4 @@
-{% set MODULE_CMD = 'module use /data/users/moci/modules/modules; module load GC4-PrgEnv/2024-01-cpe23.05-cce15.0.0/5083; module load scitools;' %}
+{% set MODULE_CMD = 'module use /data/users/moci/modules/modules; module load GC4-PrgEnv/2024-01-cpe23.05-cce15.0.0/5083; module load scitools; module load um_tools' %}
 
     [[HPC_RESOURCE]]
         env-script = "eval $(rose task-env)"
@@ -94,8 +94,8 @@
             DATA_INTENSITY = true
             COMPLEXITY = false
             TOTAL_POWER_CONSUMPTION_NEEDED = 4.8
-            NODES_IN_HPC_NEEDED = 12932	    
-       [[[directives]]] 
+            NODES_IN_HPC_NEEDED = 12932
+       [[[directives]]]
             -l select = '{{ATMOS_NODES}}:ncpus=256:mpiprocs={{ATMOS_MPIPROC_PN}}+{{OCEAN_NODES}}:ncpus=256:mpiprocs={{OCEAN_PPN}}+{{XIOS_NODES}}:ncpus=256:mpiprocs={{XIOS_NPROC}}'
 
     [[RECON_RESOURCE]]
