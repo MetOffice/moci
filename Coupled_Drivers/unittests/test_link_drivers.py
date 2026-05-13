@@ -62,12 +62,6 @@ class TestChecks(unittest.TestCase):
     Test the private check methods.
     '''
 
-    def setUp(self):
-        pass
-
-    def tearDown(self):
-        pass
-
     def test_check_drivers_single(self):
         '''
         Assert single model driver is present
