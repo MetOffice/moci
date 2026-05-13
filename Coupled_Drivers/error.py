@@ -23,6 +23,9 @@ DESCRIPTION
 # Python errors
 VERSION_ERROR = 1
 
+# Import Error
+IMPORT_ERROR = 2
+
 # File I/O errors
 IOERROR = 100
 
