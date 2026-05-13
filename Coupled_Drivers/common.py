@@ -334,3 +334,53 @@ def set_aprun_options(nproc, nodes, ompthr, hyperthreads, ss):
         rose_launcher_preopts = "-ss " + rose_launcher_preopts
 
     return rose_launcher_preopts
+
+
+def _sort_hist_dirs_by_date(dir_list):
+    '''
+    Sort a list of history directories by date
+    '''
+    # Pattern that defines the name of the history directories,
+    # which contain a date of the form YYYYmmddHHMM.
+    pattern = r'\.(\d{12})'
+
+    try:
+        dir_list.sort(key=lambda dname: datetime.datetime.strptime(
+            re.search(pattern, dname).group(1), '%Y%m%d%H%M'))
+    except AttributeError:
+        msg = '[FAIL] Cannot order directories: %s' % " ".join(dir_list)
+        sys.stderr.write(msg)
+        sys.exit(error.IOERROR)
+
+    return dir_list
+
+
+def remove_latest_hist_dir(old_hist_dir):
+    '''
+    If a model task has failed, then removed the last created history
+    directory, before a new one is created, associated with the
+    re-attempt.
+    '''
+    # Replace the regex pattern that defines the history directory
+    # name (that contains a date of the format YYYYmmddHHMM) with a
+    # generic pattern so that we can perform the directory glob.
+    history_pattern = re.sub(
+        r'\.\d{12}', '.????????????', old_hist_dir)
+
+    # Find and sort the history directories, and delete
+    # the latest one, corresponding to the last entry in
+    # the list.
+    history_dirs = glob.glob(history_pattern)
+    history_dirs = _sort_hist_dirs_by_date(history_dirs)
+
+    msg = '[INFO] Found history directories: %s \n' % ' '.join(
+        history_dirs)
+    sys.stdout.write(msg)
+
+    latest_hist_dir = history_dirs[-1]
+    msg = ("[WARN] Re-attempting failed model step. \n"
+           "[WARN] Clearing out latest history \n"
+           "[WARN] directory %s. \n" % latest_hist_dir)
+    sys.stdout.write(msg)
+
+    shutil.rmtree(latest_hist_dir)
