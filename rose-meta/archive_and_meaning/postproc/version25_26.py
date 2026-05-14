@@ -95,11 +95,11 @@ class pp25_t646(MacroUpgrade):
 
         return config, self.reports
 
-class pp25_pr52(MacroUpgrade):
+class pp25_pr53(MacroUpgrade):
 
-    """Upgrade macro for PR #52 by Erica Neininger."""
+    """Upgrade macro for PR #53 by Erica Neininger."""
     BEFORE_TAG = "pp25_t646"
-    AFTER_TAG = "pp25_pr52"
+    AFTER_TAG = "pp25_pr53"
 
     def upgrade(self, config, meta_config=None):
         """Update moose_arch namelist for Azure MASS."""
