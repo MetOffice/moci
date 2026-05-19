@@ -109,15 +109,19 @@ class UniciclesPostProc(control.RunPostProc):
                 format('bisicles', self.suite.prefix),
                 r'^{0}_{1}c_\d*[dmy]_\d{{8}}-\d{{8}}_plot-(A|Gr)IS\.hdf5$'.
                 format('bisicles', self.suite.prefix),
+                r'^{0}_{1}c_\d*[dmy]_\d{{8}}-\d{{8}}_plot-CF-(A|Gr)IS\.hdf5$'.
+                format('bisicles', self.suite.prefix),
                 r'^{0}_{1}c_\d*[dmy]_\d{{8}}-\d{{8}}_nemo-icecouple-AIS\.hdf5$'.
                 format('bisicles', self.suite.prefix),
                 r'^{0}_{1}c_\d*[dmy]_\d{{8}}-\d{{8}}_atmos-icecouple\.nc$'.
                 format('unicicles', self.suite.prefix),
-                r'^{0}_{1}c_\d*[dmy]_\d{{8}}-\d{{8}}_nemo-bathy-isf\.nc$'.
-                format('unicicles', self.suite.prefix),
                 r'^{0}_{1}c_\d*[dmy]_\d{{8}}-\d{{8}}_bisicles-icecouple\.nc$'.
                 format('unicicles', self.suite.prefix),
                 r'^{0}_{1}c_\d*[dmy]_\d{{8}}-\d{{8}}_calving\.nc$'.
+                format('unicicles', self.suite.prefix),
+                r'^{0}_{1}c_\d*[dmy]_\d{{8}}-\d{{8}}_nemo-bathy-isf\.nc$'.
+                format('unicicles', self.suite.prefix),
+                r'^{0}_{1}c_\d*[dmy]_\d{{8}}-\d{{8}}_nemo-domain\.nc$'.
                 format('unicicles', self.suite.prefix),
                 r'^{0}_{1}c_\d*[dmy]_\d{{8}}-\d{{8}}_nemo-icecouple\.nc$'.
                 format('unicicles', self.suite.prefix)]

@@ -40,7 +40,6 @@
 {# name_graphs contains test_option-dependency key-value pairs -#}
 {%- set name_graphs = {
      "default" : "default_task",
-     "mocilib_unittests" : SPACER + "extract_source => mocilib_unittests"
     }
 -%}
 
@@ -48,13 +47,13 @@
 {# groups contains group_option-trigger_list key-value pairs. -#}
 {# If a group option is set, each group or task in the trigger list will be set. -#}
 {%- set groups = {
-    "tests"             : ["mocilib_unittests"],
-    "ALL"               : ["tests"],
+    "ALL"               : [],
     "all"               : ["ALL"]
     }
  %}
 
 {% set SPACER = "         " %}
+{% include 'graph-unittests.cylc' %}
 {% include 'graph-postproc.cylc' %}
 {% include 'graph-drivers.cylc' %}
 
@@ -144,8 +143,6 @@ sleep 5
        [[[environment]]]
            HOSTNAME = $(rose host-select {{COMPUTE_HOST}})
 
-    [[UNITTESTS]]
-
     [[extract_source]]
         inherit = SOURCE_EXTRACTION, EXTRACT_RESOURCE
 
@@ -160,12 +157,6 @@ sleep 5
        [[[environment]]]
            HOSTNAME = $(rose host-select {{COMPUTE_HOST}})
 
-    [[UNITTESTS]]
-
-    [[mocilib_unittests]]
-        inherit = UNITTESTS, EXTRACT_RESOURCE
-        script = "python $SOURCE_DIRECTORY/moci/mocilib/unittests/test.py"
-
     [[HOUSEKEEPING]]
 {% if HOUSEKEEPING == true %}
         script = "rose task-run --verbose"
@@ -177,5 +168,6 @@ sleep 5
 
 {% include "site/" + SYSTEM_NAME + ".cylc" %}
 
+{% include 'tasks-unittests.cylc' %}
 {% include 'tasks-postproc.cylc' %}
 {% include 'tasks-drivers.cylc' %}

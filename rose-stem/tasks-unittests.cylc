@@ -1,0 +1,24 @@
+    [[UNITTESTS]]
+    
+    [[mocilib_unittests]]
+        inherit = UNITTESTS, EXTRACT_RESOURCE
+        script = "python $SOURCE_MOCI_BASE/mocilib/unittests/test.py"
+
+    [[ngmsutils_unittests]]
+        inherit = UNITTESTS, EXTRACT_RESOURCE
+        script = """
+python $SOURCE_MOCI_BASE/Utilities/NGMS_utils/ngms_namcouple_gen/unittests/test.py
+python $SOURCE_MOCI_BASE/Utilities/NGMS_utils/ngms_suite_lib/unittests/test.py
+"""
+
+    [[verification_unittests]]
+        inherit = UNITTESTS, EXTRACT_RESOURCE
+        script = "python $SOURCE_MOCI_BASE/Utilities/verification_scripts/unittests/test_compare_norms.py"   
+
+    [[ozone_unittests]]
+        inherit = UNITTESTS, EXTRACT_RESOURCE
+        script = "python $SOURCE_MOCI_BASE/Utilities/ozone_redistribution/unittests/test_ozone.py"
+
+    [[monitor_unittests]]
+        inherit = UNITTESTS, EXTRACT_RESOURCE
+        script = "python $SOURCE_MOCI_BASE/Utilities/suite_monitoring/unit_tests/test.py"

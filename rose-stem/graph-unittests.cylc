@@ -1,0 +1,15 @@
+{%- do name_graphs.update({
+    "mocilib_unittests" : SPACER + "extract_source => mocilib_unittests",
+    "ngmsutils_unittests" : SPACER + "extract_source => ngmsutils_unittests",
+    "verification_unittests" :  SPACER + "extract_source => verification_unittests",
+    "ozone_unittests": SPACER + "extract_source => ozone_unittests",
+    "monitor_unittests": SPACER + "extract_source => monitor_unittests",
+}) %}
+
+{# groups contains group_option-trigger_list key-value pairs. -#}
+{# If a group option is set, each group or task in the trigger list will be set. -#}
+{%- do groups.update({
+   "tests" : ["mocilib_unittests", "ngmsutils_unittests", "verification_unittests", "ozone_unittests", "monitor_unittests"]
+}) %}
+
+{%- do groups['ALL'].append( "tests" ) %}

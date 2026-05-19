@@ -16,13 +16,13 @@
 set -eu
 
 # Required environment
-PP_SOURCE_DIR=${PP_SOURCE_DIR:=$CYLC_WORKFLOW_RUN_DIR/share/source/moci_postproc}
-PP_TARGET_DIR=${PP_TARGET_DIR:-$CYLC_WORKFLOW_SHARE_DIR/bin}
+PP_SOURCE_DIR=${PP_SOURCE_DIR:=$CYLC_WORKFLOW_SHARE_DIR/source/moci_postproc}
+PP_TARGET_DIR=${PP_TARGET_DIR:=$CYLC_WORKFLOW_SHARE_DIR/bin}
 
 MOCILIB=${MOCILIB:=true}
-MOCILIB_PATH=${MOCILIB_PATH:=$CYLC_WORKFLOW_SHARE_DIR/source/moci/mocilib}
+MOCILIB_PATH=${MOCILIB_PATH:=$PP_SOURCE_DIR/mocilib}
 
-PP_COMPONENTS="atmos nemocice unicicles archive_verify"
+PP_COMPONENTS=${PP_COMPONENTS:="atmos nemocice unicicles archive_verify"}
 PP_TESTS=${PP_TESTS:=false}
 
 echo [INFO] Building PostProc application from $PP_SOURCE_DIR
@@ -33,17 +33,16 @@ if [[ ! -d $PP_SOURCE_DIR ]] ; then
     exit 1
 fi
 if [[ ! -d $PP_TARGET_DIR ]] ; then
-    echo [INFO] Creating build directory...
+    echo [INFO] Creating build directory ...
     mkdir -p $PP_TARGET_DIR
 fi
 
-# Copy mocilib
-
+# Link mocilib
 if [[ "$MOCILIB" != true ]] ; then
-    echo [INFO] MOCIlib library not installed
+    echo [INFO] MOCIlib library not requested
 elif [[ -d "$MOCILIB_PATH" ]] ; then
-    echo [INFO] Copying MOCILIB ...
-    cp -r $MOCILIB_PATH $PP_TARGET_DIR
+    echo [INFO] Linking to MOCILIB at $MOCILIB_PATH ...
+    ln -sf $MOCILIB_PATH $PP_TARGET_DIR/mocilib
 else
     echo [ERROR] Failed to find the required \"mocilib\" library >&2
     exit 1

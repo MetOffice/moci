@@ -110,7 +110,7 @@ touch ${UNICICLES_DATA}/${RUNID}c_${startdate}_glint-GrIS_restart.nc
 touch ${UNICICLES_DATA}/bisicles_${RUNID}c_3m_${predate}-${startdate}_calving-AIS.hdf5
 touch ${UNICICLES_DATA}/bisicles_${RUNID}c_3m_${predate}-${startdate}_calving-GrIS.hdf5
 touch ${UNICICLES_DATA}/unicicles_${RUNID}c_3m_${predate}-${startdate}_atmos-icecouple.nc
-touch ${UNICICLES_DATA}/unicicles_${RUNID}c_3m_${predate}-${startdate}_nemo-bathy-isf.nc
+touch ${UNICICLES_DATA}/unicicles_${RUNID}c_3m_${predate}-${startdate}_nemo-domain.nc
 touch ${UNICICLES_DATA}/unicicles_${RUNID}c_3m_${predate}-${startdate}_calving.nc
 touch ${UNICICLES_DATA}/unicicles_${RUNID}c_3m_${predate}-${startdate}_nemo-icecouple.nc
 
@@ -138,8 +138,10 @@ touch ${UNICICLES_DATA}/${RUNID}c_${enddate}_glint-GrIS_restart.nc
 
 touch ${UNICICLES_DATA}/bisicles_${RUNID}c_3m_${startdate}-${enddate}_nemo-icecouple-AIS.hdf5
 touch ${UNICICLES_DATA}/bisicles_${RUNID}c_3m_${startdate}-${enddate}_plot-AIS.hdf5
+touch ${UNICICLES_DATA}/bisicles_${RUNID}c_3m_${startdate}-${enddate}_plot-CF-AIS.hdf5
 touch ${UNICICLES_DATA}/bisicles_${RUNID}c_3m_${startdate}-${enddate}_calving-AIS.hdf5
 touch ${UNICICLES_DATA}/bisicles_${RUNID}c_3m_${startdate}-${enddate}_plot-GrIS.hdf5
+touch ${UNICICLES_DATA}/bisicles_${RUNID}c_3m_${startdate}-${enddate}_plot-CF-GrIS.hdf5
 touch ${UNICICLES_DATA}/bisicles_${RUNID}c_3m_${startdate}-${enddate}_calving-GrIS.hdf5
 
 touch ${UNICICLES_DATA}/unicicles_${RUNID}c_3m_${startdate}-${enddate}_atmos-icecouple.nc
@@ -154,6 +156,7 @@ touch ${UNICICLES_DATA}/unicicles_${RUNID}c_3m_${startdate}-${enddate}_orog-li-G
 touch ${UNICICLES_DATA}/unicicles_${RUNID}c_3m_${startdate}-${enddate}_orog-li.anc
 touch ${UNICICLES_DATA}/unicicles_${RUNID}c_3m_${startdate}-${enddate}_calving.nc
 touch ${UNICICLES_DATA}/unicicles_${RUNID}c_3m_${startdate}-${enddate}_nemo-bathy-isf.nc
+touch ${UNICICLES_DATA}/unicicles_${RUNID}c_3m_${startdate}-${enddate}_nemo-domain.nc
 
 echo [INFO] Created the following files to simulate uniCiCles output data:
 ls ${UNICICLES_DATA}/*c_${startdate}_*
