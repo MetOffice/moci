@@ -29,7 +29,7 @@ error_analysis () {
        RC=$RC_ERROR
        echo [WARN] moo command is unavailable.
        ;;
-    *'no such data'*|*'no file atoms are matched'* )
+    *'no such data'*|*'no file atoms are matched'*|*'NOT_FOUND'* )
         # No data - OK if within 1 year of Nrun
        echo [WARN] No data set/collection available.
        echo        This is acceptable for the PRIMARY archive within 1 year of NRun.
