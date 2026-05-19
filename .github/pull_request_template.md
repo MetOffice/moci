@@ -25,17 +25,24 @@ Code Reviewer: <!-- CR id, filled by SSD -->
 
 - [ ] I have performed a self-review of my own code
 - [ ] My code follows the project's style guidelines
-- [ ] Comments have been included that aid undertanding and enhance the
+- [ ] Comments have been included that aid understanding and enhance the
       readability of the code
 - [ ] My changes generate no new warnings
 
 ## Testing
 
-- [ ] I have tested this change locally, using the Moci rose-stem suite
+- [ ] I have tested this change locally, using the Moci rose-stem suite.  Required for any changes to
+  * Coupled_Drivers application
+  * Postprocessing application
+  * Unittests
 - [ ] If any tests fail (rose-stem or CI) the reason is understood and
       acceptable (eg. kgo changes)
 - [ ] I have added tests to cover new functionality as appropriate (eg. system
       tests, unit tests, etc.)
+  
+  ### trac.log
+  
+<!-- Paste your trac.log from testing output here -->
 
 <!-- Describe other testing performed (if applicable) -->
 
