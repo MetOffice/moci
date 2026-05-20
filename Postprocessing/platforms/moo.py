@@ -165,7 +165,7 @@ class _Moose(object):
         if model_id == 'a':  # Atmosphere output
             if self._file_id.endswith('.nc'):
                 fn_facets = self._file_id.split('_')
-                if re.match('^[pm][a-z0-9](-.*)?$', fn_facets[-1]):
+                if re.match(r'^[pm][a-z0-9](-.*)?$', fn_facets[-1]):
                     # Use stream id for collection if provided in filename
                     stream_id = fn_facets[-1][1]
                 else:
@@ -175,20 +175,20 @@ class _Moose(object):
                 ext = '.nc.file'
             else:
                 file_id = self._file_id[:2]
-                if re.search('[mp][1-9|a-z]', file_id):
+                if re.search(r'[mp][1-9a-z]', file_id):
                     if self._file_id.endswith('.pp'):
                         ext = '.pp'
                     else:
                         ext = '.file'
-                elif re.search('v[1-5|a-j|lmsvy]', file_id):
+                elif re.search(r'v[1-5a-jlmsvy]', file_id):
                     ext = '.pp'
-                elif re.search('n[1-9|a-m|s-z]', file_id):
+                elif re.search(r'n[1-9a-ms-z]', file_id):
                     ext = '.nc.file'
-                elif re.search('b[a-j|mxy]', file_id):
+                elif re.search(r'b[a-jmxy]', file_id):
                     ext = '.file'
-                elif re.search('d[amsy]', file_id):
+                elif re.search(r'd[amsy]', file_id):
                     ext = '.file'
-                elif re.search('r[a-m|qstuvwxz]', file_id):
+                elif re.search(r'r[a-mqstuvwxz]', file_id):
                     ext = '.file'
 
         elif model_id in 'io':  # NEMO/CICE means and restart dumps
