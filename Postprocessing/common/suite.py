@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2022 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2026 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -142,7 +142,7 @@ class SuiteEnvironment(object):
         if self.archive_system == 'moose':
             # MOOSE Archiving
             rcode = moo.archive_to_moose(filename, self.prefix, self.sourcedir,
-                                         self.nl_arch, preproc)
+                                         self.nl_arch)
         elif self.archive_system in ['archer', 'nexcs']:
             # ARCHER/NEXCS Archiving
             rcode = archer.archive_to_rdf(filename, self.sourcedir,
