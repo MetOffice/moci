@@ -36,6 +36,92 @@ import update_nemo_nl
 # Define errors for the NEMO driver only
 SERIAL_MODE_ERROR = 99
 
+def _verify_fix_rst(restartdate, nemo_rst, model_basis_time, time_step,
+                    num_steps, calendar):
+    '''
+    Verify that the restart file for nemo corresponds to the model
+    time reached within a given model run. If they don't match, then
+    make sure that nemo restarts from the correct restart date
+
+    :arg: string restartdate        : NEMO dump file date
+    :arg: string nemo_rst           : Path to NEMO restart files
+    :arg: string model_basis_time   : Model basis time
+    :arg: int time_step             : Ocean time-step (in seconds)
+    :arg: int num_steps             : Num. of time-steps covered
+    :arg: string calendar           : Calendar used in model
+
+    '''
+    # Calculate the model restart time based on the start date of the
+    # last calculated model step, the time-step and the number of
+    # steps. Then convert the date format.
+    model_basis_datetime = datetime.datetime.strptime(
+        model_basis_time, "%Y%m%d")
+
+    model_restart_date = _calc_current_model_date(
+        model_basis_datetime, time_step, num_steps, calendar)
+
+    model_restart_date = model_restart_date.strftime('%Y%m%d')
+
+    if restartdate == model_restart_date:
+        sys.stdout.write('[INFO] Validated NEMO restart date\n')
+    else:
+        # Write the message to both standard out and standard error
+        msg = '[WARN] The NEMO restart data does not match the ' \
+            ' current model time\n.' \
+            '   Current model date is %s\n' \
+            '   NEMO restart time is %s\n' \
+            '[WARN] Automatically removing NEMO dumps ahead of ' \
+            'the current model date, and pick up the dump at ' \
+            'this time\n' % (model_restart_date, restartdate)
+        sys.stdout.write(msg)
+        sys.stderr.write(msg)
+        #Remove all nemo restart files that are later than the correct
+        #cycle times
+        #Make our generic restart regular expression, to cover normal NEMO
+        #restart, and potential iceberg, SI3 or passive tracer restart files,
+        #for both the rebuilt and non rebuilt cases
+        generic_rst_regex = r'(icebergs)?.*restart(_trc)?(_ice)?(_icb)?(_\d+)?\.nc'
+        all_restart_files = [f for f in os.listdir(nemo_rst) if
+                             re.findall(generic_rst_regex, f)]
+        for restart_file in all_restart_files:
+            fname_date = re.findall(r'\d{8}', restart_file)[0]
+            if fname_date > model_restart_date:
+                common.remove_file(os.path.join(nemo_rst, restart_file))
+        restartdate = model_restart_date
+
+    return restartdate
+
+def _calc_current_model_date(model_basis_time, time_step, num_steps,
+                             calendar):
+    '''
+    Calculate the current model date using the basis time,
+    and the number of time-steps covered in a given model run.
+
+    :arg: datetime model_basis_time : Model basis time
+    :arg: int time_step             : Ocean model timestep (in seconds)
+    :arg: int num_steps             : Num. timesteps covered in this
+                                      model run
+    :arg: string calendar           : Calendar used in the model run
+
+    '''
+    ref_date_format = 'seconds since %Y-%m-%d %H:%M:%S'
+
+    # modify the calendar names for compatability with cf_units module
+    if calendar == "360day":
+        calendar = "360_day"
+    if calendar == "365day":
+        calendar = "365_day"
+
+    # Provide a reference time for the timestep incrementation.
+    ref_time = model_basis_time.strftime(ref_date_format)
+
+    model_progress_secs = cf_units.date2num(
+        model_basis_time, ref_time, calendar=calendar) + (time_step * num_steps)
+
+    current_model_date = cf_units.num2date(
+        model_progress_secs, ref_time, calendar=calendar)
+
+    return current_model_date
 
 def _nemo_driver_assertions(nemo_envar):
     '''
