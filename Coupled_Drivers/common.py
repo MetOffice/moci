@@ -186,6 +186,9 @@ def remove_file(filename):
     else:
         return False
 
+def remove_trailing_slash(path_str):
+    return path_str.rstrip(' /')
+
 def setup_runtime(common_env):
     '''
     Set up model run length in seconds based on the model suite
