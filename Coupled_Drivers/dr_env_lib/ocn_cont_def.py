@@ -18,11 +18,11 @@ DESCRIPTION
     Definition of the environment variables required for the ocean
     controllers
 '''
-
+SI3_ENVIRONMENT_VARS_COMMON = {'SI3_NL': {'default_val': 'namelist_ice_cfg'}}
 SI3_ENVIRONMENT_VARS_INITIAL = {
     'SI3_START': {'default_val': ''},
     'SI3_NL': {'default_val': 'namelist_ice_cfg'}}
-
+SI3_ENVIRONMENT_VARS_FINAL = SI3_ENVIRONMENT_VARS_COMMON
 TOP_ENVIRONMENT_VARS_COMMON = {
     'TOP_NL': {'default_val': 'namelist_top_cfg'}}
 TOP_ENVIRONMENT_VARS_INITIAL = {
@@ -32,3 +32,4 @@ TOP_ENVIRONMENT_VARS_INITIAL = {
 
 TOP_ENVIRONMENT_VARS_INITIAL = {**TOP_ENVIRONMENT_VARS_COMMON,
                                 **TOP_ENVIRONMENT_VARS_INITIAL}
+TOP_ENVIRONMENT_VARS_FINAL = TOP_ENVIRONMENT_VARS_COMMON
