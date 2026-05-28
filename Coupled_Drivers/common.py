@@ -187,7 +187,10 @@ def remove_file(filename):
         return False
 
 def remove_trailing_slash(path_str):
-    return path_str.rstrip(' /')
+    """
+    Remove any trailing slashes and whitespace from the path string.
+    """
+    return path_str.rstrip(' \t\n\r/')
 
 def setup_runtime(common_env):
     '''
