@@ -12,7 +12,6 @@
  Met Office, FitzRoy Road, Exeter, Devon, EX1 3PB, United Kingdom
 *****************************COPYRIGHT******************************
 '''
-
 import unittest
 import unittest.mock as mock
 
@@ -39,21 +38,25 @@ class TestRunSubmodelControllers(unittest.TestCase):
         self.top_controller = MockController('TOP')
         self.si3_controller = MockController('SI3')
 
-    @mock.patch('nemo_driver.sys.stdout.write')
     @mock.patch('nemo_driver.importlib.import_module')
-    def test_no_controllers(self, mock_import, mock_stdout):
-        '''Test the code runs correctly if no controllers are used'''
+    @mock.patch('nemo_driver.sys.stdout')
+    def test_no_controllers(self, mock_stdout, mock_import):
         nemo_envar = {'L_OCN_PASS_TRC': 'False'}
         common_envar = {'models': 'um nemo'}
-        nemo_driver._run_submodel_controllers(nemo_envar, common_envar,
-                                              None, None, None)
-        mock_stdout.assert_called_once_with(
-            '[INFO] nemo_driver: Passive tracer code not active.\n')
+
+        nemo_driver._run_submodel_controllers(
+            nemo_envar, common_envar, None, None, None
+        )
+
+        mock_stdout.write.assert_called_once_with(
+            '[INFO] nemo_driver: Passive tracer code not active.\n'
+        )
         mock_import.assert_not_called()
 
-    @mock.patch('nemo_driver.sys.stdout.write')
+
     @mock.patch('nemo_driver.importlib.import_module')
-    def test_top_only(self, mock_import, mock_stdout):
+    @mock.patch('nemo_driver.sys.stdout')
+    def test_top_only(self, mock_stdout, mock_import):
         '''Test that a top only call works, with upper case T'''
         nemo_envar = {'L_OCN_PASS_TRC': 'True',
                       'NEMO_NPROC': '10'}
@@ -65,10 +68,11 @@ class TestRunSubmodelControllers(unittest.TestCase):
                          'verify_rst', 'nemo_dump_time', 'mode')
         self.top_controller.expected_arguments = expected_args
         mock_import.return_value = self.top_controller
+
         nemo_driver._run_submodel_controllers(nemo_envar, common_envar,
                                               'restart_ctl', 'nemo_dump_time',
                                               'mode')
-        mock_stdout.assert_has_calls(
+        mock_stdout.write.assert_has_calls(
             [mock.call('[INFO] nemo_driver: Passive tracer code is active.\n'),
              mock.call('[INFO] Calling top_controller in mode mode\n')])
         mock_import.assert_called_once_with('top_controller')

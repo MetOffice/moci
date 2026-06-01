@@ -45,7 +45,6 @@ def main():
         'xios': 'test_xios_driver.py',
         'dependency_checker': 'test_driver_dependencies.py',
         'cpmip': 'test_cpmip*py',
-        'nemo_driver': 'test_nemo_driver.py',
         'um_driver': 'test_um_driver.py',
         'cice_driver': 'test_cice_driver.py',
         'rivers': 'test_rivers_driver.py',

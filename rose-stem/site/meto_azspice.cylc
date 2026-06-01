@@ -18,7 +18,7 @@
         [[[environment]]]
             PYTHON_ENVIRONMENT = """
 echo *** Linux Python Environment Begin ***
-module load scitools scitools/default-current
+module load scitools/default-current
 module load um_tools
 echo $(module list)
 echo *** Linux Python Environment End ***
@@ -40,7 +40,7 @@ echo *** Linux Python Environment End ***
   {% if USE_LINUX_SERVER %}
         [[[directives]]]
             --mem=10G
-  {% endif %}    
+  {% endif %}
 {% endif %}
 
     [[DRIVERS_TESTS_RESOURCE]]
