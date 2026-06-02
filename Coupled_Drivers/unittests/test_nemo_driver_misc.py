@@ -593,9 +593,15 @@ class TestVerifyRestart(unittest.TestCase):
 
 class TestSetLauncherCommand(unittest.TestCase):
 
-    def test_set_launcher_command_duff(self):
-        pass
+    @mock.patch('nemo_driver._setup_executable')
+    def test_set_launcher_command_duff(self, mock_setup_executable):
+        mock_setup_executable.return_value = None
+        common_env = {'ROSE_LAUNCHER': 'launcher'}
+        exe_envar = nemo_driver.setup_executable(common_env)
 
-    def test_set_launcher_command_non_duff(self):
-        pass
+    @mock.patch('nemo_driver._setup_executable')
+    def test_set_launcher_command_non_duff(self, mock_setup_executable):
+        mock_setup_executable.return_value = None 
+        common_env = {'ROSE_LAUNCHER': 'launcher'}
+        exe_envar = nemo_driver.setup_executable(common_env)
 
