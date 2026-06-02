@@ -592,16 +592,59 @@ class TestVerifyRestart(unittest.TestCase):
             'nemo_dump_time', 'cycle_point', 'nemo_rst')
 
 class TestSetLauncherCommand(unittest.TestCase):
+    '''
+    Test the setting up of the launcher command for NEMO executable
+    '''
+    @mock.patch('nemo_driver.common.set_aprun_options')
+    def test_set_launcher_command_aprun_unset(self, mock_set_aprun):
+        '''Test with aprun launcher and ROSE_LAUNCHER_PREOPTS_NEMO unset'''
+        mock_set_aprun.return_value = 'aprun -n 240 -N 24 -S 12 -d 1'
+        nemo_envar = {
+            'ROSE_LAUNCHER_PREOPTS_NEMO': 'unset',
+            'NEMO_NPROC': '240',
+            'OCEAN_NODES': '10',
+            'OMPTHR_OCN': '1',
+            'OHYPERTHREADS': 'false',
+            'OCEAN_LINK': 'nemo.exe'
+        }
+        launcher = 'aprun'
+        result = nemo_driver._set_launcher_command(launcher, nemo_envar)
 
-    @mock.patch('nemo_driver._setup_executable')
-    def test_set_launcher_command_duff(self, mock_setup_executable):
-        mock_setup_executable.return_value = None
-        common_env = {'ROSE_LAUNCHER': 'launcher'}
-        exe_envar = nemo_driver.setup_executable(common_env)
+        # Check the returned launch command
+        self.assertEqual(result, 'aprun -n 240 -N 24 -S 12 -d 1 ./nemo.exe')
+        # Check that nemo_envar was updated and quoted
+        self.assertEqual(
+            nemo_envar['ROSE_LAUNCHER_PREOPTS_NEMO'],
+            "'aprun -n 240 -N 24 -S 12 -d 1'")
+        # Check that set_aprun_options was called correctly
+        mock_set_aprun.assert_called_once_with('240', '10', '1', 'false', False)
 
-    @mock.patch('nemo_driver._setup_executable')
-    def test_set_launcher_command_non_duff(self, mock_setup_executable):
-        mock_setup_executable.return_value = None 
-        common_env = {'ROSE_LAUNCHER': 'launcher'}
-        exe_envar = nemo_driver.setup_executable(common_env)
+    def test_set_launcher_command_non_aprun_unset(self):
+        '''Test with non-aprun launcher and ROSE_LAUNCHER_PREOPTS_NEMO unset'''
+        nemo_envar = {
+            'ROSE_LAUNCHER_PREOPTS_NEMO': 'unset',
+            'OCEAN_LINK': 'nemo.exe'
+        }
+        launcher = 'srun'
+        result = nemo_driver._set_launcher_command(launcher, nemo_envar)
+
+        # Check the returned launch command (empty preopts)
+        self.assertEqual(result, ' ./nemo.exe')
+        # Check that nemo_envar was updated and quoted
+        self.assertEqual(nemo_envar['ROSE_LAUNCHER_PREOPTS_NEMO'], "''")
+
+    def test_set_launcher_command_preopts_already_set(self):
+        '''Test when ROSE_LAUNCHER_PREOPTS_NEMO is already configured'''
+        nemo_envar = {
+            'ROSE_LAUNCHER_PREOPTS_NEMO': 'mpirun -np 100',
+            'OCEAN_LINK': 'nemo.exe'
+        }
+        launcher = 'aprun'
+        result = nemo_driver._set_launcher_command(launcher, nemo_envar)
+
+        # Check the returned launch command uses existing preopts
+        self.assertEqual(result, 'mpirun -np 100 ./nemo.exe')
+        # Check that nemo_envar was quoted
+        self.assertEqual(
+            nemo_envar['ROSE_LAUNCHER_PREOPTS_NEMO'], "'mpirun -np 100'")
 
