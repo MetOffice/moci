@@ -591,3 +591,11 @@ class TestVerifyRestart(unittest.TestCase):
         mock_verify_fix.assert_called_once_with(
             'nemo_dump_time', 'cycle_point', 'nemo_rst')
 
+class TestSetLauncherCommand(unittest.TestCase):
+
+    def test_set_launcher_command_duff(self):
+        pass
+
+    def test_set_launcher_command_non_duff(self):
+        pass
+

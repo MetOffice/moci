@@ -101,6 +101,11 @@ dummy=32,
             ' from file %s\n' % (self.nl_name))
         del read_ocn_namelist_object
 
+    def test_read_known_file(self):
+        pass
+
+    def test_read_unknown_file(self):
+        pass
 
 
 
