@@ -647,4 +647,3 @@ class TestSetLauncherCommand(unittest.TestCase):
         # Check that nemo_envar was quoted
         self.assertEqual(
             nemo_envar['ROSE_LAUNCHER_PREOPTS_NEMO'], "'mpirun -np 100'")
-
