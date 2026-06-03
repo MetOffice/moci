@@ -23,12 +23,9 @@ import os
 import time
 import datetime
 import sys
-import glob
 import shutil
 import collections
 import importlib
-
-import inc_days
 import common
 import error
 
@@ -38,21 +35,7 @@ except ImportError:
     IMPORT_ERROR_MSG = ('Unable to import cf_units. Ensure the scitools module'
                         'has been loaded first.')
     sys.exit(IMPORT_ERROR_MSG)
-
-import dr_env_lib.nemo_def
-import dr_env_lib.env_lib
-try:
-    import f90nml
-except ImportError:
-    pass
-
-# Here, "top" refers to the NEMO TOP passive tracer system. It does not
-# imply anything to do with being in overall control or at the head of
-# any form of control heirarchy.
-import top_controller
-
-import si3_controller
-
+    
 import nemo_lib
 import nemo_restart_lib
 import nemo_runtime_namcouple
