@@ -9,6 +9,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       - name: Run Ruff Linter
-        uses: astral-sh/ruff-action@v4
+        uses: MetOffice/growss/.github/workflows/python-lint.yaml@main
         with:
           version: latest
