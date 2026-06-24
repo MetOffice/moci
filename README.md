@@ -1,4 +1,4 @@
-# moci - Met Office Coupling Infrastructure
+# MOCI - Met Office Coupling Infrastructure
 
 The Met Office global coupled models (GC) couple together the ​
 [UM](https://github.com/MetOffice/um) and [​NEMO](https://www.nemo-ocean.eu/) in
@@ -48,7 +48,7 @@ Please be aware of and follow the Simulation Systems
 #### Testing
 
 MOCI rose-stem provides testing for the Coupled_Drivers and Postprocessing applications plus Utilities unittests.
-`cylc vip -z group=<group> -n <run name> <path to rose-stem dir>
+`cylc vip -z group=<group> -n <run name> <path to rose-stem dir>`
 
 Available test groups:
 `all`       Runs all available tasks

@@ -1116,13 +1116,13 @@ class DiagnosticFilesTests(unittest.TestCase):
                        'PREFIXa.p11998aug.pp', 'PREFIXa.p11998sep.pp'],
             'amd.pp': ['PREFIXa.md19950811_00.pp', 'PREFIXa.md19950811_10.pp',
                        'PREFIXa.md19981029_18.pp', 'PREFIXa.md19981030_04.pp'],
-            'anb.nc.file': [r'atmos_prefixa_\d+[hdmsyx]_19950811-19951111_'
+            'anb.nc.file': [r'atmos_prefixa_\d+[hdmsyx]_19950811-19951111_'+
                             r'[a-zA-Z0-9\-]*\.nc$',
-                            r'atmos_prefixa_\d+[hdmsyx]_19951111-19960211_'
+                            r'atmos_prefixa_\d+[hdmsyx]_19951111-19960211_'+
                             r'[a-zA-Z0-9\-]*\.nc$',
-                            r'atmos_prefixa_\d+[hdmsyx]_19980211-19980511_'
+                            r'atmos_prefixa_\d+[hdmsyx]_19980211-19980511_'+
                             r'[a-zA-Z0-9\-]*\.nc$',
-                            r'atmos_prefixa_\d+[hdmsyx]_19980511-19980811_'
+                            r'atmos_prefixa_\d+[hdmsyx]_19980511-19980811_'+
                             r'[a-zA-Z0-9\-]*\.nc$']
             }
         expected = self.files.expected_diags()

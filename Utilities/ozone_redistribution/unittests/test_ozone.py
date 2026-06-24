@@ -244,26 +244,26 @@ class OzoneDataProcessingTests(unittest.TestCase):
 
         expected_cmds = [
             # Nullify further ozone tasks this cycle
-            'cylc broadcast u-aa000 -n redistribute_ozone -p 19950101T0000Z '
-            '-s script="echo [INFO] No redistribution required in the '
+            'cylc broadcast u-aa000 -n redistribute_ozone -p 19950101T0000Z '+
+            '-s script="echo [INFO] No redistribution required in the '+
             'first year of simulation" -s post-script=""',
-            'cylc broadcast u-aa000 -n rose_arch_ozone -p 19950101T0000Z '
-            '-s script="echo [INFO] No redistribution required in the '
+            'cylc broadcast u-aa000 -n rose_arch_ozone -p 19950101T0000Z '+
+            '-s script="echo [INFO] No redistribution required in the '+
             'first year of simulation" -s post-script=""',
             # Update ozone ancillary for remaining UM tasks this year
-            'cylc broadcast u-aa000 -n coupled '
-            '-p 19950101T0000Z -p 19950111T0000Z -p 19950121T0000Z '
-            '-p 19950201T0000Z -p 19950211T0000Z -p 19950221T0000Z '
-            '-p 19950301T0000Z -p 19950311T0000Z -p 19950321T0000Z '
-            '-p 19950401T0000Z -p 19950411T0000Z -p 19950421T0000Z '
-            '-p 19950501T0000Z -p 19950511T0000Z -p 19950521T0000Z '
-            '-p 19950601T0000Z -p 19950611T0000Z -p 19950621T0000Z '
-            '-p 19950701T0000Z -p 19950711T0000Z -p 19950721T0000Z '
-            '-p 19950801T0000Z -p 19950811T0000Z -p 19950821T0000Z '
-            '-p 19950901T0000Z -p 19950911T0000Z -p 19950921T0000Z '
-            '-p 19951001T0000Z -p 19951011T0000Z -p 19951021T0000Z '
-            '-p 19951101T0000Z -p 19951111T0000Z -p 19951121T0000Z '
-            '-p 19951201T0000Z -p 19951211T0000Z -p 19951221T0000Z '
+            'cylc broadcast u-aa000 -n coupled '+
+            '-p 19950101T0000Z -p 19950111T0000Z -p 19950121T0000Z '+
+            '-p 19950201T0000Z -p 19950211T0000Z -p 19950221T0000Z '+
+            '-p 19950301T0000Z -p 19950311T0000Z -p 19950321T0000Z '+
+            '-p 19950401T0000Z -p 19950411T0000Z -p 19950421T0000Z '+
+            '-p 19950501T0000Z -p 19950511T0000Z -p 19950521T0000Z '+
+            '-p 19950601T0000Z -p 19950611T0000Z -p 19950621T0000Z '+
+            '-p 19950701T0000Z -p 19950711T0000Z -p 19950721T0000Z '+
+            '-p 19950801T0000Z -p 19950811T0000Z -p 19950821T0000Z '+
+            '-p 19950901T0000Z -p 19950911T0000Z -p 19950921T0000Z '+
+            '-p 19951001T0000Z -p 19951011T0000Z -p 19951021T0000Z '+
+            '-p 19951101T0000Z -p 19951111T0000Z -p 19951121T0000Z '+
+            '-p 19951201T0000Z -p 19951211T0000Z -p 19951221T0000Z '+
             '-s [environment]OZONE_ANCIL=ancil1990file'
         ]
         self.assertListEqual(mock_exec.mock_calls,
