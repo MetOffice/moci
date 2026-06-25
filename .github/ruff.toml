@@ -1,0 +1,14 @@
+line-length = 80
+indent-width = 4
+preview = true
+
+[lint]
+select=["A","CPY","PLR0904","PLR0911","PLR0912","PLR0913","PLR0914","PLR0915","F901",
+"B014","B025","B025","B033","PIE794","PYI016","PYI062","PT014","SIM101","PLE0241","RUF068",
+"FIX","PLR6301"]
+ignore=[]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = false
