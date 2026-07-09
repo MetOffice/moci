@@ -1,0 +1,11 @@
+# Handle line endings automatically for files detected as text
+# and leave all files detected as binary untouched.
+*     text=auto
+
+# Binaries
+*.nc    binary
+*.png   binary
+
+# Fortran namelist file identification
+*.nl text diff=fortran-free-form
+*.nl linguist-language=fortran-free-form

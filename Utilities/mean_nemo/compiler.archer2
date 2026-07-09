@@ -1,0 +1,54 @@
+#!/bin/bash
+# ========================================================================================
+# Script to compile mean_nemo.f90 on ARCHER2
+# Some of the content of this file has been produced with the assistance of Google Gemini.
+# ========================================================================================
+set -eu
+
+NAME=mean_nemo
+SOURCE=mean_nemo.f90
+
+MODE=prod
+
+module load PrgEnv-gnu
+
+module load gcc/11.2.0
+module load cray-hdf5/1.12.2.7
+module load cray-netcdf/4.9.0.7
+
+case ${MODE} in
+    prod)
+        # -O3: High optimisation
+        # -ffree-line-length-none: Fixes truncation at 132 characters
+        opts="-O3 -ffree-line-length-none"
+        ;;
+    dev)
+        opts="-O0 -ffree-line-length-none"
+        ;;
+    debug)
+        # Detailed error reporting for AMD chips
+        opts="-O0 -g -fbacktrace -ffpe-trap=invalid,zero,overflow -ffree-line-length-none"
+        ;;
+    *)
+        echo "Compilation mode \"${MODE}\" not supported"
+        exit 1
+        ;;
+esac
+
+echo "Cleaning old executable..."
+[ -f ${NAME}.exe ] && rm -f ${NAME}.exe
+
+echo "Compiling ${SOURCE} with flags: ${opts} ..."
+
+ftn ${opts} ${SOURCE} -o ${NAME}.exe
+
+if [ -f ${NAME}.exe ]; then
+    echo "------------------------------------------------"
+    echo "SUCCESS: ${NAME}.exe has been created."
+    echo "Verifying NetCDF linkage:"
+    ldd ${NAME}.exe | grep netcdf
+    echo "------------------------------------------------"
+else
+    echo "ERROR: Compilation failed."
+    exit 1
+fi

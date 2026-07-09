@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2022 Met Office. All rights reserved.
+ (C) Crown copyright 2022-2026 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -244,26 +244,26 @@ class OzoneDataProcessingTests(unittest.TestCase):
 
         expected_cmds = [
             # Nullify further ozone tasks this cycle
-            'cylc broadcast u-aa000 -n redistribute_ozone -p 19950101T0000Z '
-            '-s script="echo [INFO] No redistribution required in the '
+            'cylc broadcast u-aa000 -n redistribute_ozone -p 19950101T0000Z '+
+            '-s script="echo [INFO] No redistribution required in the '+
             'first year of simulation" -s post-script=""',
-            'cylc broadcast u-aa000 -n rose_arch_ozone -p 19950101T0000Z '
-            '-s script="echo [INFO] No redistribution required in the '
+            'cylc broadcast u-aa000 -n rose_arch_ozone -p 19950101T0000Z '+
+            '-s script="echo [INFO] No redistribution required in the '+
             'first year of simulation" -s post-script=""',
             # Update ozone ancillary for remaining UM tasks this year
-            'cylc broadcast u-aa000 -n coupled '
-            '-p 19950101T0000Z -p 19950111T0000Z -p 19950121T0000Z '
-            '-p 19950201T0000Z -p 19950211T0000Z -p 19950221T0000Z '
-            '-p 19950301T0000Z -p 19950311T0000Z -p 19950321T0000Z '
-            '-p 19950401T0000Z -p 19950411T0000Z -p 19950421T0000Z '
-            '-p 19950501T0000Z -p 19950511T0000Z -p 19950521T0000Z '
-            '-p 19950601T0000Z -p 19950611T0000Z -p 19950621T0000Z '
-            '-p 19950701T0000Z -p 19950711T0000Z -p 19950721T0000Z '
-            '-p 19950801T0000Z -p 19950811T0000Z -p 19950821T0000Z '
-            '-p 19950901T0000Z -p 19950911T0000Z -p 19950921T0000Z '
-            '-p 19951001T0000Z -p 19951011T0000Z -p 19951021T0000Z '
-            '-p 19951101T0000Z -p 19951111T0000Z -p 19951121T0000Z '
-            '-p 19951201T0000Z -p 19951211T0000Z -p 19951221T0000Z '
+            'cylc broadcast u-aa000 -n coupled '+
+            '-p 19950101T0000Z -p 19950111T0000Z -p 19950121T0000Z '+
+            '-p 19950201T0000Z -p 19950211T0000Z -p 19950221T0000Z '+
+            '-p 19950301T0000Z -p 19950311T0000Z -p 19950321T0000Z '+
+            '-p 19950401T0000Z -p 19950411T0000Z -p 19950421T0000Z '+
+            '-p 19950501T0000Z -p 19950511T0000Z -p 19950521T0000Z '+
+            '-p 19950601T0000Z -p 19950611T0000Z -p 19950621T0000Z '+
+            '-p 19950701T0000Z -p 19950711T0000Z -p 19950721T0000Z '+
+            '-p 19950801T0000Z -p 19950811T0000Z -p 19950821T0000Z '+
+            '-p 19950901T0000Z -p 19950911T0000Z -p 19950921T0000Z '+
+            '-p 19951001T0000Z -p 19951011T0000Z -p 19951021T0000Z '+
+            '-p 19951101T0000Z -p 19951111T0000Z -p 19951121T0000Z '+
+            '-p 19951201T0000Z -p 19951211T0000Z -p 19951221T0000Z '+
             '-s [environment]OZONE_ANCIL=ancil1990file'
         ]
         self.assertListEqual(mock_exec.mock_calls,
@@ -292,8 +292,10 @@ class OzoneDataProcessingTests(unittest.TestCase):
             rval = retrieve_ozone_data.shell_cmd('run this command')
 
         self.assertNotEqual(rval, 0)
-        self.assertIn('[SUBPROCESS] No such file or directory',
-                      str(mock_out.write.mock_calls[0]))
+        # Depending on Python version, output may differ
+        errmsg = ['No such file or directory', 'Permission denied']
+        self.assertTrue(any(['[SUBPROCESS] ' + e for e in errmsg
+                             if e in str(mock_out.write.mock_calls[0])]))
 
 
 class OzoneMainTests(unittest.TestCase):

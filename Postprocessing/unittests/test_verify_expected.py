@@ -651,9 +651,28 @@ class RestartFilesTests(unittest.TestCase):
         expect = ['PREFIXc_19960101_bisicles-AIS_restart.hdf5',
                   'PREFIXc_19960101_glint-GrIS_restart.nc',
                   'PREFIXc_19970101_bisicles-AIS_restart.hdf5',
-                  'PREFIXc_19970101_glint-GrIS_restart.nc'
+                  'PREFIXc_19970101_glint-GrIS_restart.nc',
                   'PREFIXc_19980101_bisicles-AIS_restart.hdf5',
                   'PREFIXc_19980101_glint-GrIS_restart.nc']
+
+        actual = files.expected_files()
+        self.assertListEqual(actual['cda.file'], expect)
+        self.assertListEqual(list(actual.keys()), ['cda.file'])
+
+    def test_expected_unicicles_static_final(self):
+        ''' Test calculation of expected unicicles restarts finalcycle'''
+        func.logtest('Assert archived finalcycle unicicles with static ice:')
+        # No dumps are archived with static ice
+        naml =verify_namelist.UniciclesVerify()
+        naml.unicicles_bisicles_ais_rst = False
+        naml.unicicles_glint_gris_rst = False
+        with mock.patch('expected_content.utils.finalcycle',
+                        return_value=True):
+            files = expected_content.RestartFiles(
+                '19950901', '19980901', 'PREFIX', 'unicicles', naml)
+
+        actual = files.expected_files()
+        self.assertEqual(actual, {})
 
 
 class DiagnosticFilesTests(unittest.TestCase):
@@ -1097,13 +1116,13 @@ class DiagnosticFilesTests(unittest.TestCase):
                        'PREFIXa.p11998aug.pp', 'PREFIXa.p11998sep.pp'],
             'amd.pp': ['PREFIXa.md19950811_00.pp', 'PREFIXa.md19950811_10.pp',
                        'PREFIXa.md19981029_18.pp', 'PREFIXa.md19981030_04.pp'],
-            'anb.nc.file': [r'atmos_prefixa_\d+[hdmsyx]_19950811-19951111_'
+            'anb.nc.file': [r'atmos_prefixa_\d+[hdmsyx]_19950811-19951111_'+
                             r'[a-zA-Z0-9\-]*\.nc$',
-                            r'atmos_prefixa_\d+[hdmsyx]_19951111-19960211_'
+                            r'atmos_prefixa_\d+[hdmsyx]_19951111-19960211_'+
                             r'[a-zA-Z0-9\-]*\.nc$',
-                            r'atmos_prefixa_\d+[hdmsyx]_19980211-19980511_'
+                            r'atmos_prefixa_\d+[hdmsyx]_19980211-19980511_'+
                             r'[a-zA-Z0-9\-]*\.nc$',
-                            r'atmos_prefixa_\d+[hdmsyx]_19980511-19980811_'
+                            r'atmos_prefixa_\d+[hdmsyx]_19980511-19980811_'+
                             r'[a-zA-Z0-9\-]*\.nc$']
             }
         expected = self.files.expected_diags()
