@@ -350,7 +350,7 @@ class TestWriteOceanToStdout(unittest.TestCase):
     def test_write_ocean_out_to_stdout_failed(
             self, mock_stdout, mock_write_file, mock_isfile):
         '''Test for all potential restart files missing'''
-        no_file_line = '[INFO] Nemo output file %s not avaliable\n'
+        no_file_line = '[INFO] Nemo output file %s not available\n'
         mock_isfile.side_effect = [False, False, False, False]
         self.assertEqual(0, nemo_driver._write_ocean_out_to_stdout())
         mock_isfile.assert_has_calls([mock.call('ocean.output'),
