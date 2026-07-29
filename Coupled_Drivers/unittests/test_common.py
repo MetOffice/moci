@@ -133,7 +133,8 @@ class TestPathFunctions(unittest.TestCase):
         self.assertEqual(common.remove_trailing_slash(path), path[:-3])
 
     def test_remove_trailing_space(self):
-        '''Test that we successfully remove trailing whitespacec'''
+        '''Test that we successfully remove trailing whitespaces'''
+```typo
         path = '/path/with/trailing/space '
         self.assertEqual(common.remove_trailing_slash(path), path[:-1])
 
