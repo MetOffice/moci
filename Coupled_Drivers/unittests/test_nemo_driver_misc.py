@@ -370,7 +370,7 @@ class TestWriteOceanToStdout(unittest.TestCase):
     def test_write_ocean_out_to_stdout_nemo4_combo(
             self, mock_stdout, mock_write_file, mock_isfile):
         '''Test the file combination for NEMO4 (no solver.stat)'''
-        no_file_line = '[INFO] Nemo output file %s not avaliable\n'
+        no_file_line = '[INFO] Nemo output file %s not available\n'
         mock_isfile.side_effect = [True, False, True, True]
         mock_write_file.side_effect = ['error1', 'error2', 'error3']
         self.assertEqual('error3', nemo_driver._write_ocean_out_to_stdout())
