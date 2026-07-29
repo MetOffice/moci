@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #*****************************COPYRIGHT******************************
-# (C) Crown copyright 2021-2025 Met Office. All rights reserved.
+# (C) Crown copyright 2021-2026 Met Office. All rights reserved.
 #
 # Use, duplication or disclosure of this code is subject to the restrictions
 # as set forth in the licence. If no licence has been raised with this copy
@@ -27,7 +27,7 @@ echo $CYLC_SUITE_RUN_DIR
 # compatibility, and future flexibility
 DRIVER_EXTRACT_DIR=${DRIVER_EXTRACT_DIR:=$CYLC_SUITE_SHARE_DIR/fcm_make_drivers}
 
-echo "[DRIVER_TEST_SCRIPT] DRIVER_EXTRACT_DIR is $DRIVER_EXTRACT_DIR" 
+echo "[DRIVER_TEST_SCRIPT] DRIVER_EXTRACT_DIR is $DRIVER_EXTRACT_DIR"
 
 # This lets us set up a failure mode
 export DRIVERS_FINALISED=false
@@ -74,6 +74,9 @@ if [[ ${EXTRA_LINK_DRIVERS_INFO:-} == "true" ]]; then
     lfs getstripe ./link_drivers
 fi
 
+# Add MOCIlib
+cp $DRIVER_EXTRACT_DIR/$extract_path/mocilib/*py ./
+
 # Run our drivers, this produces two command files
 #  driver_envar containing environment variables to be exported
 #  driver_cmd containing a command for the system launcher
@@ -109,7 +112,7 @@ for S in $SIGNALS; do
     trap 'FINALLY' $S
 done
 
-# Export the enviromnent variables from all the drivers
+# Export the environment variables from all the drivers
 source driver_envar
 # Run the MPI launcher command and provide timing information if required
 start=$(date +%s)
@@ -117,18 +120,15 @@ source driver_cmd
 end=$(date +%s)
 
 time_in_launcher=$((end-start))
-echo "[DRIVER_TEST_SCRIPT] $time_in_launcher seconds are spent in the"
-echo "[DRIVER_TEST_SCRIPT] MPI Launcher"
+echo "[DRIVER_TEST_SCRIPT] $time_in_launcher seconds are spent in MPI Launcher"
 
-#export time_in_launcher variable so the cpmip controller can find it 
-#if required
+#export time_in_launcher variable so the cpmip controller can find it if required
 export time_in_launcher
 
 # Run the drivers in finalize mode (after completion of the model). This deals
 # with model standard out / standard error, and also with any file details
 # required prior to the start of the next model cycle (if applicable). If
-# the MPI launcher has failed, we run the drivers in a stripped down failure 
-# mode
+# MPI launcher has failed, we run the drivers in a stripped down failure mode
 echo '[DRIVER_TEST_SCRIPT] Finalizing drivers'
 ./link_drivers --finalize;
 export DRIVERS_FINALISED=true

@@ -146,7 +146,7 @@ class TestVerifyFixRestart(unittest.TestCase):
         restart_date = '19931116'
         expected_msg = '[INFO] Validated NEMO restart date\n'
 
-        with mock.patch('sys.stdout', new=io.StringIO()) as output:
+        with mock.patch('nemo_driver.sys.stdout', new=io.StringIO()) as output:
             corrected_restart_date = nemo_driver._verify_fix_rst(
                 restart_date, self.nemo_rst, self.model_step_start,
                 self.nemo_step_int, self.nemo_last_step, self.calendar)
@@ -174,7 +174,7 @@ class TestVerifyFixRestart(unittest.TestCase):
             'cplhco_19931116_restart_icb_0050.nc'
             ]
 
-        with mock.patch('sys.stdout', new=io.StringIO()) as output:
+        with mock.patch('nemo_driver.sys.stdout', new=io.StringIO()) as output:
             corrected_restart_date = nemo_driver._verify_fix_rst(
                 restart_date, self.nemo_rst, self.model_step_start,
                 self.nemo_step_int, self.nemo_last_step, self.calendar)

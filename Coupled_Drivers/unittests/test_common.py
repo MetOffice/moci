@@ -110,3 +110,37 @@ class TestRemoveDir(unittest.TestCase):
             glob.glob(self.dirpattern),
             expected_dirs
             )
+        
+class TestPathFunctions(unittest.TestCase):
+    '''
+    Test the functions relating to dealing with file paths
+    '''
+    def test_remove_trailing_slash_no_slash(self):
+        '''Test that with no trailing slash the path string gets passed
+        straight through'''
+        path = '/path/with/no/slash'
+        self.assertEqual(common.remove_trailing_slash(path), path)
+
+    def test_remove_trailing_slash_with_slash(self):
+        '''Test that we successfully strip the trailing slash'''
+        path = '/path/with/trailing/slash/'
+        self.assertEqual(common.remove_trailing_slash(path), path[:-1])
+
+    def test_remove_three_trailing_slashes(self):
+        '''Test that we successfully remove three trailing slashes and
+        no initial forward slash'''
+        path = 'path/with/three/trailing/slashes///'
+        self.assertEqual(common.remove_trailing_slash(path), path[:-3])
+
+    def test_remove_trailing_space(self):
+        '''Test that we successfully remove trailing whitespaces'''
+```typo
+        path = '/path/with/trailing/space '
+        self.assertEqual(common.remove_trailing_slash(path), path[:-1])
+
+    def test_remove_combo(self):
+        '''Test removal of combination of whitespace and slashes'''
+        path = '/path/with/trailing/combo/ /\t ///'
+        expected_return = '/path/with/trailing/combo'
+        self.assertEqual(common.remove_trailing_slash(path), expected_return)
+

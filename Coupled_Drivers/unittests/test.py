@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2022-2025 Met Office. All rights reserved.
+ (C) Crown copyright 2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -33,13 +33,16 @@ def main():
     groups = {
         'all': 'test*.py',
         'env_lib': 'test_env_lib.py',
-        'aprun_command': 'test_aprun_command_construction.py',
+        'ocn_lib': 'test_ocn_lib.py',
+        'nemo_driver': 'test_*nemo_*.py',
+        'nemo_nl': 'test_update_nemo_nl.py',
+        'nemo_lib': 'test_nemo_*lib*.py',
+        'common': 'test_common*.py',
         'mct': 'test_mct_driver.py',
         'lfric': 'test_lfric_driver.py',
         'xios': 'test_xios_driver.py',
         'dependency_checker': 'test_driver_dependencies.py',
         'cpmip': 'test_cpmip*py',
-        'nemo_driver': 'test_nemo_driver.py',
         'um_driver': 'test_um_driver.py',
         'cice_driver': 'test_cice_driver.py',
         'rivers': 'test_rivers_driver.py',
@@ -79,7 +82,7 @@ def main():
         test_rtn = unittest.TextTestRunner(buffer=True).run(test_suite)
         rtn_code += len(test_rtn.failures) + len(test_rtn.errors)
 
-    sys.exit(rtn_code)
+    exit(rtn_code)
 
 if __name__ == '__main__':
     main()

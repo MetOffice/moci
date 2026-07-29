@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2023-2025 Met Office. All rights reserved.
+ (C) Crown copyright 2021-2026 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -19,18 +19,22 @@ DESCRIPTION
     to run a given configuration
 '''
 
-
 import importlib
 import sys
 import os
 import argparse
 import error
 import common
+import write_namcouple
 import dr_env_lib.common_def
 import dr_env_lib.env_lib
 
 #A tuple for for the earlist version of python required to run the drivers
 REQUIRED_VERSION = (3, 6)
+
+# A submodel is a model which runs within another model, and doesn't require its 
+# own driver or controller, for example si3 is a submodel of NEMO
+SUBMODELS = ['si3', 'top']
 
 def _check_drivers(models):
     '''
@@ -134,8 +138,6 @@ def _export_cmd_str(launchcmds, common_env):
             cmd += launchcmd+' : '
     sys.stdout.write(message_str % cmd[:-3])
     return cmd[:-3]
-
-
 
 
 

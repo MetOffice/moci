@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2021-2025 Met Office. All rights reserved.
+ (C) Crown copyright 2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -18,12 +18,8 @@ DESCRIPTION
     Tests construction of aprun command.
 '''
 import unittest
-try:
-    import unittest.mock as mock
-except ImportError:
-    import mock
+import unittest.mock as mock
 import os
-import copy
 from io import StringIO
 
 import common
@@ -32,7 +28,6 @@ import um_driver
 import nemo_driver
 import xios_driver
 import jnr_driver
-import lfric_driver
 
 #pylint: disable=protected-access
 
@@ -79,7 +74,6 @@ class TestCommon(unittest.TestCase):
             nproc, nodes, ompthr, hyperthreads, ss)
 
         self.assertEqual(opts, expected_output)
-
 
 class TestUMDriver(unittest.TestCase):
     ''' Tests for um_driver.py '''
@@ -201,77 +195,6 @@ class TestUMDriver(unittest.TestCase):
         self.assertTrue(um_envar.contains("ROSE_LAUNCHER_PREOPTS_UM"))
         self.assertEqual(um_envar["ROSE_LAUNCHER_PREOPTS_UM"], \
             expected_output_preopts)
-
-
-class TestLFRicDriver(unittest.TestCase):
-    '''Tests for lfric driver'''
-
-    def setUp(self):
-        '''
-        Setup a common lfric_envar object
-        '''
-        self.lfric_envar = dr_env_lib.env_lib.LoadEnvar()
-        self.lfric_envar.add('LFRIC_LINK', 'lfric.exe')
-        self.lfric_envar.add('CONFIG_NL_PATH_LFRIC', 'config_nl_path')
-
-    def test_set_launcher_command_suite_construction(self):
-        '''Test LFRic driver _set_launcher_command() returns a string with the
-        correct values if ROSE_LAUNCHER_PREOPTS_LFRIC is set as an environment
-        variable regardless of the launcher'''
-        lfric_envar = copy.deepcopy(self.lfric_envar)
-        lfric_envar.add('ROSE_LAUNCHER_PREOPTS_LFRIC', 'string of preopts')
-
-        expected_output_preopts = "'string of preopts'"
-        expected_cmd = 'string of preopts ./lfric.exe config_nl_path'
-        self.assertEqual(lfric_driver._set_launcher_command(None,
-                                                            lfric_envar),
-                         expected_cmd)
-        self.assertEqual(lfric_envar['ROSE_LAUNCHER_PREOPTS_LFRIC'],
-                         expected_output_preopts)
-
-    @mock.patch('lfric_driver.common.set_aprun_options')
-    def test_set_launcher_command_not_aprun(self, mock_set_aprun):
-        '''Test LFRic driver _set_launcher_command returns no preopts if
-        ROSE_LAUNCHER_PREOPTS_LFRIC is 'unset', and the launcher is not
-        aprun'''
-        lfric_envar = copy.deepcopy(self.lfric_envar)
-        lfric_envar.add('ROSE_LAUNCHER_PREOPTS_LFRIC', 'unset')
-
-        expected_output_preopts = "''"
-        expected_cmd = ' ./lfric.exe config_nl_path'
-        self.assertEqual(lfric_driver._set_launcher_command('not_aprun',
-                                                            lfric_envar),
-                         expected_cmd)
-        self.assertEqual(lfric_envar['ROSE_LAUNCHER_PREOPTS_LFRIC'],
-                         expected_output_preopts)
-        mock_set_aprun.assert_not_called()
-
-    @mock.patch('lfric_driver.common.set_aprun_options')
-    def test_set_launcher_command_aprun(self, mock_set_aprun):
-        '''Test LFRic driver _set_launcher_command returns custom preopts if
-        ROSE_LAUNCHER_PREOPTS_LFRIC is 'unset', and the launcher is
-        aprun'''
-        lfric_envar = copy.deepcopy(self.lfric_envar)
-        lfric_envar.add('ROSE_LAUNCHER_PREOPTS_LFRIC', 'unset')
-        lfric_envar.add('LFRIC_NPROC', 'lfric_nproc')
-        lfric_envar.add('LFRIC_NODES', 'lfric_nodes')
-        lfric_envar.add('OMPTHR_LFRIC', 'lfric_threads')
-        lfric_envar.add('LFRICHYPERTHREADS', 'lfric_hyper')
-
-        mock_set_aprun.return_value = 'custom_preopts'
-
-        expected_output_preopts = "'custom_preopts'"
-        expected_cmd = 'custom_preopts ./lfric.exe config_nl_path'
-        self.assertEqual(lfric_driver._set_launcher_command('aprun',
-                                                            lfric_envar),
-                         expected_cmd)
-        self.assertEqual(lfric_envar['ROSE_LAUNCHER_PREOPTS_LFRIC'],
-                         expected_output_preopts)
-        mock_set_aprun.assert_called_once_with(
-            'lfric_nproc', 'lfric_nodes', 'lfric_threads', 'lfric_hyper', False)
-
-
-
 
 class TestNEMODriver(unittest.TestCase):
     ''' Tests for nemo_driver.py '''
@@ -563,8 +486,8 @@ class TestXIOSDriver(unittest.TestCase):
         self._set_xios_nproc()
 
         with mock.patch('sys.stdout', new=StringIO()) as mock_out, \
-             mock.patch('sys.stderr', new=StringIO()) as _, \
-             mock.patch.dict(os.environ, self.xios_envar_dict):
+            mock.patch('sys.stderr', new=StringIO()), \
+            mock.patch.dict(os.environ, self.xios_envar_dict):
             xios_driver._setup_executable(self.common_env_dict)
 
             self.assertRegex(mock_out.getvalue(), \

@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2021-2025 Met Office. All rights reserved.
+ (C) Crown copyright 2021-2026 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -52,6 +52,9 @@ MISSING_DRIVER_FILE_ERROR = 201
 
 # Invalid argument to driver script
 INVALID_DRIVER_ARG_ERROR = 202
+
+# Missing file contents
+MISSING_FILE_CONTENTS_ERROR = 203
 
 # Missing file required by a controller
 MISSING_CONTROLLER_FILE_ERROR = 251
@@ -138,6 +141,9 @@ NOT_FOUND_STASH_CODE = 815
 
 # Unable to create remapping file for mapping type
 MISSING_RMP_MAPPING = 816
+
+# Size of 1D grid is unknown
+UNKNOWN_1D_GRID_SIZE = 817
 
 # Ocean resolution for Snr<->Jnr coupling is not specified
 NO_OCN_RESOL = 818

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2022-2025 Met Office. All rights reserved.
+ (C) Crown copyright 2021 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -18,8 +18,6 @@ DESCRIPTION
     Common functions and classes required by multiple model drivers
 '''
 
-
-
 import datetime
 import glob
 import shutil
@@ -31,7 +29,6 @@ import threading
 import math
 import error
 import inc_days
-
 
 class ModNamelist(object):
     '''
@@ -139,6 +136,7 @@ def get_filepaths(directory):
     return file_paths
 
 
+
 def open_text_file(name, mode):
     '''
     Provide a common function to open a file and provide a suitiable error
@@ -152,7 +150,7 @@ def open_text_file(name, mode):
              'a+':'updating (appending)'}
     if mode not in list(modes.keys()):
         options = ''
-        for k in modes:
+        for k in modes.keys():
             options += '  %s: %s\n' % (k, modes[k])
         sys.stderr.write('[FAIL] Attempting to open file %s, do not recognise'
                          ' mode %s. Please use one of the following modes:\n%s'
@@ -187,6 +185,12 @@ def remove_file(filename):
         return True
     else:
         return False
+
+def remove_trailing_slash(path_str):
+    """
+    Remove any trailing slashes and whitespace from the path string.
+    """
+    return path_str.rstrip(' \t\n\r/')
 
 def setup_runtime(common_env):
     '''
