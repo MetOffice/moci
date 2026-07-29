@@ -122,7 +122,7 @@ end=$(date +%s)
 time_in_launcher=$((end-start))
 echo "[DRIVER_TEST_SCRIPT] $time_in_launcher seconds are spent in MPI Launcher"
 
-#export time_in_aprun variable so the cpmip controller can find it if required
+#export time_in_launcher variable so the cpmip controller can find it if required
 export time_in_launcher
 
 # Run the drivers in finalize mode (after completion of the model). This deals
