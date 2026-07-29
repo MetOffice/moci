@@ -453,7 +453,7 @@ class TestFinaliseExecutable(unittest.TestCase):
     def test_finalize_executable_nemo_rst_top_rist(
             self, mock_copy_nl_end_of_run, mock_read_nl,
             mock_load_env, mock_write, mock_cwd, mock_stdout):
-        '''Test finalise when the nemo and top restarts are avaliable to move'''
+        '''Test finalise when the nemo and top restarts are available to move'''
         common_env = {'models': 'model list'}
         mock_write.return_value = 0
         mock_cwd.return_value = ''
