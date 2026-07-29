@@ -25,7 +25,7 @@ NEMO_ENVIRONMENT_VARS_COMMON = {
     'L_OCN_PASS_TRC': {'default_val': 'false'},
     'NEMO_NPROC': {'desc': 'Number of NEMO processors'},
     'RST_LINK_DIR': {'default_val': '.',
-                     'desc': 'Subdirectory of $CYCL_TASK_WORK_DIR containing' \
+                     'desc': 'Subdirectory of $CYLC_TASK_WORK_DIR containing' \
                      ' ocean restart links'}
     }
 
