@@ -111,6 +111,7 @@ def compile_nemo_restart_files(nemo_rst):
     common.remove_file('restart.nc')
     common.remove_file('restart_icebergs.nc')
     common.remove_file('restart_trc.nc')
+    common.remove_file('restart_icb.nc')
 
     if os.path.isfile(latest_nemo_dump):
         nemo_init_dir = nemo_rst
