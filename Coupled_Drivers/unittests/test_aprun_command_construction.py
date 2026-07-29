@@ -486,8 +486,8 @@ class TestXIOSDriver(unittest.TestCase):
         self._set_xios_nproc()
 
         with mock.patch('sys.stdout', new=StringIO()) as mock_out, \
-            mock.patch('sys.stderr', new=StringIO()) as mock_err, \
-                mock.patch.dict(os.environ, self.xios_envar_dict):
+            mock.patch('sys.stderr', new=StringIO()), \
+            mock.patch.dict(os.environ, self.xios_envar_dict):
             xios_driver._setup_executable(self.common_env_dict)
 
             self.assertRegex(mock_out.getvalue(), \
