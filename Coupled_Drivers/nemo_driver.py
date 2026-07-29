@@ -449,7 +449,7 @@ def _write_ocean_out_to_stdout():
             error_count = _write_output_file_to_stdout(
                 nemo_output_file, error_count)
         else:
-            sys.stdout.write('[INFO] Nemo output file %s not avaliable\n'
+            sys.stdout.write('[INFO] Nemo output file %s not available\n'
                              % nemo_output_file)
     return error_count
 

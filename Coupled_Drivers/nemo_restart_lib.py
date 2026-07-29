@@ -1,15 +1,9 @@
+# -----------------------------------------------------------------------------
+# (C) Crown copyright Met Office. All rights reserved.
+# The file LICENCE, distributed with this code, contains details of the terms
+# under which the code may be used.
+# -----------------------------------------------------------------------------
 '''
-*****************************COPYRIGHT******************************
- (C) Crown copyright 2021 Met Office. All rights reserved.
-
- Use, duplication or disclosure of this code is subject to the restrictions
- as set forth in the licence. If no licence has been raised with this copy
- of the code, the use, duplication or disclosure of it is strictly
- prohibited. Permission to do so must first be obtained in writing from the
- Met Office Information Asset Owner at the following address:
-
- Met Office, FitzRoy Road, Exeter, Devon, EX1 3PB, United Kingdom
-*****************************COPYRIGHT******************************
 NAME
     nemo_restart_lib.py
 
@@ -80,7 +74,7 @@ def verify_fix_rst(restartdate, cyclepoint, nemo_rst):
         #Make our generic restart regular expression, to cover normal NEMO
         #restart, and potential iceberg or passive tracer restart files, for
         #both the rebuilt and non rebuilt cases
-        generic_rst_regex = r'(icebergs)?.*restart(_trc)?(_\d+)?\.nc'
+        generic_rst_regex = r'(icebergs)?.*restart(_trc)?(_ice)?(_icb)?(_\d+)?\.nc'
         all_restart_files = [f for f in os.listdir(nemo_rst) if
                              re.findall(generic_rst_regex, f)]
         for restart_file in all_restart_files:

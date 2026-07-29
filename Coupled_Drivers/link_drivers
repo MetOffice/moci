@@ -19,8 +19,6 @@ DESCRIPTION
     to run a given configuration
 '''
 
-#The from __future__ imports ensure compatibility between python2.7 and 3.x
-from __future__ import absolute_import
 import importlib
 import sys
 import os
@@ -34,7 +32,8 @@ import dr_env_lib.env_lib
 #A tuple for for the earlist version of python required to run the drivers
 REQUIRED_VERSION = (3, 6)
 
-# A submodel is a model which runs within another model, and doesnt require its # own driver or controller, for example si3 is a submodel of NEMO
+# A submodel is a model which runs within another model, and doesn't require its 
+# own driver or controller, for example si3 is a submodel of NEMO
 SUBMODELS = ['si3', 'top']
 
 def _check_drivers(models):

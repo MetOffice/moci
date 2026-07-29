@@ -46,7 +46,7 @@ class ModNamelist(object):
     def var_val(self, variable, value):
         '''
         Create a container of variable name, value pairs to be updated. Note
-        that if a variable doesn't exisit in the namelist file, then it
+        that if a variable doesn't exist in the namelist file, then it
         will be ignored
         '''
         if isinstance(value, str):
