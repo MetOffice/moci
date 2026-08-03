@@ -29,5 +29,6 @@ XIOS_ENVIRONMENT_VARS_INITIAL = {
     'IODEF_FILENAME': {'default_val': 'iodef.xml'},
     'ROSE_LAUNCHER_PREOPTS_XIOS': {'default_val': 'unset'},
     'XIOS_EXEC': {},
-    'XIOS_LINK': {'default_val': 'xios.exe'}
+    'XIOS_LINK': {'default_val': 'xios.exe'},
+    'XIOS_VERSION': {'default_val': '2'}
     }

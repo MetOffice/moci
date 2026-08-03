@@ -35,7 +35,8 @@ def _copy_iodef_custom(xios_evar):
         shutil.copy(xios_evar['IODEF_CUSTOM'], xios_evar['IODEF_FILENAME'])
 
 def _update_iodef(
-        is_server_mode, is_coupled_mode, oasis_components, iodef_fname):
+        is_server_mode, is_coupled_mode, oasis_components, iodef_fname,
+        xios_version):
     '''
     Update the iodef.xml file for server/attatched mode and couplng mode.
     is_server_mode and is_coupled_mode are boolean. (true when each option
@@ -62,10 +63,17 @@ def _update_iodef(
             line = line.replace(text_bool[not is_coupled_mode], \
                                 text_bool[is_coupled_mode])
         # Update the list of coupled components
-        elif '<!' not in line and 'oasis_codes_id' in line:
+        elif '<!' not in line and ('oasis_codes_id' in line or
+                                   'clients_code_id' in line):
             if oasis_components.strip():
-                line = '<variable id="oasis_codes_id"   type="string" >' \
-                   + oasis_components+'</variable>'
+                if xios_version == '3':
+                    # The appropriate variable is clients_code_id
+                    line = '<variable id="clients_code_id"   type="string" >' \
+                        + oasis_components+'</variable>'
+                else:
+                    # For XIOS2/2.5 the appropriate variable is oasis_codes_id
+                    line = '<variable id="oasis_codes_id"   type="string" >' \
+                        + oasis_components+'</variable>'
             else:
                 line =  '<!-- oasis_codes_id not required -->'
 
@@ -129,7 +137,7 @@ def _setup_executable(common_env):
     oasis_components, xios_envar = _setup_coupling_components(xios_envar)
     # Update the iodef file
     _update_iodef(using_server, using_coupler, oasis_components,
-                  xios_envar['IODEF_FILENAME'])
+                  xios_envar['IODEF_FILENAME'], xios_envar['XIOS_VERSION'])
 
     return xios_envar
 
