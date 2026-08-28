@@ -1,0 +1,80 @@
+= Code Owners =
+
+The purpose of this page is to list ownership of the various components
+held within the MOCI repository.
+
+Please consider the following:
+ * Ownership is not a commitment for the individual to undertake all work
+   requested or all reviewing for the owned section
+ * Any planned changes to a section should be discussed with the code owner
+   to ensure plans are appropriate
+ * Code owners should be given the option to be a science/technical reviewer
+   for anyu code that alters their section
+ * Any interface between components needss to be agreed by all affected parties
+
+Contact details for code owners: https://code.metoffice.gov.uk/trac/home/wiki/UserList
+
+= Coupling Applications: Contacts =
+{{{
+Area                          Owner
+UM                            umsysteam@metoffice.gov.uk
+NEMO                          timgraham
+SI3                           davestorkey
+CICE                          davestorkey
+MEDUSA                        NOC_southampton
+LFRic                         timgraham            richardhill
+Wave                          juancastillo
+Rivers                        dancopsey            juancastillo
+OASIS_MCT                     harryshepherd
+XIOS                          harryshepherd
+CPMIP
+mule                          umsysteam@metoffice.gov.uk
+iris                          ml-avd-support@metoffice.gov.uk
+}}}
+
+= MOCI Components =
+== Applications ==
+{{{
+Area                          Owner
+rose-stem/                    @ericaneininger      @Pierre-siddall
+Coupled_Drivers               @Pierre-siddall      @ericaneininger
+Postprocessing                @ericaneininger
+Fortran_Cap
+Coupling_Documentation        dancopsey
+}}}
+
+
+== Configurations ==
+{{{
+Area                          Owner
+fcm-make
+Infrastucture_Builds
+GC4
+GC5
+Global_Coupled_NWP
+UKESM                         janemulcahy
+}}}
+
+== Utilities ==
+{{{
+Area                          Owner
+moci_lib                      @ericaneininger
+moci_testing_scripts
+dashboard                     @ericaneininger
+ozone_redistribution          @ericaneininger
+mean_nemo
+verification_scripts
+NGMS_utils
+}}}
+
+== Rose meta data ==
+{{{
+Area                          Owner
+archive_and_meaning           @ericaneininger
+coupled_drivers
+ocean_ice                     davestorkey
+fcm_make_ocean                richardhill
+GA7
+GC3
+GC3.1
+}}}
