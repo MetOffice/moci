@@ -37,9 +37,9 @@ iris                          ml-avd-support@metoffice.gov.uk
 {{{
 Area                          Owner
 rose-stem/                    @ericaneininger      @Pierre-siddall
-Coupled_Drivers               @Pierre-siddall      @ericaneininger
-Postprocessing                @ericaneininger
-Fortran_Cap
+Coupled_Drivers/              @Pierre-siddall      @ericaneininger
+Postprocessing/               @ericaneininger
+Fortran_Cap/
 Coupling_Documentation        dancopsey
 }}}
 
@@ -58,10 +58,10 @@ UKESM                         janemulcahy
 == Utilities ==
 {{{
 Area                          Owner
-moci_lib                      @ericaneininger
+mocilib/                      @ericaneininger
 moci_testing_scripts
-dashboard                     @ericaneininger
-ozone_redistribution          @ericaneininger
+dashboard/                    @ericaneininger
+ozone_redistribution/         @ericaneininger
 mean_nemo
 verification_scripts
 NGMS_utils
@@ -70,10 +70,10 @@ NGMS_utils
 == Rose meta data ==
 {{{
 Area                          Owner
-archive_and_meaning           @ericaneininger
+rose-meta/archive_and_meaning           @ericaneininger
 coupled_drivers
-ocean_ice                     davestorkey
-fcm_make_ocean                richardhill
+rose-meta/ocean_ice                     davestorkey
+rose-meta/fcm-make-ocean                richardhill
 GA7
 GC3
 GC3.1
