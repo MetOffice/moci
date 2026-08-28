@@ -1,80 +1,73 @@
-= Code Owners =
+# = Code Owners =
+#
+# The purpose of this file is to list ownership of the various components
+# held within the MOCI repository.
+#
+# Please consider the following:
+#  * Ownership is not a commitment for the individual to undertake all work
+#    requested or all reviewing for the owned section
+#  * Any planned changes to a section should be discussed with the code owner
+#    to ensure plans are appropriate
+#  * Code owners should be given the option to be a science/technical reviewer
+#    for any code that alters their section
+#  * Any interface between components needs to be agreed by all affected parties
+#
+# Contact details for code owners:
+# https://code.metoffice.gov.uk/trac/home/wiki/UserList
+#
+# Only lines of the form "<path pattern> <@owner> [@owner ...]" are active
+# rules. Areas without a known GitHub owner are kept as comments so the
+# original ownership table is preserved.
 
-The purpose of this page is to list ownership of the various components
-held within the MOCI repository.
+# = Coupling Applications: Contacts =
+# These are external contacts rather than repository paths, so they are
+# recorded here for reference only.
+#
+# Area                          Owner
+# UM                            umsysteam@metoffice.gov.uk
+# NEMO                          timgraham
+# SI3                           davestorkey
+# CICE                          davestorkey
+# MEDUSA                        NOC_southampton
+# LFRic                         timgraham            richardhill
+# Wave                          juancastillo
+# Rivers                        dancopsey            juancastillo
+# OASIS_MCT                     harryshepherd
+# XIOS                          harryshepherd
+# CPMIP
+# mule                          umsysteam@metoffice.gov.uk
+# iris                          ml-avd-support@metoffice.gov.uk
 
-Please consider the following:
- * Ownership is not a commitment for the individual to undertake all work
-   requested or all reviewing for the owned section
- * Any planned changes to a section should be discussed with the code owner
-   to ensure plans are appropriate
- * Code owners should be given the option to be a science/technical reviewer
-   for anyu code that alters their section
- * Any interface between components needss to be agreed by all affected parties
+# = MOCI Components =
+# == Applications ==
+/rose-stem/                             @ericaneininger @Pierre-siddall
+/Coupled_Drivers/                       @Pierre-siddall @ericaneininger
+/Postprocessing/                        @ericaneininger
+# /Fortran_Cap/
+# Coupling_Documentation                dancopsey
 
-Contact details for code owners: https://code.metoffice.gov.uk/trac/home/wiki/UserList
+# == Configurations ==
+# /fcm-make/
+# /Infrastructure_Builds/
+# GC4
+# GC5
+# Global_Coupled_NWP
+# UKESM                                 janemulcahy
 
-= Coupling Applications: Contacts =
-{{{
-Area                          Owner
-UM                            umsysteam@metoffice.gov.uk
-NEMO                          timgraham
-SI3                           davestorkey
-CICE                          davestorkey
-MEDUSA                        NOC_southampton
-LFRic                         timgraham            richardhill
-Wave                          juancastillo
-Rivers                        dancopsey            juancastillo
-OASIS_MCT                     harryshepherd
-XIOS                          harryshepherd
-CPMIP
-mule                          umsysteam@metoffice.gov.uk
-iris                          ml-avd-support@metoffice.gov.uk
-}}}
+# == Utilities ==
+/mocilib/                               @ericaneininger
+/Utilities/dashboard/                   @ericaneininger
+/Utilities/ozone_redistribution/        @ericaneininger
+# moci_testing_scripts
+# /Utilities/mean_nemo/
+# /Utilities/verification_scripts/
+# /Utilities/NGMS_utils/
 
-= MOCI Components =
-== Applications ==
-{{{
-Area                          Owner
-rose-stem/                    @ericaneininger      @Pierre-siddall
-Coupled_Drivers/              @Pierre-siddall      @ericaneininger
-Postprocessing/               @ericaneininger
-Fortran_Cap/
-Coupling_Documentation        dancopsey
-}}}
-
-
-== Configurations ==
-{{{
-Area                          Owner
-fcm-make
-Infrastucture_Builds
-GC4
-GC5
-Global_Coupled_NWP
-UKESM                         janemulcahy
-}}}
-
-== Utilities ==
-{{{
-Area                          Owner
-mocilib/                      @ericaneininger
-moci_testing_scripts
-dashboard/                    @ericaneininger
-ozone_redistribution/         @ericaneininger
-mean_nemo
-verification_scripts
-NGMS_utils
-}}}
-
-== Rose meta data ==
-{{{
-Area                          Owner
-rose-meta/archive_and_meaning           @ericaneininger
-coupled_drivers
-rose-meta/ocean_ice                     davestorkey
-rose-meta/fcm-make-ocean                richardhill
-GA7
-GC3
-GC3.1
-}}}
+# == Rose meta data ==
+/rose-meta/archive_and_meaning/         @ericaneininger
+# /rose-meta/coupled_drivers/
+# /rose-meta/ocean_ice/                 davestorkey
+# /rose-meta/fcm-make-ocean/            richardhill
+# /rose-meta/GA7/
+# /rose-meta/GC3/
+# /rose-meta/GC3.1/
