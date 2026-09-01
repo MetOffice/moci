@@ -29,7 +29,7 @@
 # SI3                           davestorkey
 # CICE                          davestorkey
 # MEDUSA                        NOC_southampton
-# LFRic                         timgraham            richardhill
+/Coupled_Drivers/lfric_driver.py  timgraham            @HengistPodd
 # Wave                          juancastillo
 # Rivers                        dancopsey            juancastillo
 # OASIS_MCT                     harryshepherd
@@ -67,7 +67,7 @@
 /rose-meta/archive_and_meaning/         @ericaneininger
 # /rose-meta/coupled_drivers/
 # /rose-meta/ocean_ice/                 davestorkey
-# /rose-meta/fcm-make-ocean/            richardhill
+/rose-meta/fcm-make-ocean/            @HengistPodd
 # /rose-meta/GA7/
 # /rose-meta/GC3/
 # /rose-meta/GC3.1/
