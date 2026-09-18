@@ -100,13 +100,6 @@ def _setup_si3_controller(common_env,
     si3_envar = _load_environment_variables(si3_envar)
     _ = _check_si3nl_envar(si3_envar)
 
-    # SI3 hasn't been set up to use CONTINUE_FROM_FAIL yet
-    # Raise an error if it's set to prevent unexpected behaviour in future
-    if common_env['CONTINUE_FROM_FAIL'] == 'true':
-        sys.stderr.write('[FAIL] si3_controller is not coded to work with'
-                         'CONTINUE_FROM_FAIL=true')
-        sys.exit(error.INVALID_EVAR_ERROR)
-
     restart_direcs = []
     si3_rst = _get_si3rst(si3_envar['SI3_NL'])
     if si3_rst:
@@ -204,7 +197,7 @@ def _setup_si3_controller(common_env,
 
         if verify_restart == 'True':
             _verify_si3_rst(nemo_dump_time, nemo_nproc, si3_restart_files)
-        if si3_dump_time != nemo_dump_time:
+        if int(si3_dump_time) != nemo_dump_time:
             sys.stderr.write('[FAIL] si3_controller: Mismatch in SI3 restart '
                              'file date %s and NEMO restart file date %s\n'
                              % (si3_dump_time, nemo_dump_time))
