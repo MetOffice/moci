@@ -94,3 +94,27 @@ class pp25_t646(MacroUpgrade):
                                   "unicicles_glint_gris_rst"], "false")
 
         return config, self.reports
+
+class pp25_pr53(MacroUpgrade):
+
+    """Upgrade macro for PR #53 by Erica Neininger."""
+    BEFORE_TAG = "pp25_t646"
+    AFTER_TAG = "pp25_pr53"
+
+    def upgrade(self, config, meta_config=None):
+        """Update moose_arch namelist for Azure MASS."""
+        try:
+            non_duplex = self.get_setting_value(
+                config,
+                ["namelist:moose_arch", "non_duplexed_set"]
+            )
+        except AttributeError:
+            non_duplex = "true"
+
+        self.add_setting(config,
+                         ["namelist:moose_arch", "risk_appetite"],
+                         "low" if non_duplex == "true" else "very_low")
+
+        self.remove_setting(config, ["namelist:moose_arch", "non_duplexed_set"])
+
+        return config, self.reports

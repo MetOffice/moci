@@ -39,7 +39,13 @@ L_MCT_VALIDATE=${L_MCT_VALIDATE:=false}
 
 # Copy scripts to work directory so they can be found. We use the dependency
 # checker script so we only copy the files we need.
-FILES_TO_INSTALL=$($DRIVER_EXTRACT_DIR/extract/drivers/Coupled_Drivers/driver_dependencies.py --extract-directory $DRIVER_EXTRACT_DIR/extract/drivers/Coupled_Drivers)
+if [[ $DRIVER_EXTRACT_DIR == *"fcm_make"* ]] ; then
+    # fcm_make infrastructure
+    extract_path=extract/drivers
+else
+    extract_path=
+fi
+FILES_TO_INSTALL=$($DRIVER_EXTRACT_DIR/$extract_path/Coupled_Drivers/driver_dependencies.py --extract-directory $DRIVER_EXTRACT_DIR/$extract_path/Coupled_Drivers)
 for file in $FILES_TO_INSTALL; do
     # handle any packages
     package_name=$(dirname "${file}")
@@ -47,7 +53,7 @@ for file in $FILES_TO_INSTALL; do
 	mkdir $package_name
     fi
     # as package_name will default to . then this will handle all cases
-    cp $DRIVER_EXTRACT_DIR/extract/drivers/Coupled_Drivers/$file $package_name
+    cp $DRIVER_EXTRACT_DIR/$extract_path/Coupled_Drivers/$file $package_name
 done
 
 # If the run uses LFRic, and environment variable NAMCOUPLE_STATIC is .false.
@@ -56,8 +62,8 @@ done
 # compatibility
 NAMCOUPLE_STATIC=${NAMCOUPLE_STATIC:=True}
 if [[ "$models" == *lfric* && "$NAMCOUPLE_STATIC" == .false. ]]; then
-    cp $DRIVER_EXTRACT_DIR/extract/drivers/Utilities/NGMS_utils/ngms_namcouple_gen/*py ./
-    cp $DRIVER_EXTRACT_DIR/extract/drivers/Utilities/NGMS_utils/ngms_suite_lib/*py ./
+    cp $DRIVER_EXTRACT_DIR/$extract_path/Utilities/NGMS_utils/ngms_namcouple_gen/*py ./
+    cp $DRIVER_EXTRACT_DIR/$extract_path/Utilities/NGMS_utils/ngms_suite_lib/*py ./
 fi
 
 EXTRA_LINK_DRIVERS_INFO=$( echo ${EXTRA_LINK_DRIVERS_INFO:-} | tr '[:upper:]' '[:lower:]')
@@ -80,7 +86,7 @@ echo '[DRIVER_TEST_SCRIPT] Drivers successfully linked'
 # had been completed
 if [ "$L_MCT_VALIDATE" = True ]; then
     echo "Running MCT validate"
-    cp $DRIVER_EXTRACT_DIR/extract/drivers/Coupled_Drivers/driver_utilities/mct_validate/mct_validate.py ./
+    cp $DRIVER_EXTRACT_DIR/$extract_path/Coupled_Drivers/driver_utilities/mct_validate/mct_validate.py ./
     ./mct_validate.py
 fi
 

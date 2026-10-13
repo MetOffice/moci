@@ -26,18 +26,22 @@ echo *** Linux Python Environment End ***
     [[EXTRACT_RESOURCE]]
         inherit = LINUX
 
+    [[DRIVERS_BUILD_TASKS]]
+
     [[POSTPROC_SCRIPTING_RESOURCE]]
         inherit = LINUX, LINUX_PYTHON_ENV
-	execution time limit = PT10M
+        execution time limit = PT10M
 
+{% if not REMOTE_PP %}
     [[POSTPROC_RESOURCE]]
         inherit = POSTPROC_SCRIPTING_RESOURCE
 	[[[environment]]]
-	    STASHMASTER = /data/users/moci/KGO/pp_test_execs/STASHmaster_vn10.2
-{% if USE_LINUX_SERVER %}
+            STASHMASTER = /data/users/moci/KGO/pp_test_execs/STASHmaster_vn10.2
+  {% if USE_LINUX_SERVER %}
         [[[directives]]]
             --mem=10G
-{% endif %}    
+  {% endif %}    
+{% endif %}
 
     [[DRIVERS_TESTS_RESOURCE]]
         inherit = LINUX, LINUX_PYTHON_ENV

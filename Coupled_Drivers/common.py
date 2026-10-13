@@ -234,6 +234,10 @@ def exec_subproc_timeout(cmd, timeout_sec=10):
     the commands to be run, and an integer timeout_sec for how long to
     wait for the command to run. Returns the return code from the process
     and the standard out from the command or 'None' if the command times out.
+
+    This function is now DEPRECATED in favour of the exec_shellout function in
+    mocilib
+
     '''
     process = subprocess.Popen(cmd, shell=False,
                                stdin=subprocess.PIPE,
@@ -260,6 +264,10 @@ def exec_subproc(cmd, verbose=True):
     Execute given shell command. Takes a list containing the commands to be
     run, and a logical verbose which if set to true will write the output of
     the command to stdout.
+
+    This function is now DEPRECATED in favour of the exec_shellout function in
+    mocilib
+
     '''
     process = subprocess.Popen(cmd, shell=False,
                                stdin=subprocess.PIPE,
@@ -281,6 +289,10 @@ def __exec_subproc_true_shell(cmd, verbose=True):
     exec_subproc does not work correctly. Takes a list containing the commands
     to be run, and a logical verbose which if set to true will write the
     output of the command to stdout.
+
+    This function is now DEPRECATED in favour of the exec_shellout function in
+    mocilib
+
     '''
     process = subprocess.Popen(cmd, shell=True,
                                stdin=subprocess.PIPE,

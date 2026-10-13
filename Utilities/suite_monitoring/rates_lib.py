@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2019-2020 Met Office. All rights reserved.
+ (C) Crown copyright 2019-2026 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -173,7 +173,7 @@ def interpolate(x_values, y_values, interval):
 
     x_min = x_values[0]
     x_max = x_values[-1]
-    n_interp = ((x_max - x_min) / float(interval)) + 1
+    n_interp = int(((x_max - x_min) / float(interval))) + 1
     x_values_interp = numpy.linspace(x_min, x_max, n_interp)
     y_values_interp = numpy.interp(x_values_interp, x_values, y_values)
 

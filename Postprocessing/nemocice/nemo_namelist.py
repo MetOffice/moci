@@ -31,10 +31,10 @@ class Processing(template_namelist.Processing):
     means_fieldsfiles = None
 
     exec_rebuild = '/projects/ocean/hadgem3/scripts/GC2.0/rebuild_nemo.exe'
-    exec_rebuild_icebergs = os.environ['CYLC_SUITE_SHARE_DIR'] + \
-        '/fcm_make_pp/build/bin/icb_combrest.py'
-    exec_rebuild_iceberg_trajectory = os.environ['CYLC_SUITE_SHARE_DIR'] + \
-        '/fcm_make_pp/build/bin/icb_pp.py'
+    exec_rebuild_icebergs = os.environ['CYLC_WORKFLOW_SHARE_DIR'] + \
+        '/bin/icb_combrest.py'
+    exec_rebuild_iceberg_trajectory = os.environ['CYLC_WORKFLOW_SHARE_DIR'] + \
+        '/bin/icb_pp.py'
     msk_rebuild = False
     rebuild_restart_timestamps = '05-30', '11-30', '06-01', '12-01'
     rebuild_omp_numthreads = 1

@@ -1,10 +1,35 @@
 #!jinja2
+{% from "cylc.flow" import LOG %}
+{% from "utils" import get_site %}
+{% from "read_sources" import read_sources  %}
+
+{% if SITE is not defined %}
+    {% set SITE = get_site() %}
+{% endif %}
+{% do LOG.info("Site: " + SITE) %}
+
+{% set SOURCE_DIRECTORY = ROSE_ORIG_HOST~":"~CYLC_WORKFLOW_SRC_DIR~"/.." %}
+{# Include log message for suite_report #}
+{% do LOG.info("MOCI SOURCE CLONE="~SOURCE_DIRECTORY) %}
+
+{# Read the sources of dependencies from the dependencies.yaml file #}
+{% set dependencies = read_sources(SOURCE_DIRECTORY, "moci", false) %}
+
+{% set SPACER = "         " %}
+{# Read in groups to run #}
+ {% if group is defined %}
+    {% set RUN_NAMES = group %}
+{% elif g is defined %}
+    {% set RUN_NAMES = g %}
+{% else %}
+    {% set RUN_NAMES = ["default"] %}
+{% endif %}
+{% do LOG.info("Running groups: "~RUN_NAMES|join('
+                   ')) %}
+
 {% set TASK_RUN = "rose task-run --verbose -O '(" + SITE + ")'"%}
 {% set PP_CYCLES = range(110,113)|list + range(201,213)|list + [301,]|list %}
 {% set PP_UNICICLES_CYCLES = [112,203,206,209,212,]|list %}
-
-{# Test to determine when to use single fcm_make tasks #}
-{% set MULTISTEP_FCM = ['archer'] %}
 
 {% macro format_wallclock(time_list) -%}
     PT{{'%02d' % (time_list[0])}}H{{'%02d' % (time_list[1])}}M{{'%02d' % (time_list[2])}}S
@@ -14,7 +39,7 @@
 # set of cylc task dependencies
 {# name_graphs contains test_option-dependency key-value pairs -#}
 {%- set name_graphs = {
-    "default" : "default_task",
+     "default" : "default_task",
     }
 -%}
 
@@ -27,12 +52,16 @@
     }
  %}
 
+{% set SPACER = "         " %}
+{% include 'graph-unittests.cylc' %}
 {% include 'graph-postproc.cylc' %}
 {% include 'graph-drivers.cylc' %}
 
 [scheduler]
     UTC mode = True
     [[events]]
+        shutdown handlers = "suite_report_git.py -S $CYLC_WORKFLOW_RUN_DIR"
+        stall handlers = "suite_report_git.py -S $CYLC_WORKFLOW_RUN_DIR"
         stall timeout handlers = "echo %worklfow%s %event%s"
         stall timeout = PT6H
 	abort on stall timeout = true
@@ -69,10 +98,64 @@
             submission timeout = PT12H # 12 hours
             execution timeout  = PT3H # 3 hours
         [[[environment]]]
-            SOURCE_MOCI_BASE = {{ HOST_SOURCE_MOCI_BASE }}
+            SOURCE_DIRECTORY = $CYLC_WORKFLOW_SHARE_DIR/source
+            SOURCE_MOCI_BASE = $SOURCE_DIRECTORY/moci
 
     [[default_task]]
         script = "echo [ERROR] Please select a valid group within the test suite to test the component that has been modified >&2; exit 1"
+
+    [[SOURCE_EXTRACTION]]
+        post-script = """
+cp $SOURCE_DIRECTORY/moci/dependencies.yaml $CYLC_WORKFLOW_RUN_DIR
+cp $SOURCE_DIRECTORY/SimSys_Scripts/github_scripts/suite_report_git.py $CYLC_WORKFLOW_RUN_DIR/bin
+cp $SOURCE_DIRECTORY/SimSys_Scripts/github_scripts/suite_data.py $CYLC_WORKFLOW_RUN_DIR/bin
+cp $SOURCE_DIRECTORY/SimSys_Scripts/github_scripts/git_bdiff.py $CYLC_WORKFLOW_RUN_DIR/bin
+cp $SOURCE_DIRECTORY/SimSys_Scripts/github_scripts/get_git_sources.py $CYLC_WORKFLOW_RUN_DIR/bin
+"""
+        [[[environment]]]
+            ROSE_TASK_APP = extract_source
+            DEPENDENCIES = {{dependencies}}
+            USE_MIRRORS = {{USE_MIRRORS}}
+            USE_TOKENS = false
+            USE_HEADS = false
+        {% if USE_MIRRORS %}
+            {% if GIT_MIRROR_LOC is defined and GIT_MIRROR_LOC %}
+            GIT_MIRROR_LOC = {{GIT_MIRROR_LOC}}
+            {% else %}
+                {{ raise(
+                    "Trying to run with mirrors without setting a mirror location. "
+                    "Ensure 'GIT_MIRROR_LOC' set."
+                    ) }}
+            {% endif %}
+        {% endif %}
+
+    [[extract_source]]
+        inherit = SOURCE_EXTRACTION, EXTRACT_RESOURCE
+
+    [[mirror_source]]
+        inherit = SOURCE_EXTRACTION, EXTRACT_RESOURCE
+        script  = """
+RELATIVE_SOURCE_DIRECTORY=`echo $SOURCE_DIRECTORY | sed 's|$HOME/||'`
+ssh $HOSTNAME mkdir -p $RELATIVE_SOURCE_DIRECTORY
+rsync -avz --exclude='.*' $SOURCE_DIRECTORY/* $HOSTNAME:$RELATIVE_SOURCE_DIRECTORY/
+sleep 5
+                  """
+       [[[environment]]]
+           HOSTNAME = $(rose host-select {{COMPUTE_HOST}})
+
+    [[extract_source]]
+        inherit = SOURCE_EXTRACTION, EXTRACT_RESOURCE
+
+    [[mirror_source]]
+        inherit = SOURCE_EXTRACTION, EXTRACT_RESOURCE
+        script  = """
+RELATIVE_SOURCE_DIRECTORY=`echo $SOURCE_DIRECTORY | sed 's|$HOME/||'`
+ssh $HOSTNAME mkdir -p $RELATIVE_SOURCE_DIRECTORY
+rsync -avz --exclude='.*' $SOURCE_DIRECTORY/* $HOSTNAME:$RELATIVE_SOURCE_DIRECTORY/
+sleep 5
+                  """
+       [[[environment]]]
+           HOSTNAME = $(rose host-select {{COMPUTE_HOST}})
 
     [[HOUSEKEEPING]]
 {% if HOUSEKEEPING == true %}
@@ -84,6 +167,7 @@
             ROSE_TASK_APP = housekeeping
 
 {% include "site/" + SYSTEM_NAME + ".cylc" %}
- 
+
+{% include 'tasks-unittests.cylc' %}
 {% include 'tasks-postproc.cylc' %}
 {% include 'tasks-drivers.cylc' %}

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2025 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2026 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -24,7 +24,7 @@ except ImportError:
 import testing_functions as func
 import runtime_environment
 
-# Import of moo requires 'CYLC_SUITE_NAME' from runtime environment
+# Import of moo requires 'CYLC_WORKFLOW_NAME' from runtime environment
 runtime_environment.setup_env()
 import moo
 
@@ -37,14 +37,13 @@ MOO_CMD = {
     'FILENAME_PREFIX':     'TESTP',
     'DATAM':               'TestDir',
     'SETNAME':             MOO_NLIST.archive_set,
-    'NON_DUPLEXED':        MOO_NLIST.non_duplexed_set,
     'CATEGORY':            'UNCATEGORISED',
     'DATACLASS':           MOO_NLIST.dataclass,
     'ENSEMBLEID':          MOO_NLIST.ensembleid,
     'MOOPATH':             MOO_NLIST.moopath,
     'PROJECT':             MOO_NLIST.mooproject,
-    'CONVERTPP':           True,
-    'ACT_AS':              MOO_NLIST.act_as
+    'ACT_AS':              MOO_NLIST.act_as,
+    'RISK_APPETITE':       MOO_NLIST.risk_appetite,
     }
 
 class CommandTests(unittest.TestCase):
@@ -141,7 +140,7 @@ class MooseTests(unittest.TestCase):
         with mock.patch('moo.utils.exec_subproc', return_value=(0, '')):
             with mock.patch.dict('moo.os.environ', {'PREFIX': 'PATH/'}):
                 self.inst = moo._Moose(cmd)
-
+        
     def tearDown(self):
         pass
 
@@ -223,17 +222,18 @@ class MooseTests(unittest.TestCase):
         func.logtest('test mkset function, with project:')
         mock_subproc.return_value = (0, '')
         project = 'UKESM'
-        self.inst.mkset('UNCATEGORISED', project, False)
+        self.inst.mkset('UNCATEGORISED', project, 'risk')
         cmd = 'moo mkset -v -p ' + project + ' ' + self.inst.dataset
         mock_subproc.assert_called_with(cmd, verbose=False)
         self.assertIn('created set', func.capture())
 
     @mock.patch('moo.utils.exec_subproc')
-    def test_mkset_nonduplex(self, mock_subproc):
-        '''Test mkset function with non-duplex option'''
-        func.logtest('test mkset function, with non-duplex option:')
+    def test_mkset_lowrisk(self, mock_subproc):
+        '''Test mkset function with --single-copy option'''
+        func.logtest('test mkset function, with --single-copy option:')
+
         mock_subproc.return_value = (0, '')
-        self.inst.mkset('UNCATEGORISED', '', True)
+        self.inst.mkset('UNCATEGORISED', '', 'low')
         cmd = 'moo mkset -v --single-copy ' + self.inst.dataset
         mock_subproc.assert_called_with(cmd, verbose=False)
         self.assertIn('created set', func.capture())
@@ -244,7 +244,7 @@ class MooseTests(unittest.TestCase):
         func.logtest('test mkset function, with act_as option:')
         mock_subproc.return_value = (0, '')
         self.inst._act_as = 'user.name'
-        self.inst.mkset('UNCATEGORISED', '', False)
+        self.inst.mkset('UNCATEGORISED', '', 'risk')
         cmd = 'moo mkset -v --act-as user.name ' + self.inst.dataset
         mock_subproc.assert_called_with(cmd, verbose=False)
         self.assertIn('created set', func.capture())
@@ -255,7 +255,7 @@ class MooseTests(unittest.TestCase):
         func.logtest('test mkset with category - Failed operation:')
         mock_subproc.return_value = (-1, '')
         cat = 'GLOBAL'
-        self.inst.mkset(cat, '', False)
+        self.inst.mkset(cat, '', 'very_low')
         cmd = 'moo mkset -v -c ' + cat + ' ' + self.inst.dataset
         mock_subproc.assert_called_with(cmd, verbose=False)
         self.assertIn('Unable to create', func.capture(direct='err'))
@@ -265,7 +265,7 @@ class MooseTests(unittest.TestCase):
         '''Test mkset function with pre-existing set'''
         func.logtest('test mkset function, with pre-existing set:')
         mock_subproc.return_value = (10, '')
-        self.inst.mkset('UNCATEGORISED', '', False)
+        self.inst.mkset('UNCATEGORISED', '', 'risk')
         mock_subproc.assert_called_with('moo mkset -v ' + self.inst.dataset,
                                         verbose=False)
         self.assertIn('already exists', func.capture())
@@ -275,26 +275,22 @@ class MooseTests(unittest.TestCase):
         func.logtest('test formation of collection name with atmos dump:')
         collection = self.inst._collection()
         self.assertEqual(collection, 'ada.file')
-        self.assertFalse(self.inst.fl_pp)
 
     def test_collection_atmos_pp(self):
         '''Test formation of collection name - atmosphere pp'''
         func.logtest('test formation of collection name with atmos pp:')
         self.inst._model_id = 'a'
-        self.inst._file_id = 'pmYYYYMMDD'
+        self.inst._file_id = 'pm.YYYYMMDD.pp'
         collection = self.inst._collection()
         self.assertEqual(collection, 'apm.pp')
-        self.assertTrue(self.inst.fl_pp)
 
     def test_collection_atmos_ff(self):
         '''Test formation of collection name - atmosphere fieldsfile'''
         func.logtest('test formation of collection name with atmos ffile:')
         self.inst._model_id = 'a'
-        self.inst._file_id = 'pm'
-        self.inst.convertpp = False
+        self.inst._file_id = 'pm.yyyymmdd'
         collection = self.inst._collection()
         self.assertEqual(collection, 'apm.file')
-        self.assertFalse(self.inst.fl_pp)
 
     def test_collection_atmos_netcdf(self):
         '''Test formation of collection name - atmosphere netCDF'''
@@ -303,7 +299,6 @@ class MooseTests(unittest.TestCase):
         self.inst._file_id = '1d_YYYYMMDD-YYYYMMDD_pm-TAG.nc'
         collection = self.inst._collection()
         self.assertEqual(collection, 'anm.nc.file')
-        self.assertFalse(self.inst.fl_pp)
 
     def test_collection_atmos_netcdf_noid(self):
         '''Test formation of collection name - atmosphere netCDF with no ID'''
@@ -312,42 +307,36 @@ class MooseTests(unittest.TestCase):
         self.inst._file_id = '1d_YYYYMMDD-YYYYMMDD_genericTAG.nc'
         collection = self.inst._collection()
         self.assertEqual(collection, 'and.nc.file')
-        self.assertFalse(self.inst.fl_pp)
 
     def test_collection_ocean_restart(self):
         '''Test formation of collection name - NEMO restart'''
         func.logtest('test formation of collection name with NEMO restart:')
         collection = self.inst._collection()
         self.assertEqual(collection, 'oda.file')
-        self.assertFalse(self.inst.fl_pp)
 
     def test_collection_iceberg_restart(self):
         '''Test formation of collection name - iceberg restart'''
         func.logtest('test formation of collection name with iceberg restart:')
         collection = self.inst._collection()
         self.assertEqual(collection, 'oda.file')
-        self.assertFalse(self.inst.fl_pp)
 
     def test_collection_ocean_tracer_restart(self):
         '''Test formation of collection name - NEMO passive tracer restart'''
         func.logtest('test formation of collection name with tracer restart:')
         collection = self.inst._collection()
         self.assertEqual(collection, 'oda.file')
-        self.assertFalse(self.inst.fl_pp)
 
     def test_collection_ocean_SI3_restart(self):
         '''Test formation of collection name - NEMO SI3 restart'''
         func.logtest('test formation of collection name with SI3 restart:')
         collection = self.inst._collection()
         self.assertEqual(collection, 'ida.file')
-        self.assertFalse(self.inst.fl_pp)
 
     def test_collection_seaice_restart(self):
         '''Test formation of collection name - CICE restart'''
         func.logtest('test formation of collection name with CICE restart:')
         collection = self.inst._collection()
         self.assertEqual(collection, 'ida.file')
-        self.assertFalse(self.inst.fl_pp)
 
     def test_collection_oi_fail(self):
         '''Test formation of collection name - invalid ocean/ice file type'''
@@ -363,32 +352,26 @@ class MooseTests(unittest.TestCase):
         self.inst._file_id = '12h'
         collection = self.inst._collection()
         self.assertEqual(collection, 'onh.nc.file')
-        self.assertFalse(self.inst.fl_pp)
 
         self.inst._file_id = '10d'
         collection = self.inst._collection()
         self.assertEqual(collection, 'ond.nc.file')
-        self.assertFalse(self.inst.fl_pp)
 
         self.inst._file_id = '1m'
         collection = self.inst._collection()
         self.assertEqual(collection, 'onm.nc.file')
-        self.assertFalse(self.inst.fl_pp)
 
         self.inst._file_id = '1s'
         collection = self.inst._collection()
         self.assertEqual(collection, 'ons.nc.file')
-        self.assertFalse(self.inst.fl_pp)
 
         self.inst._file_id = '1y'
         collection = self.inst._collection()
         self.assertEqual(collection, 'ony.nc.file')
-        self.assertFalse(self.inst.fl_pp)
 
         self.inst._file_id = '1x'
         collection = self.inst._collection()
         self.assertEqual(collection, 'onx.nc.file')
-        self.assertFalse(self.inst.fl_pp)
 
     def test_collection_ice_season_mean(self):
         '''Test formation of collection name - CICE seasonal mean'''
@@ -397,7 +380,6 @@ class MooseTests(unittest.TestCase):
         self.inst._file_id = '1s'
         collection = self.inst._collection()
         self.assertEqual(collection, 'ins.nc.file')
-        self.assertFalse(self.inst.fl_pp)
 
     @mock.patch('moo.utils.exec_subproc')
     @mock.patch('moo.os.path.exists')
@@ -410,19 +392,18 @@ class MooseTests(unittest.TestCase):
         self.inst.put_data()
         src = os.path.expandvars('TestDir/$PREFIX$RUNID.daTestfile')
         dest = os.path.expandvars('moose:myclass/mysuite/$RUNID.daTestfile')
-        mock_subproc.assert_called_with('moo put -f -vv ' + src + ' ' + dest)
+        mock_subproc.assert_called_with('moo put -f -v ' + src + ' ' + dest)
 
     @mock.patch('moo.utils.exec_subproc')
     def test_putdata_pp_no_convert(self, mock_subproc):
         '''Test put_data function with converted fieldsfile'''
         func.logtest('test put_data function with converted fieldsfile:')
         self.inst._rqst_name = 'TESTPa.pmTestfile.pp'
-        self.inst.fl_pp = True
         mock_subproc.return_value = (0, '')
         with mock.patch('moo._Moose._collection', return_value='apm.pp'):
             with mock.patch('moo.os.path.exists', return_value=True):
                 self.inst.put_data()
-        cmd = 'moo put -f -vv TestDir/TESTPa.pmTestfile.pp ' \
+        cmd = 'moo put -f -v TestDir/TESTPa.pmTestfile.pp ' \
             'moose:myclass/mysuite/apm.pp'
         mock_subproc.assert_called_with(cmd)
 
@@ -431,12 +412,11 @@ class MooseTests(unittest.TestCase):
         '''Test put_data function with unconverted fieldsfile'''
         func.logtest('test put_data function with unconverted fieldsfile:')
         self.inst._rqst_name = 'TESTPa.pmTestfile'
-        self.inst.fl_pp = False
         mock_subproc.return_value = (0, '')
         with mock.patch('moo._Moose._collection', return_value='apm.file'):
             with mock.patch('moo.os.path.exists', return_value=True):
                 self.inst.put_data()
-        cmd = 'moo put -f -vv TestDir/TESTPa.pmTestfile ' \
+        cmd = 'moo put -f -v TestDir/TESTPa.pmTestfile ' \
             'moose:myclass/mysuite/apm.file'
         mock_subproc.assert_called_with(cmd)
 
@@ -472,7 +452,7 @@ class PutCommandTests(unittest.TestCase):
     '''Unit tests relating to the creation of the `moo put` command'''
 
     def setUp(self):
-        self.moocmd = 'moo put -f -vv '
+        self.moocmd = 'moo put -f -v '
         self.testfile = os.path.join(MOO_CMD['DATAM'],
                                      MOO_CMD['CURRENT_RQST_NAME'])
         self.archdest = os.path.join(MOO_CMD['DATACLASS'],
@@ -550,16 +530,7 @@ class Utilitytests(unittest.TestCase):
     def test_archive_to_moose(self, mock_exec):
         '''Test call to archive a file to the Moose system'''
         func.logtest('Assert call to archive file to Moose')
-        self.cmd['CONVERTPP'] = False
         moo.archive_to_moose('FILE', 'FN-PREFIX', 'SOURCEDIR',
-                             MOO_NLIST, False)
+                             MOO_NLIST)
         mock_exec.assert_called_with(self.cmd)
 
-    @mock.patch('moo.CommandExec.execute')
-    def test_archive_to_moose_convertpp(self, mock_exec):
-        '''Test call to archive a file to the Moose system'''
-        func.logtest('Assert call to archive file to Moose')
-        self.cmd['CONVERTPP'] = True
-        moo.archive_to_moose('FILE', 'FN-PREFIX', 'SOURCEDIR',
-                             MOO_NLIST, True)
-        mock_exec.assert_called_with(self.cmd)

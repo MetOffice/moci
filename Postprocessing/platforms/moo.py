@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2025 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2026 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -43,7 +43,7 @@ MODELS = ['atmos', 'jules', 'nemo', 'medusa', 'cice', 'si3',
 
 
 @timer.run_timer
-def archive_to_moose(filename, fnprefix, sourcedir, nlist, convertpp):
+def archive_to_moose(filename, fnprefix, sourcedir, nlist):
     '''Assemble the dictionary of variables required to archive'''
     cmd = {
         'CURRENT_RQST_ACTION': 'ARCHIVE',
@@ -51,14 +51,13 @@ def archive_to_moose(filename, fnprefix, sourcedir, nlist, convertpp):
         'FILENAME_PREFIX':     fnprefix,
         'DATAM':               sourcedir,
         'SETNAME':             nlist.archive_set,
-        'NON_DUPLEXED':        nlist.non_duplexed_set,
         'CATEGORY':            'UNCATEGORISED',
         'DATACLASS':           nlist.dataclass,
         'ENSEMBLEID':          nlist.ensembleid,
         'MOOPATH':             nlist.moopath,
         'PROJECT':             nlist.mooproject,
-        'CONVERTPP':           convertpp,
-        'ACT_AS':              nlist.act_as
+        'ACT_AS':              nlist.act_as,
+        'RISK_APPETITE':       nlist.risk_appetite,
         }
 
     rcode = CommandExec().execute(cmd)[filename]
@@ -77,7 +76,6 @@ class _Moose(object):
         self._class = comms['DATACLASS']
         self._ens_id = comms['ENSEMBLEID']
         self._moopath = comms['MOOPATH']
-        self.convertpp = comms['CONVERTPP']
         self._act_as = comms['ACT_AS']
 
         # Define the collection name
@@ -104,13 +102,11 @@ class _Moose(object):
             self._model_id = rqst[len(fnprefix):len(fnprefix) + 1]
             self._file_id = rqst[len(fnprefix) + 2:]
 
-        self.fl_pp = False
-
         if not self.chkset():
             # Create a set
             self.mkset(comms['CATEGORY'],
                        comms['PROJECT'],
-                       comms['NON_DUPLEXED'])
+                       comms['RISK_APPETITE'])
 
     @property
     def dataset(self):
@@ -130,14 +126,14 @@ class _Moose(object):
             utils.log_msg('chkset: Using existing Moose set', level='INFO')
         return exist
 
-    def mkset(self, cat, project, non_duplexed):
+    def mkset(self, cat, project, risk_appetite):
         '''Create Moose set'''
         mkset_cmd = os.path.join(self._moopath, 'moo') + ' mkset -v '
         if cat != 'UNCATEGORISED':
             mkset_cmd += '-c ' + cat + ' '
         if project:
             mkset_cmd += '-p ' + project + ' '
-        if non_duplexed:
+        if risk_appetite.lower() == 'low':
             mkset_cmd += '--single-copy '
         if self._act_as:
             mkset_cmd += '--act-as {} '.format(self._act_as)
@@ -169,7 +165,7 @@ class _Moose(object):
         if model_id == 'a':  # Atmosphere output
             if self._file_id.endswith('.nc'):
                 fn_facets = self._file_id.split('_')
-                if re.match('^[pm][a-z0-9](-.*)?$', fn_facets[-1]):
+                if re.match(r'^[pm][a-z0-9](-.*)?$', fn_facets[-1]):
                     # Use stream id for collection if provided in filename
                     stream_id = fn_facets[-1][1]
                 else:
@@ -179,20 +175,20 @@ class _Moose(object):
                 ext = '.nc.file'
             else:
                 file_id = self._file_id[:2]
-                if re.search('[mp][1-9|a-z]', file_id):
-                    if self.convertpp:
+                if re.search(r'[mp][1-9a-z]', file_id):
+                    if self._file_id.endswith('.pp'):
                         ext = '.pp'
                     else:
                         ext = '.file'
-                elif re.search('v[1-5|a-j|lmsvy]', file_id):
+                elif re.search(r'v[1-5a-jlmsvy]', file_id):
                     ext = '.pp'
-                elif re.search('n[1-9|a-m|s-z]', file_id):
+                elif re.search(r'n[1-9a-ms-z]', file_id):
                     ext = '.nc.file'
-                elif re.search('b[a-j|mxy]', file_id):
+                elif re.search(r'b[a-jmxy]', file_id):
                     ext = '.file'
-                elif re.search('d[amsy]', file_id):
+                elif re.search(r'd[amsy]', file_id):
                     ext = '.file'
-                elif re.search('r[a-m|qstuvwxz]', file_id):
+                elif re.search(r'r[a-mqstuvwxz]', file_id):
                     ext = '.file'
 
         elif model_id in 'io':  # NEMO/CICE means and restart dumps
@@ -244,9 +240,6 @@ class _Moose(object):
                 'if your requirements are not being met by this script.'
             utils.log_msg(msg, level='ERROR')
 
-        if ext == '.pp':
-            self.fl_pp = True
-
         return model_id + file_id + ext
 
     def put_data(self):
@@ -263,7 +256,7 @@ class _Moose(object):
         # Because of full path, need to get the filename at the end
         crn = os.path.join(self._sourcedir, crn)
 
-        moo_cmd = os.path.join(self._moopath, 'moo') + ' put -f -vv '
+        moo_cmd = os.path.join(self._moopath, 'moo') + ' put -f -v '
         if self._act_as:
             moo_cmd += '--act-as {} '.format(self._act_as)
         filepath = os.path.join(self.dataset, self._ens_id,
@@ -373,13 +366,13 @@ class CommandExec(object):
 
 class MooseArch(object):
     '''Default namelist for Moose archiving'''
-    archive_set = os.environ['CYLC_SUITE_NAME']
-    non_duplexed_set = False
+    archive_set = os.environ['CYLC_WORKFLOW_NAME']
     dataclass = 'crum'
     ensembleid = ''
     moopath = ''
     mooproject = ''
     act_as = ''
+    risk_appetite = 'low'
 
 NAMELISTS = {'moose_arch': MooseArch}
 

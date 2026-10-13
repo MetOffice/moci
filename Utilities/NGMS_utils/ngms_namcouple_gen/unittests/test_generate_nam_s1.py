@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2021-2025 Met Office. All rights reserved.
+ (C) Crown copyright 2021-2026 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -88,7 +88,7 @@ class TestNlogprtVal2(unittest.TestCase):
         '''Test that with correct values we return nothing, and stderror is
         not called'''
         for val in [-1, 0, 1, 2, 3]:
-            self.assertIsNone(generate_nam_s1.check_nlogprt_val2(val))
+            assert generate_nam_s1.check_nlogprt_val2(val) == None
         mock_stderr.assert_not_called()
 
     @mock.patch('generate_nam_s1.sys.stderr.write')

@@ -26,7 +26,6 @@ import sys
 import re
 import datetime
 import time
-import subprocess
 import time2days
 import inc_days
 import common

@@ -1,7 +1,41 @@
 #!/bin/bash
+#PBS -N compile_mean_nemo
+#PBS -o compile_mean_nemo.o
+#PBS -e compile_mean_nemo.e
+#PBS -q shared
+#PBS -l ncpus=1
+#PBS -l walltime=00:01:00
+#PBS -l mem=500mb
 
-rm -f mean_nemo.exe
+set -eu
 
-module unload cray-netcdf
-module load cray-netcdf
-ftn -O0 mean_nemo.f90 -o mean_nemo.exe
+NAME=mean_nemo
+
+MODE=prod
+#MODE=dev
+#MODE=debug
+
+case ${MODE} in
+    prod)
+        opts="-O2 -Ovector1 -hfp0 -hflex_mp=intolerant"
+        ;;
+    dev)
+        opts="-O0"
+        ;;
+    debug)
+        opts="-O0 -Ovector0 -hflex_mp=intolerant -e CID -Ktrap=fp -g"
+        ;;
+    *)
+        echo "Compilation mode \"${MODE}\" not supported"
+        exit 1
+        ;;
+esac
+
+cd ${PBS_O_WORKDIR}
+
+[ -f ${NAME}.exe ] && rm -f ${NAME}.exe
+
+module unload cray-hdf5 cray-netcdf 2>/dev/null
+module load cray-hdf5 cray-netcdf
+
+ftn ${opts} mean_nemo.f90 -o ${NAME}.exe

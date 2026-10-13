@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2020-2025 Met Office. All rights reserved.
+ (C) Crown copyright 2020-2026 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -73,7 +73,8 @@ class TimestepTests(unittest.TestCase):
 class TestCompareFiles(unittest.TestCase):
     ''' Unit tests for Timestep object '''
     def setUp(self):
-        self.kgofile = os.path.join(HERE, 'norms_kgo')
+        self.kgofile = os.path.join(HERE, 'norms_kgo_vn14')
+        self.kgofile_legacy = os.path.join(HERE, 'norms_kgo')
         self.emptyfile = os.path.join(HERE, 'norms_emptyfile')
         self.kgo = {}
         for i in range(10):
@@ -89,6 +90,11 @@ class TestCompareFiles(unittest.TestCase):
         ''' Assert yield variable type from the timestep generator '''
         tsteps = list(compare_absnorms.generate_timestep(self.kgofile))
         self.assertIsInstance(tsteps[0], compare_absnorms.Timestep)
+        
+    def test_generate_legacy_timestep(self):
+        ''' Assert yield variable type from the timestep generator (legacy)'''
+        tsteps = list(compare_absnorms.generate_timestep(self.kgofile_legacy))
+        self.assertIsInstance(tsteps[0], compare_absnorms.Timestep)
 
     def test_generate_no_norms(self):
         ''' Assert yield from a file containing no norms data '''
@@ -103,6 +109,13 @@ class TestCompareFiles(unittest.TestCase):
     def test_create_timesteps(self):
         ''' Assert creation of a timesteps dictionary '''
         tsteps = compare_absnorms.create_timesteps(self.kgofile)
+        self.assertIsInstance(tsteps, dict)
+        self.assertIsInstance(tsteps[list(tsteps.keys())[0]],
+                              compare_absnorms.Timestep)
+
+    def test_create_legacy_timesteps(self):
+        ''' Assert creation of a timesteps dictionary (legacy)'''
+        tsteps = compare_absnorms.create_timesteps(self.kgofile_legacy)
         self.assertIsInstance(tsteps, dict)
         self.assertIsInstance(tsteps[list(tsteps.keys())[0]],
                               compare_absnorms.Timestep)

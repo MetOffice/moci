@@ -23,6 +23,7 @@ def setup_env():
     '''Set up the runtime environment required to run the postproc unittests'''
 
     # Standard Cylc Environment
+    os.environ['CYLC_WORKFLOW_NAME'] = 'suiteID'
     os.environ['CYLC_SUITE_NAME'] = 'suiteID'
     os.environ['CYLC_CYCLING_MODE'] = '360day'
     os.environ['CYLC_SUITE_SHARE_DIR'] = os.getcwd()
