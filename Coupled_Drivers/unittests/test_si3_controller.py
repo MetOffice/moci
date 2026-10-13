@@ -6,7 +6,7 @@
 # -----------------------------------------------------------------------------
 '''
 NAME
-    test_nemo_driver.py
+    test_si3_controller.py
 
 DESCRIPTION
     Contains unit tests for the si3_controller.py module.
@@ -20,7 +20,7 @@ import si3_controller
 nml = si3_controller.dr_env_lib.ocn_cont_def.SI3_ENVIRONMENT_VARS_INITIAL
 SI3_ENV = { k: nml[k].get('default_val', None) for k in nml.keys()}
 
-class TesSetupController(unittest.TestCase):
+class TestSetupController(unittest.TestCase):
     '''
     Tests for the setup of the SI3 model prior to running
     '''
