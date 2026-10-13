@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016-2025 Met Office. All rights reserved.
+ (C) Crown copyright 2016-2026 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -31,7 +31,7 @@ MODEL_COMPONENTS = {
                             'UK-shelf-T', 'UK-shelf-U', 'UK-shelf-V'],
                       ['', 'icebergs']),
              'medusa': ('o', ['ptrc-T', 'diad-T', 'ptrd-T'], ['ptracer']),
-             'si3': ('i', ['icemod'], ['ice'])},
+             'si3': ('i', ['icemod', 'icemod-1d', 'SBC-scalar'], ['ice'])},
     'cice': {'cice': ('i', '', ['', 'age'])},
     'unicicles': {'bisicles':
                   ('c', ['calving-AIS', 'calving-GrIS', 'nemo-icecouple-AIS',

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2016-2025 Met Office. All rights reserved.
+ (C) Crown copyright 2016-2026 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -518,26 +518,38 @@ class RestartFilesTests(unittest.TestCase):
         ''' Test calculation of expected nemo restart files buffer=3'''
         func.logtest('Assert list of archived nemo dumps - buffered:')
         # Default setting is bi-annual archive
+        self.files.rst_types.append('nemo_ice_rst')
         self.files.edate = [1998, 7, 1]
-        expect = ['PREFIXo_19951201_restart.nc',
-                  'PREFIXo_19960601_restart.nc',
-                  'PREFIXo_19961201_restart.nc',
-                  'PREFIXo_19970601_restart.nc',
-                  'PREFIXo_19971201_restart.nc',
-                  'PREFIXo_19980601_restart.nc',
-                  'PREFIXo_19980701_restart.nc']
+        expect_o = ['PREFIXo_19951201_restart.nc',
+                    'PREFIXo_19960601_restart.nc',
+                    'PREFIXo_19961201_restart.nc',
+                    'PREFIXo_19970601_restart.nc',
+                    'PREFIXo_19971201_restart.nc',
+                    'PREFIXo_19980601_restart.nc',
+                    'PREFIXo_19980701_restart.nc']
+        expect_i = ['PREFIXo_19951201_restart_ice.nc',
+                    'PREFIXo_19960601_restart_ice.nc',
+                    'PREFIXo_19961201_restart_ice.nc',
+                    'PREFIXo_19970601_restart_ice.nc',
+                    'PREFIXo_19971201_restart_ice.nc',
+                    'PREFIXo_19980601_restart_ice.nc',
+                    'PREFIXo_19980701_restart_ice.nc']
         self.files.naml.buffer_restart = 4  # 40 days
 
         with mock.patch('expected_content.utils.CylcCycle._cyclepoint',
                         return_value={'iso': '19980621T0000Z',
                                       'intlist':  [1998, 6, 21, 0, 0]}):
-            files_returned = self.files.expected_files()['oda.file']
-            self.assertListEqual(files_returned, expect[:-2])
+            ofiles_returned = self.files.expected_files()['oda.file']
+            self.assertListEqual(ofiles_returned, expect_o[:-2])
+            ifiles_returned = self.files.expected_files()['ida.file']
+            self.assertListEqual(ifiles_returned, expect_i[:-2])
 
             self.files.finalcycle = True
             dict_returned = self.files.expected_files()
-            self.assertListEqual(dict_returned['oda.file'], expect)
-            self.assertListEqual(list(dict_returned.keys()), ['oda.file'])
+            self.assertListEqual(dict_returned['oda.file'], expect_o)
+            self.assertListEqual(dict_returned['ida.file'], expect_i)
+            self.assertListEqual(sorted(list(dict_returned.keys())),
+                                 ['ida.file', 'oda.file'])
 
     def test_expected_nemo_olddumps(self):
         ''' Test calculation of expected nemo restarts with 3.1 datestamp'''
@@ -1272,7 +1284,7 @@ class DiagnosticFilesTests(unittest.TestCase):
                             'si3_prefixi_1m_19951101-19951201_icemod.nc',
                             'si3_prefixi_1m_19951201-19960101_icemod.nc'],
             'ins.nc.file': ['si3_prefixi_1s_19950901-19951201_icemod.nc']
-            }
+        }
 
         expected = self.files.expected_diags()
         self.assertListEqual(sorted(expected['onm.nc.file']),

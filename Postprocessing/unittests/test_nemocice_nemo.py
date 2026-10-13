@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2025 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2026 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -126,6 +126,7 @@ class StencilTests(unittest.TestCase):
     def test_model_realm_seaice(self):
         '''Test model_realm returns regular expression for ocean files'''
         self.assertEqual(self.nemo.model_realm('icemod'), 'i')
+        self.assertEqual(self.nemo.model_realm('sbc_scalar'), 'i')
 
     def test_model_realm_both(self):
         '''Test model_realm returns regular expression for all NEMO files'''
@@ -149,11 +150,12 @@ class Propertytests(unittest.TestCase):
         '''Test the return value of the fields property - default'''
         func.logtest('Assert return value of fields property:')
         self.assertEqual(self.nemo.naml.processing.means_fieldsfiles, None)
-        self.assertListEqual(self.nemo.mean_fields,
-                             ['diad_T', 'diaptr', 'grid_T',
+        self.assertListEqual(sorted(self.nemo.mean_fields),
+                             ['SBC_scalar', 'diad_T', 'diaptr', 'grid_T',
                               'grid_U', 'grid_V', 'grid_W',
-                              'icemod', 'isf_T',
-                              'ptrc_T', 'ptrd_T', 'scalar', 'trnd3d'])
+                              'icemod', 'icemod_1d', 'isf_T',
+                              'ptrc_T', 'ptrd_T',
+                              'scalar', 'trnd3d'])
         self.assertEqual(self.nemo.naml.processing.region_fieldsfiles, None)
         self.assertListEqual(self.nemo.inst_fields, [])
 
@@ -1459,13 +1461,13 @@ class UtilityMethodTests(unittest.TestCase):
         func.logtest('Assert si3 in model identification:')
         with mock.patch('nemo.NemoPostProc.model_components',
                         new_callable=mock.PropertyMock,
-                        return_value={'si3': ['GRID', 'FIELD']}):
+                        return_value={'si3': ['grid', 'my_field']}):
             self.nemo.filename_components(
-                'RUNIDo_1m_11112233_44445566_FIELD.nc'
+                'RUNIDo_1m_11112233_44445566_MY_FIELD.nc'
                 )
         mock_ncf.assert_called_once_with('si3', 'RUNID', 'i', base='1m',
                                          start_date=('1111', '22', '33'),
-                                         custom='FIELD')
+                                         custom='MY-FIELD')
 
     @mock.patch('nemo.netcdf_filenames.NCFilename.__init__', return_value=None)
     def test_components_4date_format(self, mock_ncf):

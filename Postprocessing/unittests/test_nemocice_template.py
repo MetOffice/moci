@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2022 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2026 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -847,7 +847,7 @@ class ArchiveTests(unittest.TestCase):
                 self.model.prepare_archive()
 
         pattern = r'.*_runid[a-z]+_(1m|1s|1y)_' \
-                  '\d{4}\d{2}\d{2}-\d{4}\d{2}\d{2}.nc'
+                  r'\d{4}\d{2}\d{2}-\d{4}\d{2}\d{2}.nc'
         self.assertListEqual(mock_set.mock_calls,
                              [mock.call(os.getcwd(), pattern)])
 
@@ -878,7 +878,7 @@ class ArchiveTests(unittest.TestCase):
                     self.model.prepare_archive()
 
         pattern = r'.*_runid[a-z]+_(1m|1s|1y)_' \
-                  '\d{4}\d{2}\d{2}-\d{4}\d{2}\d{2}.nc'
+                  r'\d{4}\d{2}\d{2}-\d{4}\d{2}\d{2}.nc'
         self.assertListEqual(mock_set.mock_calls,
                              [mock.call(os.getcwd(), pattern)])
         self.assertIn('Failed to copy', func.capture('err'))
@@ -935,6 +935,42 @@ class ArchiveTests(unittest.TestCase):
         self.assertListEqual(self.model.compress_file.mock_calls, call_compress)
 
     @mock.patch('modeltemplate.utils')
+    def test_compress_netcdf_excl_chunk(self, mock_utils):
+        '''Test compress_netcdf_files'''
+        func.logtest('Assert compress_netcdf_files - chunking exclusion:')
+
+        self.model.naml.processing.compress_netcdf = 'comp_util'
+        self.model.naml.processing.compression_level = 5
+        self.model.naml.processing.chunking_arguments = 'chunks'
+
+        self.model.compress_file = mock.Mock(return_value=0)
+
+        mock_utils.add_path.return_value = ['path/to/si3_DATE_SBC-scalar.nc',
+                                            'path/to/nemo_DATE_grid-T.nc',
+                                            'si3_DATE_icemod.nc']
+
+        with mock.patch('modeltemplate.ModelTemplate.model_realm',
+                        return_value='x'):
+            with mock.patch('modeltemplate.ModelTemplate.prefix',
+                            new_callable=mock.PropertyMock,
+                            return_value='RUNID'):
+                self.model.compress_netcdf_files('1x', 'SBC-scalar')
+
+        pattern = r'component_runidx_1x_\d{4}\d{2}\d{2}-' + \
+            r'\d{4}\d{2}\d{2}_SBC-scalar.nc(_COMPRESS_FAILED)?$'
+        mock_utils.get_subset.assert_called_once_with('ModelDir/archive_ready',
+                                                      pattern)
+
+        call_compress = []
+        call_compress.append(mock.call('path/to/si3_DATE_SBC-scalar.nc', 'comp_util',
+                                       compression=5, chunking=None))
+        call_compress.append(mock.call('path/to/nemo_DATE_grid-T.nc', 'comp_util',
+                                       compression=5, chunking='chunks'))
+        call_compress.append(mock.call('si3_DATE_icemod.nc', 'comp_util',
+                                    compression=5, chunking=None))
+        self.assertListEqual(self.model.compress_file.mock_calls, call_compress)
+
+    @mock.patch('modeltemplate.utils')
     @mock.patch('modeltemplate.os.rename')
     def test_compress_netcdf_fail(self, mock_rename, mock_utils):
         '''Test compress_netcdf_files - fail'''
@@ -975,7 +1011,7 @@ class ArchiveTests(unittest.TestCase):
         '''Test archive_means'''
         func.logtest('Assert correct archive_means functionality:')
 
-        mock_fullname.side_effect = [['file/one', 'file/two']]
+        mock_fullname.side_effect = [['file/one', 'file/two', 'file/two']]
         with mock.patch('modeltemplate.ModelTemplate.prefix',
                         new_callable=mock.PropertyMock,
                         return_value='RUNID'):
@@ -987,7 +1023,7 @@ class ArchiveTests(unittest.TestCase):
                                          r'runid.*\.nc$')
         mock_fullname.assert_called_once_with(mock_set.return_value,
                                               'ModelDir/archive_ready')
-        self.assertListEqual(mock_arch.mock_calls,
+        self.assertListEqual(sorted(mock_arch.mock_calls),
                              [mock.call('file/one'), mock.call('file/two')])
         mock_clean.assert_called_with(mock_arch.return_value, 'means files')
 
@@ -1012,16 +1048,16 @@ class ArchiveTests(unittest.TestCase):
 
         self.assertListEqual(
             mock_set.mock_calls,
-            [mock.call('ModelDir/archive_ready', r'runid.*F1\.nc$'),
-             mock.call('ModelDir/archive_ready', r'runid.*F2\.nc$')]
+            [mock.call('ModelDir/archive_ready', r'runid.*_F1\.nc$'),
+             mock.call('ModelDir/archive_ready', r'runid.*_F2\.nc$')]
             )
 
         self.assertEqual(len(mock_fullname.mock_calls), 2)
         mock_fullname.assert_called_with(mock_set.return_value,
                                          'ModelDir/archive_ready')
-        self.assertListEqual(mock_arch.mock_calls,
-                             [mock.call('file/one'), mock.call('file/two'),
-                              mock.call('file/three'), mock.call('file/four')])
+        self.assertListEqual(sorted(mock_arch.mock_calls),
+                             [mock.call('file/four'), mock.call('file/one'),
+                              mock.call('file/three'), mock.call('file/two')])
         mock_clean.assert_called_with(mock_arch.return_value, 'means files')
 
     @mock.patch('modeltemplate.utils.get_subset')
@@ -1045,7 +1081,7 @@ class ArchiveTests(unittest.TestCase):
                                          r'runid.*\.nc$')
         mock_fullname.assert_called_once_with(mock_set.return_value,
                                               'ModelDir/archive_ready')
-        self.assertListEqual(mock_arch.mock_calls,
+        self.assertListEqual(sorted(mock_arch.mock_calls),
                              [mock.call('file/one'), mock.call('file/two')])
         mock_clean.assert_called_with(mock_arch.return_value, 'means files')
 
@@ -1538,7 +1574,7 @@ class MethodsTests(unittest.TestCase):
                 _ = self.model.filename_components(
                     'RUNIDx.1x.11112233_44445566_FIELD.nc'
                     )
-        self.assertIn('unable to extract "component"', func.capture('err'))
+        self.assertIn('Unable to determine the realm ID', func.capture('err'))
 
     @mock.patch('modeltemplate.netcdf_filenames.NCFilename.__init__',
                 return_value=None)
@@ -1553,8 +1589,11 @@ class MethodsTests(unittest.TestCase):
                 'RUNIDx_10m_11112233_44445566_FIELD.nc'
                 )
             self.assertTrue(isinstance(ncf, netcdf_filenames.NCFilename))
-        self.assertIn('unable to extract "component"', func.capture('err'))
-        mock_ncf.assert_called_once_with('component', 'PREFIX', 'R')
+        self.assertIn('Unable to determine the realm ID', func.capture('err'))
+        mock_ncf.assert_called_once_with(
+            'model', 'TESTP', 'R',
+            base='10m', start_date=('1111', '22', '33'), custom=''
+        )
 
     def test_datastamp_period_cf(self):
         '''Test datestamp_period extraction from filename - cf compliant'''

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 '''
 *****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2025 Met Office. All rights reserved.
+ (C) Crown copyright 2015-2026 Met Office. All rights reserved.
 
  Use, duplication or disclosure of this code is subject to the restrictions
  as set forth in the licence. If no licence has been raised with this copy
@@ -21,6 +21,7 @@ DESCRIPTION
 import os
 import re
 import shutil
+from collections import OrderedDict
 
 import timer
 import utils
@@ -94,13 +95,13 @@ class NemoPostProc(mt.ModelTemplate):
     @property
     def model_components(self):
         '''Name of model component, to be used as a prefix to archived files '''
-        return {
-            'nemo': ['grid_T', 'grid_U', 'grid_V', 'isf_T',
-                     'grid_W', 'diaptr', 'trnd3d', 'scalar',
-                     'UK_shelf_T', 'UK_shelf_U', 'UK_shelf_V'],
-            'si3': ['icemod'],
-            'medusa': ['ptrc_T', 'diad_T', 'ptrd_T']
-            }
+        return OrderedDict([
+            ('nemo', ['grid_T', 'grid_U', 'grid_V', 'isf_T',
+                      'grid_W', 'diaptr', 'trnd3d', 'scalar',
+                      'UK_shelf_T', 'UK_shelf_U', 'UK_shelf_V']),
+            ('si3', ['icemod', 'icemod_1d', 'SBC_scalar']),
+            ('medusa', ['ptrc_T', 'diad_T', 'ptrd_T']),
+            ])
 
     @property
     def cfcompliant_output(self):
@@ -166,9 +167,15 @@ class NemoPostProc(mt.ModelTemplate):
             field <type str> Individual fieldname
                              or  "|" separated list of fieldnames
         '''
+        si3_fields = self.model_components['si3'][:]
+        si3_fields += [f.replace('_', '-') for f in
+                       self.model_components['si3']]
+        ice_field = any([re.search(str(f), field, re.IGNORECASE)
+                         for f in si3_fields])
+
         if '|' in field:
             realm = '[io]'
-        elif field in self.model_components['si3']:
+        elif ice_field:
             realm = 'i'
         else:
             realm = 'o'
