@@ -11,3 +11,4 @@
 | jonseddon       | Jon Seddon      | Met Office  | 2026-05-11 |
 | jonnyhtw        | Jonny Williams  | NCAS        | 2026-05-13 |
 | yaswant         | Yaswant Pradhan | Met Office  | 2026-07-17 |
+| jonahroberts-jones | Jonah Roberts-Jones | Met Office | 2026-09-21 |
