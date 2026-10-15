@@ -721,11 +721,14 @@ class ModelTemplate(control.RunPostProc):
                 os.rename(fname, fname[:-len(fail_tag)])
                 fname = fname[:-len(fail_tag)]
 
-            if os.path.basename(fname).startswith('si3_'):
-                # Exclude SI3 fieldsfiles from chunking to prevent crashing
-                chunks=None
-            else:
-                chunks=self.naml.processing.chunking_arguments
+            chunks = self.naml.processing.chunking_arguments
+            try:
+                exclusions = self.chunking_exclusions_pattern
+            except AttributeError:
+                exclusions = None
+            if exclusions and re.match(exclusions, fname):
+                chunks = None
+
             rcode = self.compress_file(
                 fname,
                 self.naml.processing.compress_netcdf,

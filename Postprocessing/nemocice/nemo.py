@@ -146,9 +146,20 @@ class NemoPostProc(mt.ModelTemplate):
     @property
     def iberg_trajectory_pattern(self):
         '''
-        Return a regular expression matching iceberg trajecoty restart files
+        Return a regular expression matching iceberg trajectory restart files
         '''
         return r'trajectory_icebergs_\d{6,8}(-\d{8})?'
+        
+    @property
+    def chunking_exclusions_pattern(self):
+        '''
+        Return a regular expression matching filenames for which
+        &processing/chunking_arguments should be ignored during compression
+        '''
+        excl_fields = [f.replace('_', '-') for
+                       f in self.naml.processing.chunking_exclude_fields]
+        if excl_fields:
+            return r'.*_({})\.nc'.format(('|').join(excl_fields))
 
     def model_realm(self, field):
         '''

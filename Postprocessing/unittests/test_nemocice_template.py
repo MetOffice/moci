@@ -928,10 +928,46 @@ class ArchiveTests(unittest.TestCase):
         self.assertListEqual(self.model.compress_file.mock_calls, call_compress)
 
     @mock.patch('modeltemplate.utils')
+    @mock.patch('modeltemplate.os.rename')
+    def test_compress_netcdf_inc_chunk(self, mock_rename, mock_utils):
+        '''Test compress_netcdf_files'''
+        func.logtest('Assert compress_netcdf_files - no chunking exclusions:')
+
+        self.model.chunking_exclusions_pattern = None
+        self.model.naml.processing.compress_netcdf = 'comp_util'
+        self.model.naml.processing.compression_level = 5
+        self.model.naml.processing.chunking_arguments = 'chunks'
+
+        self.model.compress_file = mock.Mock(return_value=0)
+
+        mock_utils.add_path.return_value = ['f1', 'f2_COMPRESS_FAILED']
+
+        with mock.patch('modeltemplate.ModelTemplate.model_realm',
+                        return_value='x'):
+            with mock.patch('modeltemplate.ModelTemplate.prefix',
+                            new_callable=mock.PropertyMock,
+                            return_value='RUNID'):
+                self.model.compress_netcdf_files('1x', 'grid')
+
+        mock_rename.assert_called_once_with('f2_COMPRESS_FAILED', 'f2')
+
+        pattern = r'component_runidx_1x_\d{4}\d{2}\d{2}-' + \
+            r'\d{4}\d{2}\d{2}_grid.nc(_COMPRESS_FAILED)?$'
+        mock_utils.get_subset.assert_called_once_with('ModelDir/archive_ready',
+                                                      pattern)
+
+        call_compress = []
+        for fname in ['f1', 'f2']:
+            call_compress.append(mock.call(fname, 'comp_util',
+                                           compression=5, chunking='chunks'))
+        self.assertListEqual(self.model.compress_file.mock_calls, call_compress)        
+
+    @mock.patch('modeltemplate.utils')
     def test_compress_netcdf_excl_chunk(self, mock_utils):
         '''Test compress_netcdf_files'''
         func.logtest('Assert compress_netcdf_files - chunking exclusion:')
 
+        self.model.chunking_exclusions_pattern = r'.*_(modfield|SBC-scalar)\.nc'
         self.model.naml.processing.compress_netcdf = 'comp_util'
         self.model.naml.processing.compression_level = 5
         self.model.naml.processing.chunking_arguments = 'chunks'
@@ -940,7 +976,7 @@ class ArchiveTests(unittest.TestCase):
 
         mock_utils.add_path.return_value = ['path/to/si3_DATE_SBC-scalar.nc',
                                             'path/to/nemo_DATE_grid-T.nc',
-                                            'si3_DATE_icemod.nc']
+                                            'model_DATE_modfield.nc']
 
         with mock.patch('modeltemplate.ModelTemplate.model_realm',
                         return_value='x'):
@@ -955,11 +991,13 @@ class ArchiveTests(unittest.TestCase):
                                                       pattern)
 
         call_compress = []
-        call_compress.append(mock.call('path/to/si3_DATE_SBC-scalar.nc', 'comp_util',
+        call_compress.append(mock.call('path/to/si3_DATE_SBC-scalar.nc',
+                                       'comp_util',
                                        compression=5, chunking=None))
-        call_compress.append(mock.call('path/to/nemo_DATE_grid-T.nc', 'comp_util',
+        call_compress.append(mock.call('path/to/nemo_DATE_grid-T.nc',
+                                       'comp_util',
                                        compression=5, chunking='chunks'))
-        call_compress.append(mock.call('si3_DATE_icemod.nc', 'comp_util',
+        call_compress.append(mock.call('model_DATE_modfield.nc', 'comp_util',
                                     compression=5, chunking=None))
         self.assertListEqual(self.model.compress_file.mock_calls, call_compress)
 

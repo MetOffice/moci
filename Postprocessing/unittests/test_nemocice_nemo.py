@@ -177,6 +177,16 @@ class Propertytests(unittest.TestCase):
         self.nemo.naml.processing.region_fieldsfiles = ['reg_T', 'reg_V']
         self.assertListEqual(self.nemo._region_fields, ['reg_T', 'reg_V'])
 
+    def test_chunk_excl_pattern(self):
+        func.logtest('Assert chunking exclusions pattern property:')
+        self.nemo.naml.processing.chunking_exclude_fields = \
+            ['icemod', 'icemod_1d', 'SBC_scalar']
+        self.assertEqual(self.nemo.chunking_exclusions_pattern,
+                         r'.*_(icemod|icemod-1d|SBC-scalar)\.nc')
+
+    def test_chunk_excl_pattern_none(self):
+        func.logtest('Assert chunking exclusions pattern property:')
+        self.assertIsNone(self.nemo.chunking_exclusions_pattern)
 
 class RebuildTests(unittest.TestCase):
     '''Unit tests relating to the rebuilding of restart and means files'''
