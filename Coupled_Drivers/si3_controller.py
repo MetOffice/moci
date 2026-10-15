@@ -1,19 +1,15 @@
 #!/usr/bin/env python3
+# -----------------------------------------------------------------------------
+# (C) Crown copyright Met Office. All rights reserved.
+# The file LICENCE, distributed with this code, contains details of the terms
+# under which the code may be used.
+# -----------------------------------------------------------------------------
 '''
-*****************************COPYRIGHT******************************
- (C) Crown copyright 2021-2025 Met Office. All rights reserved.
- Use, duplication or disclosure of this code is subject to the restrictions
- as set forth in the licence. If no licence has been raised with this copy
- of the code, the use, duplication or disclosure of it is strictly
- prohibited. Permission to do so must first be obtained in writing from the
- Met Office Information Asset Owner at the following address:
-
- Met Office, FitzRoy Road, Exeter, Devon, EX1 3PB, United Kingdom
-*****************************COPYRIGHT******************************
 NAME
     si3_controller.py
 
 DESCRIPTION
+    Controller for the SI3 sea-ice model
 '''
 
 
@@ -39,6 +35,7 @@ def _check_si3nl_envar(envar_container):
                          'file %s\n' % envar_container['SI3_NL'])
         sys.exit(error.MISSING_CONTROLLER_FILE_ERROR)
     return 0
+
 
 def _get_si3rst(si3_nl_file):
     '''
@@ -84,6 +81,7 @@ def _load_environment_variables(si3_envar):
 
     return si3_envar
 
+
 def _setup_si3_controller(common_env,
                           restart_ctl,
                           nemo_nproc,
@@ -100,13 +98,7 @@ def _setup_si3_controller(common_env,
     si3_envar = _load_environment_variables(si3_envar)
     _ = _check_si3nl_envar(si3_envar)
 
-    # SI3 hasn't been set up to use CONTINUE_FROM_FAIL yet
-    # Raise an error if it's set to prevent unexpected behaviour in future
-    if common_env['CONTINUE_FROM_FAIL'] == 'true':
-        sys.stderr.write('[FAIL] si3_controller is not coded to work with'
-                         'CONTINUE_FROM_FAIL=true')
-        sys.exit(error.INVALID_EVAR_ERROR)
-
+    # restart_direcs is NOT currently used
     restart_direcs = []
     si3_rst = _get_si3rst(si3_envar['SI3_NL'])
     if si3_rst:
@@ -204,7 +196,7 @@ def _setup_si3_controller(common_env,
 
         if verify_restart == 'True':
             _verify_si3_rst(nemo_dump_time, nemo_nproc, si3_restart_files)
-        if si3_dump_time != nemo_dump_time:
+        if int(si3_dump_time) != int(nemo_dump_time):
             sys.stderr.write('[FAIL] si3_controller: Mismatch in SI3 restart '
                              'file date %s and NEMO restart file date %s\n'
                              % (si3_dump_time, nemo_dump_time))
@@ -213,7 +205,7 @@ def _setup_si3_controller(common_env,
 
         # This could be a new run (the first NRUN of a cycle) or
         # a CRUN.
-        sys.stdout.write('[INFO] si3_controller: Restart data avaliable in '
+        sys.stdout.write('[INFO] si3_controller: Restart data available in '
                          'SI3 restart directory %s. Restarting from previous '
                          'task output\n\n'
                          % si3_rst)
@@ -252,13 +244,12 @@ def _setup_si3_controller(common_env,
         # during a CRUN seems pretty slim.
 
     else:
-        sys.stderr.write('[FAIL] si3_controller: No restart data avaliable in '
+        sys.stderr.write('[FAIL] si3_controller: No restart data available in '
                          'SI3 restart directory:\n  %s\n' % si3_rst)
         sys.exit(error.MISSING_MODEL_FILE_ERROR)
 
-
-
     return si3_envar
+
 
 def _set_launcher_command(_):
     '''
@@ -269,10 +260,12 @@ def _set_launcher_command(_):
     launch_cmd = ''
     return launch_cmd
 
+
 def _finalize_si3_controller():
     '''
     Finalize the passive SI3 setup
     '''
+
 
 def run_controller(common_env,
                    restart_ctl,
