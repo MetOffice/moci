@@ -27,14 +27,19 @@ def exec_subprocess(
     cmd.whitespace_split = True
     formatted_cmd = list(cmd)
 
+
+    run_kwargs = { 'cwd': current_working_directory,
+               'timeout': timeout,
+               'check': True, }
+    if sys.version_info[:2] < (3,7):
+        # simulate capture_output functionality
+        run_kwargs['stdout'] = subprocess.PIPE
+        run_kwargs['stderr'] = subprocess.PIPE
+    else:
+        run_kwargs['capture_output'] = True
+
     try:
-        output = subprocess.run(
-            formatted_cmd,
-            capture_output=True,
-            cwd=current_working_directory,
-            timeout=timeout,
-            check=True,
-        )
+        output = subprocess.run(formatted_cmd, **run_kwargs)
         rcode = output.returncode
         output_message = output.stdout.decode()
 
