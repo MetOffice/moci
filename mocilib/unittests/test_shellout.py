@@ -4,6 +4,8 @@
 # under which the code may be used.
 # -----------------------------------------------------------------------------
 
+import sys
+import os
 import unittest
 import unittest.mock as mock
 
@@ -53,7 +55,7 @@ class ExecTests(unittest.TestCase):
                "stdout": shellout.subprocess.PIPE,
                "stderr": shellout.subprocess.PIPE }
 
-        with mock.patch("sys.version_info", (3,6,15)):
+        with mock.patch("mocilib.shellout.sys.version_info", (3,6,15)):
             with mock.patch("subprocess.run") as mock_exec:
                 rcode, _ = shellout.exec_subprocess(cmd)
         mock_exec.assert_called_once_with([cmd], **kw)
@@ -66,7 +68,7 @@ class ExecTests(unittest.TestCase):
                "check": True,
                "capture_output": True }
 
-        with mock.patch("sys.version_info", (3,7,0)):
+        with mock.patch("mocilib.shellout.sys.version_info", (3,7,0)):
             with mock.patch("subprocess.run") as mock_exec:
                 rcode, _ = shellout.exec_subprocess(cmd)
         mock_exec.assert_called_once_with([cmd], **kw)
