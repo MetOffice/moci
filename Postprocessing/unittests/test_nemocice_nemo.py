@@ -1,17 +1,10 @@
 #!/usr/bin/env python
-'''
-*****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2025 Met Office. All rights reserved.
+# -----------------------------------------------------------------------------
+# (C) Crown copyright Met Office. All rights reserved.
+# The file LICENCE, distributed with this code, contains details of the terms
+# under which the code may be used.
+# -----------------------------------------------------------------------------
 
- Use, duplication or disclosure of this code is subject to the restrictions
- as set forth in the licence. If no licence has been raised with this copy
- of the code, the use, duplication or disclosure of it is strictly
- prohibited. Permission to do so must first be obtained in writing from the
- Met Office Information Asset Owner at the following address:
-
- Met Office, FitzRoy Road, Exeter, Devon, EX1 3PB, United Kingdom
-*****************************COPYRIGHT******************************
-'''
 import unittest
 import os
 import re
@@ -126,6 +119,7 @@ class StencilTests(unittest.TestCase):
     def test_model_realm_seaice(self):
         '''Test model_realm returns regular expression for ocean files'''
         self.assertEqual(self.nemo.model_realm('icemod'), 'i')
+        self.assertEqual(self.nemo.model_realm('sbc_scalar'), 'i')
 
     def test_model_realm_both(self):
         '''Test model_realm returns regular expression for all NEMO files'''
@@ -149,11 +143,12 @@ class Propertytests(unittest.TestCase):
         '''Test the return value of the fields property - default'''
         func.logtest('Assert return value of fields property:')
         self.assertEqual(self.nemo.naml.processing.means_fieldsfiles, None)
-        self.assertListEqual(self.nemo.mean_fields,
-                             ['diad_T', 'diaptr', 'grid_T',
+        self.assertListEqual(sorted(self.nemo.mean_fields),
+                             ['SBC_scalar', 'diad_T', 'diaptr', 'grid_T',
                               'grid_U', 'grid_V', 'grid_W',
-                              'icemod', 'isf_T',
-                              'ptrc_T', 'ptrd_T', 'scalar', 'trnd3d'])
+                              'icemod', 'icemod_1d', 'isf_T',
+                              'ptrc_T', 'ptrd_T',
+                              'scalar', 'trnd3d'])
         self.assertEqual(self.nemo.naml.processing.region_fieldsfiles, None)
         self.assertListEqual(self.nemo.inst_fields, [])
 
@@ -182,6 +177,16 @@ class Propertytests(unittest.TestCase):
         self.nemo.naml.processing.region_fieldsfiles = ['reg_T', 'reg_V']
         self.assertListEqual(self.nemo._region_fields, ['reg_T', 'reg_V'])
 
+    def test_chunk_excl_pattern(self):
+        func.logtest('Assert chunking exclusions pattern property:')
+        self.nemo.naml.processing.chunking_exclude_fields = \
+            ['icemod', 'icemod_1d', 'SBC_scalar']
+        self.assertEqual(self.nemo.chunking_exclusions_pattern,
+                         r'.*_(icemod|icemod-1d|SBC-scalar)\.nc')
+
+    def test_chunk_excl_pattern_none(self):
+        func.logtest('Assert chunking exclusions pattern property:')
+        self.assertIsNone(self.nemo.chunking_exclusions_pattern)
 
 class RebuildTests(unittest.TestCase):
     '''Unit tests relating to the rebuilding of restart and means files'''
@@ -1459,13 +1464,13 @@ class UtilityMethodTests(unittest.TestCase):
         func.logtest('Assert si3 in model identification:')
         with mock.patch('nemo.NemoPostProc.model_components',
                         new_callable=mock.PropertyMock,
-                        return_value={'si3': ['GRID', 'FIELD']}):
+                        return_value={'si3': ['grid', 'my_field']}):
             self.nemo.filename_components(
-                'RUNIDo_1m_11112233_44445566_FIELD.nc'
+                'RUNIDo_1m_11112233_44445566_MY_FIELD.nc'
                 )
         mock_ncf.assert_called_once_with('si3', 'RUNID', 'i', base='1m',
                                          start_date=('1111', '22', '33'),
-                                         custom='FIELD')
+                                         custom='MY-FIELD')
 
     @mock.patch('nemo.netcdf_filenames.NCFilename.__init__', return_value=None)
     def test_components_4date_format(self, mock_ncf):

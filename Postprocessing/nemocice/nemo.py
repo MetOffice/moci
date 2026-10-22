@@ -1,16 +1,10 @@
 #!/usr/bin/env python
+# -----------------------------------------------------------------------------
+# (C) Crown copyright Met Office. All rights reserved.
+# The file LICENCE, distributed with this code, contains details of the terms
+# under which the code may be used.
+# -----------------------------------------------------------------------------
 '''
-*****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2025 Met Office. All rights reserved.
-
- Use, duplication or disclosure of this code is subject to the restrictions
- as set forth in the licence. If no licence has been raised with this copy
- of the code, the use, duplication or disclosure of it is strictly
- prohibited. Permission to do so must first be obtained in writing from the
- Met Office Information Asset Owner at the following address:
-
- Met Office, FitzRoy Road, Exeter, Devon, EX1 3PB, United Kingdom
-*****************************COPYRIGHT******************************
 NAME
     nemo.py
 
@@ -21,6 +15,7 @@ DESCRIPTION
 import os
 import re
 import shutil
+from collections import OrderedDict
 
 import timer
 import utils
@@ -94,13 +89,13 @@ class NemoPostProc(mt.ModelTemplate):
     @property
     def model_components(self):
         '''Name of model component, to be used as a prefix to archived files '''
-        return {
-            'nemo': ['grid_T', 'grid_U', 'grid_V', 'isf_T',
-                     'grid_W', 'diaptr', 'trnd3d', 'scalar',
-                     'UK_shelf_T', 'UK_shelf_U', 'UK_shelf_V'],
-            'si3': ['icemod'],
-            'medusa': ['ptrc_T', 'diad_T', 'ptrd_T']
-            }
+        return OrderedDict([
+            ('nemo', ['grid_T', 'grid_U', 'grid_V', 'isf_T',
+                      'grid_W', 'diaptr', 'trnd3d', 'scalar',
+                      'UK_shelf_T', 'UK_shelf_U', 'UK_shelf_V']),
+            ('si3', ['icemod', 'icemod_1d', 'SBC_scalar']),
+            ('medusa', ['ptrc_T', 'diad_T', 'ptrd_T']),
+            ])
 
     @property
     def cfcompliant_output(self):
@@ -151,9 +146,20 @@ class NemoPostProc(mt.ModelTemplate):
     @property
     def iberg_trajectory_pattern(self):
         '''
-        Return a regular expression matching iceberg trajecoty restart files
+        Return a regular expression matching iceberg trajectory restart files
         '''
         return r'trajectory_icebergs_\d{6,8}(-\d{8})?'
+        
+    @property
+    def chunking_exclusions_pattern(self):
+        '''
+        Return a regular expression matching filenames for which
+        &processing/chunking_arguments should be ignored during compression
+        '''
+        excl_fields = [f.replace('_', '-') for
+                       f in self.naml.processing.chunking_exclude_fields]
+        if excl_fields:
+            return r'.*_({})\.nc'.format(('|').join(excl_fields))
 
     def model_realm(self, field):
         '''
@@ -166,9 +172,15 @@ class NemoPostProc(mt.ModelTemplate):
             field <type str> Individual fieldname
                              or  "|" separated list of fieldnames
         '''
+        si3_fields = self.model_components['si3'][:]
+        si3_fields += [f.replace('_', '-') for f in
+                       self.model_components['si3']]
+        ice_field = any([re.search(str(f), field, re.IGNORECASE)
+                         for f in si3_fields])
+
         if '|' in field:
             realm = '[io]'
-        elif field in self.model_components['si3']:
+        elif ice_field:
             realm = 'i'
         else:
             realm = 'o'
