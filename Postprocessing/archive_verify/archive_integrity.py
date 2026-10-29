@@ -56,7 +56,7 @@ def log_archive(dataset):
     ''' Debug mode only - read archived files from Cylc logs '''
 
     logfile = 'cylclog'
-    cylclog = os.path.join(os.environ['CYLC_SUITE_SHARE_DIR'], logfile)
+    cylclog = os.path.join(os.environ['CYLC_WORKFLOW_SHARE_DIR'], logfile)
     utils.log_msg('Reading archive contents from file: ' + cylclog,
                   level='DEBUG')
     with open(cylclog, 'r') as logfile:

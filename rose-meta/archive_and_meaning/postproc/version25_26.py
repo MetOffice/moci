@@ -118,3 +118,18 @@ class pp25_pr53(MacroUpgrade):
         self.remove_setting(config, ["namelist:moose_arch", "non_duplexed_set"])
 
         return config, self.reports
+
+
+class pp25_pr73(MacroUpgrade):
+
+    """Upgrade macro for PR #73 by Erica Neininger."""
+    BEFORE_TAG = "pp25_pr53"
+    AFTER_TAG = "pp25_pr73"
+
+    def upgrade(self, config, meta_config=None):
+        """Update moose_arch namelist for Azure MASS."""
+        self.add_setting(config,
+                         ["namelist:nemo_processing", "chunking_exclude_fields"],
+                         "")
+
+        return config, self.reports

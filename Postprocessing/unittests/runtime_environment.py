@@ -26,7 +26,7 @@ def setup_env():
     os.environ['CYLC_WORKFLOW_NAME'] = 'suiteID'
     os.environ['CYLC_SUITE_NAME'] = 'suiteID'
     os.environ['CYLC_CYCLING_MODE'] = '360day'
-    os.environ['CYLC_SUITE_SHARE_DIR'] = os.getcwd()
+    os.environ['CYLC_WORKFLOW_SHARE_DIR'] = os.getcwd()
     os.environ['CYLC_SUITE_WORK_DIR'] = os.getcwd()
     os.environ['CYLC_TASK_WORK_DIR'] = os.getcwd()
     os.environ['CYLC_TASK_LOG_ROOT'] = os.getcwd() + '/job'

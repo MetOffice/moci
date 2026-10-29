@@ -1,16 +1,10 @@
 #!/usr/bin/env python
+# -----------------------------------------------------------------------------
+# (C) Crown copyright Met Office. All rights reserved.
+# The file LICENCE, distributed with this code, contains details of the terms
+# under which the code may be used.
+# -----------------------------------------------------------------------------
 '''
-*****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2025 Met Office. All rights reserved.
-
- Use, duplication or disclosure of this code is subject to the restrictions
- as set forth in the licence. If no licence has been raised with this copy
- of the code, the use, duplication or disclosure of it is strictly
- prohibited. Permission to do so must first be obtained in writing from the
- Met Office Information Asset Owner at the following address:
-
- Met Office, FitzRoy Road, Exeter, Devon, EX1 3PB, United Kingdom
-*****************************COPYRIGHT******************************
 NAME
     atmos.py
 
@@ -119,7 +113,7 @@ class AtmosPostProc(control.RunPostProc):
                 self.naml.atmospp.streams_to_netcdf
             )
         return process_methods
-            
+
     @property
     def _archive_methods(self):
         ''' Return <type OrderedDict> List of archiving methods '''
@@ -721,7 +715,7 @@ class AtmosPostProc(control.RunPostProc):
             msg += '\n '.join(files_to_archive)
             utils.log_msg(msg)
 
-            for fname in files_to_archive:
+            for fname in set(files_to_archive):
                 fname_only = os.path.basename(fname)
                 if fname_only.endswith('.pp'):
                     fname_only = fname_only[:-3]
@@ -736,7 +730,7 @@ class AtmosPostProc(control.RunPostProc):
                         os.rename(fname, fname + '_ARCHIVED')
                     else:
                         # Delete pp/NetCDF files for which fieldsfiles remain.
-                        # Ozone output from PostProc app does NOT have an 
+                        # Ozone output from PostProc app does NOT have an
                         # associated fieldsfile
                         ozone_stream = self._stream_expr(
                             self.naml.atmospp.ozone_output_stream

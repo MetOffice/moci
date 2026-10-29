@@ -1,16 +1,10 @@
 #!/usr/bin/env python
+# -----------------------------------------------------------------------------
+# (C) Crown copyright Met Office. All rights reserved.
+# The file LICENCE, distributed with this code, contains details of the terms
+# under which the code may be used.
+# -----------------------------------------------------------------------------
 '''
-*****************************COPYRIGHT******************************
- (C) Crown copyright 2015-2022 Met Office. All rights reserved.
-
- Use, duplication or disclosure of this code is subject to the restrictions
- as set forth in the licence. If no licence has been raised with this copy
- of the code, the use, duplication or disclosure of it is strictly
- prohibited. Permission to do so must first be obtained in writing from the
- Met Office Information Asset Owner at the following address:
-
- Met Office, FitzRoy Road, Exeter, Devon, EX1 3PB, United Kingdom
-*****************************COPYRIGHT******************************
 NAME
     modeltemplate.py
 
@@ -452,49 +446,50 @@ class ModelTemplate(control.RunPostProc):
         Initialise a netCDF filename object based on a filename produced
         as direct output from the model.
         '''
-        for model in self.model_components:
-            field = self.model_components[model]
-            if field:
-                match = [f for f in self.model_components[model] if
-                         f in filename]
+        component = list(self.model_components.keys())[0]
+        in_field = ''
+        out_field = ''
+        for model, field in self.model_components.items():
+            for modelfield in field:
+                match = re.search(modelfield, filename, re.IGNORECASE)
                 if match:
-                    field = match[0].replace('_', '-')
                     component = model
+                    in_field = match[0]
+                    out_field = in_field.replace('_', '-')
                     break
-            else:
-                component = model
 
         if self.rebuild_suffix['REGEX']:
             # Add processor number (if available) to field
-            patt = r'.*{}.*({})'.format(match[0], self.rebuild_suffix['REGEX'])
+            patt = r'.*{}.*({})'.format(in_field, self.rebuild_suffix['REGEX'])
             try:
-                field += re.match(patt, filename).group(1).rstrip('.nc')
+                out_field += re.match(patt, filename).group(1).rstrip('.nc')
             except AttributeError:
                 # No processor number
                 pass
 
-        for elem in re.split(r'[._\-]', filename):
-            if re.match(r'\d+[hdmsyxHDMSYX]', elem):
-                base = elem
-                break
+        base = re.search(r'[._\-](\d+[hdmsyxHDMSYX])[._\-]', filename)
+        try:
+            base = base.group(1)
+        except AttributeError:
+            msg = 'Unable to extract base frequency from filename: {}'.\
+                format(filename)
+            utils.log_msg('filename_components: ' + msg, level='ERROR')
+            base = '1m'
+
         startdate = self.get_date(filename)
 
         try:
-            ncf = netcdf_filenames.NCFilename(
-                component, self.prefix, self.model_realm(field),
-                base=base, start_date=startdate, custom=field
-                )
-        except UnboundLocalError as exc:
-            try:
-                # Python 3+
-                errmsg = exc.with_traceback(None)
-            except AttributeError:
-                # Python 2.7
-                errmsg = exc.message
-            msg = 'unable to extract "{}" from filename: {}'.\
-                format(str(errmsg).split('\'')[1], filename)
+            realm = self.model_realm(in_field)
+        except NotImplementedError:
+            msg = 'Unable to determine the realm ID from filename: {}'.\
+                format(filename)
             utils.log_msg('filename_components: ' + msg, level='ERROR')
-            ncf = netcdf_filenames.NCFilename('component', 'PREFIX', 'R')
+            realm = 'R'
+
+        ncf = netcdf_filenames.NCFilename(
+            component, self.prefix, realm,
+            base=base, start_date=startdate, custom=out_field
+        )
 
         return ncf
 
@@ -726,11 +721,19 @@ class ModelTemplate(control.RunPostProc):
                 os.rename(fname, fname[:-len(fail_tag)])
                 fname = fname[:-len(fail_tag)]
 
+            chunks = self.naml.processing.chunking_arguments
+            try:
+                exclusions = self.chunking_exclusions_pattern
+            except AttributeError:
+                exclusions = None
+            if exclusions and re.match(exclusions, fname):
+                chunks = None
+
             rcode = self.compress_file(
                 fname,
                 self.naml.processing.compress_netcdf,
                 compression=self.naml.processing.compression_level,
-                chunking=self.naml.processing.chunking_arguments
+                chunking=chunks
                 )
             if rcode != 0:
                 # Prevent archive - tag file as failed to compress (debug mode)
@@ -818,13 +821,15 @@ class ModelTemplate(control.RunPostProc):
         if os.path.exists(self.diagsdir):
             for field in self.mean_fields:
                 # Pattern ends with ".nc" to prevent processing of tagged files
+                if len(field) > 0:
+                    field = '_' + field
                 pattern = r'{}.*{}\.nc$'.format(self.prefix.lower(), field)
 
                 files = utils.get_subset(self.diagsdir, pattern)
                 to_archive += utils.add_path(files, self.diagsdir)
 
         if to_archive:
-            for fname in to_archive:
+            for fname in set(to_archive):
                 arch_rtn = self.archive_files(fname)
                 self.clean_archived_files(arch_rtn, 'means files')
         else:
